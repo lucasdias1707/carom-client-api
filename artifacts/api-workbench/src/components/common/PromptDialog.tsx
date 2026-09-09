@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Dialog } from '@/components/common/Dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type PromptDialogProps = {
   title: string;
@@ -35,28 +38,27 @@ export function PromptDialog({
       testId="dialog-prompt"
       footer={
         <>
-          <button className="btn" onClick={onCancel} data-testid="button-prompt-cancel">
+          <Button variant="secondary" onClick={onCancel} data-testid="button-prompt-cancel">
             Cancel
-          </button>
-          <button className="btn btn-primary" onClick={submit} disabled={!value.trim()} data-testid="button-prompt-confirm">
+          </Button>
+          <Button onClick={submit} disabled={!value.trim()} data-testid="button-prompt-confirm">
             {confirmLabel}
-          </button>
+          </Button>
         </>
       }
     >
-      <label className="section-label" htmlFor="prompt-value">
+      <Label className="section-label" htmlFor="prompt-value">
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id="prompt-value"
-        className="field"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') submit();
         }}
         data-testid="input-prompt-value"
-        autoFocus
+        data-autofocus
       />
     </Dialog>
   );

@@ -12,6 +12,9 @@ import { folderPath } from '@/state/selectors';
 import { useDeleteWithUndo } from '@/hooks/use-delete-with-undo';
 import { useWorkspace } from '@/state/workspace-store';
 import type { Auth, Folder } from '@/types';
+import { IconButton } from '@/components/common/IconButton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type FolderTab = 'variables' | 'auth' | 'scripts' | 'docs';
 
@@ -70,51 +73,42 @@ export function FolderPane({ folder }: { folder: Folder }) {
   return (
     <section className="pane" aria-label="Folder" data-testid="folder-pane">
       <div className="folder-head">
-        <input
-          className="field folder-title"
+        <Input
+          className="folder-title"
           value={folder.name}
           onChange={(event) => patch({ name: event.target.value })}
           aria-label="Folder name"
           data-testid="input-folder-name"
         />
-        <button className="icon-btn" onClick={addRequest} title="New request in this folder" aria-label="New request in this folder" data-testid="button-folder-new-request">
-          <FilePlus2 size={15} />
-        </button>
-        <button
-          className="icon-btn"
+        <IconButton label="New request in this folder" onClick={addRequest} testId="button-folder-new-request">
+          <FilePlus2 />
+        </IconButton>
+        <IconButton label="New folder inside"
           onClick={() =>
             dispatch({
               type: 'folder/create',
               folder: createFolder(folder.workspaceId, 'New folder', folder.id, state.folders.length),
             })
           }
-          title="New folder inside"
-          aria-label="New folder inside"
-          data-testid="button-folder-new-folder"
+          testId="button-folder-new-folder"
         >
-          <FolderPlus size={15} />
-        </button>
-        <button
-          className="icon-btn"
+          <FolderPlus />
+        </IconButton>
+        <IconButton label="Export folder"
           onClick={() => {
             const payload = exportFolder(state, folder.id);
             if (payload) downloadJson(exportFileName(folder.name), payload);
           }}
-          title="Export folder"
-          aria-label="Export folder"
-          data-testid="button-folder-export"
+          testId="button-folder-export"
         >
-          <Download size={15} />
-        </button>
-        <button
-          className="icon-btn danger"
+          <Download />
+        </IconButton>
+        <IconButton label="Delete folder" tone="danger"
           onClick={() => setConfirming(true)}
-          title="Delete folder"
-          aria-label="Delete folder"
-          data-testid="button-folder-delete"
+          testId="button-folder-delete"
         >
-          <Trash2 size={15} />
-        </button>
+          <Trash2 />
+        </IconButton>
       </div>
 
       <div className="pane-tabs">
@@ -191,7 +185,7 @@ export function FolderPane({ folder }: { folder: Folder }) {
             <div className="section-label">Colour</div>
             <input
               type="color"
-              className="field"
+              className=""
               style={{ width: 72, padding: 3 }}
               value={folder.color}
               onChange={(event) => patch({ color: event.target.value })}

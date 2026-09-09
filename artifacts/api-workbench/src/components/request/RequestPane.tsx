@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Copy, Terminal } from 'lucide-react';
+import { IconButton } from '@/components/common/IconButton';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AuthEditor } from '@/components/request/AuthEditor';
 import { BodyEditor } from '@/components/request/BodyEditor';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
@@ -99,56 +105,65 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
         onCancel={onCancel}
       />
 
-      <div className="pane-tabs">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            className={`pane-tab ${tab === item.id ? 'active' : ''}`}
-            onClick={() => setTab(item.id)}
-            data-testid={`tab-request-${item.id}`}
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as RequestTab)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="pane-tabbar">
+          <TabsList className="pane-tabs">
+            {TABS.map((item) => (
+              <TabsTrigger key={item.id} value={item.id} className="pane-tab" data-testid={`tab-request-${item.id}`}>
+                {item.label}
+                {badges[item.id] ? <Badge variant="accent">{badges[item.id]}</Badge> : null}
+                {item.id === 'body' && request.bodyType !== 'none' ? (
+                  <Badge variant="accent">{request.bodyType}</Badge>
+                ) : null}
+                {item.id === 'auth' && authSource.auth.type !== 'none' ? (
+                  authSource.from === 'folder' ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="accent">{authSource.auth.type} ·</Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>Inherited from {authSource.folder.name}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Badge variant="accent">{authSource.auth.type}</Badge>
+                  )
+                ) : null}
+                {item.id === 'scripts' && (request.preScript.trim() || request.postScript.trim()) ? (
+                  <Badge variant="accent">on</Badge>
+                ) : null}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <span className="flex-1" />
+          <IconButton label="Copy as curl" onClick={copyAsCurl} testId="button-copy-curl">
+            <Terminal />
+          </IconButton>
+          <IconButton
+            label="Copy resolved URL"
+            hint="variables applied"
+            onClick={() => {
+              navigator.clipboard?.writeText(prepareRequest(request, variables, { folders: chain }).url);
+              toast({ title: 'URL copied', kind: 'success' });
+            }}
+            testId="button-copy-url"
           >
-            {item.label}
-            {badges[item.id] ? <span className="badge">{badges[item.id]}</span> : null}
-            {item.id === 'body' && request.bodyType !== 'none' ? <span className="badge">{request.bodyType}</span> : null}
-            {item.id === 'auth' && authSource.auth.type !== 'none' ? (
-              <span className="badge" title={authSource.from === 'folder' ? `Inherited from ${authSource.folder.name}` : undefined}>
-                {authSource.auth.type}
-                {authSource.from === 'folder' ? ' ·' : ''}
-              </span>
-            ) : null}
-            {item.id === 'scripts' && (request.preScript.trim() || request.postScript.trim()) ? (
-              <span className="badge">on</span>
-            ) : null}
-          </button>
-        ))}
-        <span style={{ flex: 1 }} />
-        <button className="icon-btn" onClick={copyAsCurl} title="Copy as curl" aria-label="Copy as curl" data-testid="button-copy-curl">
-          <Terminal size={14} />
-        </button>
-        <button
-          className="icon-btn"
-          onClick={() => {
-            navigator.clipboard?.writeText(prepareRequest(request, variables, { folders: chain }).url);
-            toast({ title: 'URL copied', kind: 'success' });
-          }}
-          title="Copy resolved URL"
-          aria-label="Copy resolved URL"
-          data-testid="button-copy-url"
-        >
-          <Copy size={14} />
-        </button>
-      </div>
+            <Copy />
+          </IconButton>
+        </div>
 
-      <div className="pane-body">
-        {tab === 'params' ? (
+        <div className="pane-body">
+        <TabsContent value="params" className="contents">
           <div className="pane-pad stack">
             <div className="section-label">Query parameters</div>
             <KeyValueTable items={request.params} onChange={setRows('params')} testPrefix="params" />
             <p className="hint">Parameters are appended to the URL when the request is sent, after variables resolve.</p>
           </div>
-        ) : null}
+        </TabsContent>
 
-        {tab === 'headers' ? (
+        <TabsContent value="headers" className="contents">
           <div className="pane-pad stack">
             <div className="section-label">Request headers</div>
             <KeyValueTable items={request.headers} onChange={setRows('headers')} testPrefix="headers" keyPlaceholder="Header" />
@@ -156,10 +171,12 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
               A <code>Content-Type</code> matching the body type is added automatically unless you set one here.
             </p>
           </div>
-        ) : null}
+        </TabsContent>
 
-        {tab === 'body' ? <BodyEditor request={request} onChange={patch} /> : null}
-        {tab === 'auth' ? (
+        <TabsContent value="body" className="contents">
+          <BodyEditor request={request} onChange={patch} />
+        </TabsContent>
+        <TabsContent value="auth" className="contents">
           <AuthEditor
             auth={request.auth}
             onChange={(auth: Auth) => patch({ auth })}
@@ -167,9 +184,9 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
             subject="request"
             variables={variableTable}
           />
-        ) : null}
+        </TabsContent>
 
-        {tab === 'scripts' ? (
+        <TabsContent value="scripts" className="contents">
           <ScriptEditor
             preScript={request.preScript}
             postScript={request.postScript}
@@ -177,22 +194,20 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
             subject="request"
             testPrefix="request"
           />
-        ) : null}
+        </TabsContent>
 
-        {tab === 'docs' ? (
+        <TabsContent value="docs" className="contents">
           <div className="pane-pad stack">
             <div className="section-label">Name</div>
-            <input
-              className="field"
+            <Input
               value={request.name}
               onChange={(event) => patch({ name: event.target.value })}
               aria-label="Request name"
               data-testid="input-request-name"
             />
             <div className="section-label">Description</div>
-            <textarea
-              className="editor"
-              style={{ minHeight: 150, fontFamily: 'var(--font-sans)' }}
+            <Textarea
+              className="min-h-[150px] font-sans"
               value={request.description}
               placeholder="What is this request for? Who owns the endpoint?"
               onChange={(event) => patch({ description: event.target.value })}
@@ -203,8 +218,9 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
               {path.length > 0 ? `In ${path.join(' / ')} · ` : ''}Saved locally in this browser.
             </p>
           </div>
-        ) : null}
-      </div>
+        </TabsContent>
+        </div>
+      </Tabs>
     </section>
   );
 }

@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Copy, Download, History, Search, Trash2, Waypoints } from 'lucide-react';
+import { IconButton } from '@/components/common/IconButton';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { JsonTree } from '@/components/response/JsonTree';
 import { SyntaxText } from '@/components/response/SyntaxText';
 import { useToast } from '@/components/common/Toaster';
@@ -131,43 +137,51 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         <span className="status-meta" data-testid="text-response-size">
           {formatBytes(response.size)}
         </span>
-        <span className="chip" title={contentType ?? 'No content type'}>
-          {contentTypeLabel(contentType)}
-        </span>
-        <span className="chip" title={`Sent through the ${response.via}`}>
-          {response.via}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="chip">{contentTypeLabel(contentType)}</Badge>
+          </TooltipTrigger>
+          <TooltipContent>{contentType ?? 'No content type'}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="chip">{response.via}</Badge>
+          </TooltipTrigger>
+          <TooltipContent>Sent through the {response.via}</TooltipContent>
+        </Tooltip>
         <span className="spacer" />
-        <button className="icon-btn" onClick={() => setWrap((current) => !current)} title="Toggle line wrapping" aria-label="Toggle line wrapping">
-          <Waypoints size={14} />
-        </button>
-        <button
-          className="icon-btn"
+        <IconButton
+          label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'}
+          onClick={() => setWrap((current) => !current)}
+          tone={wrap ? 'accent' : 'default'}
+        >
+          <Waypoints />
+        </IconButton>
+        <IconButton
+          label="Copy response body"
           onClick={() => {
             navigator.clipboard?.writeText(response.body);
             toast({ title: 'Response copied', kind: 'success' });
           }}
-          title="Copy body"
-          aria-label="Copy response body"
-          data-testid="button-copy-response"
+          testId="button-copy-response"
         >
-          <Copy size={14} />
-        </button>
-        <button className="icon-btn" onClick={download} title="Download body" aria-label="Download response body">
-          <Download size={14} />
-        </button>
-        <button
-          className="icon-btn"
+          <Copy />
+        </IconButton>
+        <IconButton label="Download response body" onClick={download}>
+          <Download />
+        </IconButton>
+        <IconButton
+          label="Clear responses"
+          hint={responses.length > 1 ? `all ${responses.length}` : undefined}
+          tone="danger"
           onClick={() => {
             dispatch({ type: 'response/clear', requestId });
             setSelectedId(null);
           }}
-          title="Clear responses"
-          aria-label="Clear responses"
-          data-testid="button-clear-response"
+          testId="button-clear-response"
         >
-          <Trash2 size={14} />
-        </button>
+          <Trash2 />
+        </IconButton>
       </div>
 
       {response.error ? (
@@ -177,38 +191,39 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         </div>
       ) : null}
 
-      <div className="pane-tabs">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            className={`pane-tab ${tab === item.id ? 'active' : ''}`}
-            onClick={() => setTab(item.id)}
-            data-testid={`tab-response-${item.id}`}
-          >
-            {item.label}
-            {item.count ? <span className="badge">{item.count}</span> : null}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'pretty' || tab === 'headers' ? (
-        <div className="pane-toolbar">
-          <Search size={13} style={{ color: 'var(--text-faint)' }} />
-          <input
-            className="field"
-            style={{ height: 24 }}
-            value={filter}
-            placeholder={tab === 'headers' ? 'Filter headers' : 'Highlight in body'}
-            onChange={(event) => setFilter(event.target.value)}
-            aria-label="Filter response"
-            data-testid="input-response-filter"
-          />
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as ResponseTab)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="pane-tabbar">
+          <TabsList className="pane-tabs">
+            {tabs.map((item) => (
+              <TabsTrigger key={item.id} value={item.id} data-testid={`tab-response-${item.id}`}>
+                {item.label}
+                {item.count ? <Badge variant="accent">{item.count}</Badge> : null}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
-      ) : null}
 
-      <div className="pane-body">
-        {tab === 'pretty' ? (
-          parsed !== null ? (
+        {tab === 'pretty' || tab === 'headers' ? (
+          <div className="pane-toolbar">
+            <Search size={13} style={{ color: 'var(--text-faint)' }} />
+            <Input
+              className="h-6 border-0 bg-transparent px-1"
+              value={filter}
+              placeholder={tab === 'headers' ? 'Filter headers' : 'Highlight in body'}
+              onChange={(event) => setFilter(event.target.value)}
+              aria-label="Filter response"
+              data-testid="input-response-filter"
+            />
+          </div>
+        ) : null}
+
+        <div className="pane-body">
+        <TabsContent value="pretty" className="contents">
+          {parsed !== null ? (
             <JsonTree data={parsed} term={filter} />
           ) : xml ? (
             <SyntaxText text={prettyText} language="xml" wrap={wrap} testId="display-response-body" />
@@ -216,10 +231,10 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
             <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-body">
               {prettyText || '(empty response body)'}
             </pre>
-          )
-        ) : null}
+          )}
+        </TabsContent>
 
-        {tab === 'console' ? (
+        <TabsContent value="console" className="contents">
           <div className="pane-pad stack" data-testid="script-console">
             {scriptTests.length === 0 && scriptLogs.length === 0 ? (
               <p className="hint">
@@ -246,65 +261,67 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
               </div>
             ))}
           </div>
-        ) : null}
+        </TabsContent>
 
-        {tab === 'raw' ? (
+        <TabsContent value="raw" className="contents">
           <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-raw">
             {response.body || '(empty response body)'}
           </pre>
-        ) : null}
+        </TabsContent>
 
-        {tab === 'preview' ? <Preview body={response.body} contentType={contentType} /> : null}
+        <TabsContent value="preview" className="contents">
+          <Preview body={response.body} contentType={contentType} />
+        </TabsContent>
 
-        {tab === 'headers' ? (
-          <table className="headers-table" data-testid="table-response-headers">
-            <thead>
-              <tr>
-                <th>Header</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TabsContent value="headers" className="contents">
+          <Table className="headers-table" data-testid="table-response-headers">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Header</TableHead>
+                <TableHead>Value</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredHeaders.map((header) => (
-                <tr key={header.id}>
-                  <td>{header.key}</td>
-                  <td>{header.value}</td>
-                </tr>
+                <TableRow key={header.id}>
+                  <TableCell>{header.key}</TableCell>
+                  <TableCell>{header.value}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        ) : null}
+            </TableBody>
+          </Table>
+        </TabsContent>
 
-        {tab === 'cookies' ? (
-          cookies.length === 0 ? (
+        <TabsContent value="cookies" className="contents">
+          {cookies.length === 0 ? (
             <div className="empty">
               <div>
                 <p>This response did not set any cookies.</p>
               </div>
             </div>
           ) : (
-            <table className="headers-table" data-testid="table-response-cookies">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Value</th>
-                  <th>Attributes</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="headers-table" data-testid="table-response-cookies">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Attributes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {cookies.map((cookie) => (
-                  <tr key={`${cookie.name}-${cookie.value}`}>
-                    <td>{cookie.name}</td>
-                    <td>{cookie.value}</td>
-                    <td>{cookie.attributes}</td>
-                  </tr>
+                  <TableRow key={`${cookie.name}-${cookie.value}`}>
+                    <TableCell>{cookie.name}</TableCell>
+                    <TableCell>{cookie.value}</TableCell>
+                    <TableCell>{cookie.attributes}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          )
-        ) : null}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
 
-        {tab === 'history' ? (
+        <TabsContent value="history" className="contents">
           <div data-testid="list-response-history">
             {responses.map((item) => (
               <button
@@ -326,14 +343,15 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
               </button>
             ))}
           </div>
-        ) : null}
+        </TabsContent>
 
         {response.truncated ? (
           <p className="hint" style={{ padding: '8px 12px' }}>
             <History size={11} /> This body was truncated to {formatBytes(byteLength(response.body))} when it was saved.
           </p>
         ) : null}
-      </div>
+        </div>
+      </Tabs>
     </section>
   );
 }

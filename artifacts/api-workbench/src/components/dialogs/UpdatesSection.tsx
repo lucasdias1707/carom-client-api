@@ -2,6 +2,8 @@ import { Download, RefreshCw, RotateCw } from 'lucide-react';
 import { useUpdates } from '@/state/update-store';
 import { canSelfUpdate, describeDownload, releasePageUrl, restartApp } from '@/lib/updates';
 import { useWorkspace } from '@/state/workspace-store';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
  * The Updates panel.
@@ -24,23 +26,20 @@ export function UpdatesSection() {
       <div className="section-label">
         Updates
         <span className="spacer" />
-        <button
-          className="btn btn-sm"
+        <Button variant="secondary" size="sm"
           onClick={updates.check}
           disabled={updates.phase === 'checking' || updates.phase === 'downloading'}
           data-testid="button-check-updates"
         >
-          <RefreshCw size={12} /> {updates.phase === 'checking' ? 'Checking…' : 'Check now'}
-        </button>
+          <RefreshCw /> {updates.phase === 'checking' ? 'Checking…' : 'Check now'}
+        </Button>
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input
-          type="checkbox"
-          className="checkbox"
+        <Checkbox
           checked={settings.autoCheckUpdates}
-          onChange={(event) =>
-            dispatch({ type: 'settings/update', patch: { autoCheckUpdates: event.target.checked } })
+          onCheckedChange={(checked) =>
+            dispatch({ type: 'settings/update', patch: { autoCheckUpdates: checked === true } })
           }
           data-testid="checkbox-auto-check-updates"
         />
@@ -69,14 +68,13 @@ export function UpdatesSection() {
 
             {selfUpdating ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
+                <Button
                   onClick={updates.download}
                   disabled={updates.phase === 'downloading'}
                   data-testid="button-download-update"
                 >
-                  <Download size={13} /> Download and install
-                </button>
+                  <Download /> Download and install
+                </Button>
                 {updates.phase === 'downloading' ? (
                   <span className="hint mono">
                     {describeDownload(updates.progress.received, updates.progress.total)}
@@ -86,13 +84,13 @@ export function UpdatesSection() {
             ) : (
               <>
                 <a
-                  className="btn"
+                  className={buttonVariants({ variant: 'secondary' })}
                   href={releasePageUrl(updates.update.version)}
                   target="_blank"
                   rel="noreferrer"
                   data-testid="link-release-page"
                 >
-                  <Download size={13} /> Open the release page
+                  <Download /> Open the release page
                 </a>
                 <p className="hint">
                   This copy was installed from a <code>.deb</code> or <code>.rpm</code>, so the files belong to
@@ -109,9 +107,9 @@ export function UpdatesSection() {
             <p className="hint">
               Version {updates.update?.version} is installed. It takes effect when the app restarts.
             </p>
-            <button className="btn btn-primary" onClick={() => void restartApp()} data-testid="button-restart-app">
-              <RotateCw size={13} /> Restart now
-            </button>
+            <Button onClick={() => void restartApp()} data-testid="button-restart-app">
+              <RotateCw /> Restart now
+            </Button>
           </div>
         ) : null}
       </div>
