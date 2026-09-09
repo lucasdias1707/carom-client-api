@@ -1,13 +1,16 @@
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
-import { changedSpan, handleEditorKey } from '@/lib/editor-keys';
-import { mirrorTokens } from '@/lib/mirror-tokens';
+import { changedSpan, handleEditorKey, pairsFor } from '@/lib/editor-keys';
+import { mirrorTokens, type MirrorLanguage } from '@/lib/mirror-tokens';
 import type { VariableTable } from '@/types';
 
 type CodeEditorProps = {
   value: string;
   onChange: (value: string) => void;
-  /** Only 'json' is coloured; everything else gets the key handling alone. */
-  language?: 'json' | 'plain';
+  /**
+   * Which colouring runs, and which bracket keys close themselves. 'plain'
+   * gets the key handling alone; 'xml' also auto-closes `<`.
+   */
+  language?: MirrorLanguage;
   placeholder?: string;
   ariaLabel: string;
   testId?: string;
@@ -92,6 +95,7 @@ export function CodeEditor({
       { value: area.value, start: area.selectionStart, end: area.selectionEnd },
       event.key,
       event.shiftKey,
+      pairsFor(language),
     );
     if (!edit) return;
     event.preventDefault();

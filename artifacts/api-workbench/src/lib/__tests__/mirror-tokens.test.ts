@@ -85,4 +85,25 @@ describe('mirrorTokens', () => {
     expect(twice).toEqual(once);
     expect(twice.filter((token) => token.variable)).toHaveLength(1);
   });
+
+  it('colours XML, and still picks the variable out of a tag', () => {
+    const tokens = mirrorTokens('<host>{{first_name}}</host>', 'xml', table);
+    expect(tokens.map((token) => `${token.kind}:${token.text}`)).toEqual([
+      'tag-punct:<',
+      'tag:host',
+      'tag-punct:>',
+      'text:{{first_name}}',
+      'tag-punct:</',
+      'tag:host',
+      'tag-punct:>',
+    ]);
+    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'first_name', defined: true });
+  });
+
+  it('marks no variable at all when the text is not a template', () => {
+    // A response body that happens to contain braces is showing you braces.
+    const tokens = mirrorTokens('<a>{{first_name}} {{nope}}</a>', 'xml', null);
+    expect(tokens.every((token) => token.variable === undefined)).toBe(true);
+    expect(tokens.map((token) => token.text).join('')).toBe('<a>{{first_name}} {{nope}}</a>');
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedSpan, closePair, deletePair, handleEditorKey, indent, skipClosing, type EditorSelection } from '@/lib/editor-keys';
+import { changedSpan, closePair, deletePair, handleEditorKey, indent, pairsFor, skipClosing, XML_PAIRS, type EditorSelection } from '@/lib/editor-keys';
 
 /**
  * Writes a case as one string: `|` is the caret, `[...]` is a selection.
@@ -134,6 +134,41 @@ describe('handleEditorKey', () => {
 
   it('wraps a selection in quotes rather than replacing it', () => {
     expect(show(handleEditorKey(at('[abc]'), '"', false))).toBe('"[abc]"');
+  });
+});
+
+describe('the angle bracket, in XML', () => {
+  const xml = (marked: string, key: string) => show(handleEditorKey(at(marked), key, false, XML_PAIRS));
+
+  it('closes itself, leaving only the name to type', () => {
+    expect(xml('|', '<')).toBe('<|>');
+  });
+
+  it('steps over the closer it inserted, instead of doubling it', () => {
+    expect(xml('<note|>', '>')).toBe('<note>|');
+  });
+
+  it('wraps a selection, so a name already typed becomes a tag', () => {
+    expect(xml('[note]', '<')).toBe('<[note]>');
+  });
+
+  it('takes both halves on backspace, while the pair is still empty', () => {
+    expect(xml('<|>', 'Backspace')).toBe('|');
+  });
+
+  it('stays out of the way right before a word', () => {
+    // `<` here means "wrap what follows", and `<>note` would not be that.
+    expect(handleEditorKey(at('|note'), '<', false, XML_PAIRS)).toBeNull();
+  });
+
+  it('is left alone in JSON, where `<` is an ordinary character', () => {
+    expect(handleEditorKey(at('"a |b"'), '<', false, pairsFor('json'))).toBeNull();
+    expect(handleEditorKey(at('|'), '<', false)).toBeNull();
+  });
+
+  it('does not cost XML the braces and quotes it also needs', () => {
+    expect(xml('|', '{')).toBe('{|}');
+    expect(xml('<a id=|>', '"')).toBe('<a id="|">');
   });
 });
 
