@@ -5,6 +5,10 @@ import { row } from '@/lib/factories';
 import { copyableVariables, mergeVariables, variableSources } from '@/lib/variables';
 import { useWorkspace } from '@/state/workspace-store';
 import type { Environment, KeyValue } from '@/types';
+import { SelectField } from '@/components/common/SelectField';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type CopyVariablesDialogProps = {
   destination: Environment;
@@ -81,17 +85,16 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
       testId="dialog-copy-variables"
       footer={
         <>
-          <button className="btn" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
             onClick={apply}
             disabled={chosen.length === 0}
             data-testid="button-confirm-copy-variables"
           >
-            <ArrowDownToLine size={13} /> Copy {chosen.length || ''}
-          </button>
+            <ArrowDownToLine /> Copy {chosen.length || ''}
+          </Button>
         </>
       }
     >
@@ -102,19 +105,14 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
       ) : (
         <div className="stack" style={{ gap: 10 }}>
           <div className="section-label">Copy from</div>
-          <select
-            className="select"
+          <SelectField
             value={sourceId}
-            onChange={(event) => setSourceId(event.target.value)}
-            aria-label="Copy from"
-            data-testid="select-copy-source"
-          >
-            {sources.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.kind})
-              </option>
-            ))}
-          </select>
+            onChange={setSourceId}
+            options={sources.map((item) => ({ value: item.id, label: `${item.name} (${item.kind})` }))}
+            ariaLabel="Copy from"
+            testId="select-copy-source"
+            block
+          />
 
           <div className="section-label">
             Variables
@@ -134,9 +132,7 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
                 const on = picked.has(item.key);
                 return (
                   <label className="import-row" key={item.key} style={{ paddingLeft: 6 }}>
-                    <input
-                      type="checkbox"
-                      className="checkbox"
+                    <Checkbox
                       checked={on}
                       onChange={() => toggle(item.key)}
                       data-testid={`checkbox-copy-${item.key}`}
@@ -148,9 +144,9 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
                       {withValues ? item.value || '(empty)' : '(blank)'}
                     </span>
                     {item.conflict ? (
-                      <span className="chip" style={{ color: 'var(--yellow)' }} title="This name already exists here">
+                      <Badge variant="outline" className="chip" style={{ color: 'var(--yellow)' }}>
                         replaces
-                      </span>
+                      </Badge>
                     ) : null}
                   </label>
                 );
@@ -159,11 +155,9 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
           </div>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              className="checkbox"
+            <Checkbox
               checked={withValues}
-              onChange={(event) => setWithValues(event.target.checked)}
+              onCheckedChange={(checked) => setWithValues(checked === true)}
               data-testid="checkbox-copy-values"
             />
             Copy the values too

@@ -124,6 +124,13 @@ export function CodeEditor({
             keeps the last line of the two in the same place. */}
         {'\n'}
       </div>
+      {/*
+        A bare textarea, not the `Textarea` from `components/ui`: this one is
+        transparent and sits exactly on top of the mirror, so every property
+        that moves a glyph has to come from the shared `.code-editor > *` rule.
+        A component with padding and a font of its own would slide the two
+        apart.
+      */}
       <textarea
         ref={areaRef}
         className="code-area"

@@ -3,6 +3,8 @@ import { Dialog } from '@/components/common/Dialog';
 import { parseCurl } from '@/lib/curl';
 import { createRequest } from '@/lib/factories';
 import { useWorkspace } from '@/state/workspace-store';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 const SAMPLE = `curl https://api.github.com/repos/mountain-loop/yaak \\
   -H 'Accept: application/vnd.github+json'`;
@@ -51,18 +53,17 @@ export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
       testId="dialog-import-curl"
       footer={
         <>
-          <button className="btn" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button className="btn btn-primary" onClick={submit} disabled={!command.trim()} data-testid="button-confirm-import-curl">
+          </Button>
+          <Button onClick={submit} disabled={!command.trim()} data-testid="button-confirm-import-curl">
             Create request
-          </button>
+          </Button>
         </>
       }
     >
-      <textarea
-        className="editor"
-        style={{ minHeight: 170 }}
+      <Textarea
+        className="min-h-[170px] font-mono"
         value={command}
         placeholder={SAMPLE}
         spellCheck={false}

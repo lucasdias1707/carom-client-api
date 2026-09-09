@@ -12,6 +12,9 @@ import { WorkspaceMenu } from '@/components/sidebar/WorkspaceMenu';
 import { useDeleteWithUndo } from '@/hooks/use-delete-with-undo';
 import { useWorkspace } from '@/state/workspace-store';
 import type { Folder, RequestRecord } from '@/types';
+import { IconButton } from '@/components/common/IconButton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type MenuState = { x: number; y: number; entries: MenuEntry[] } | null;
 type PromptState =
@@ -280,7 +283,7 @@ export function Sidebar({
             <span className="tree-caret">{isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
             <span className="tree-folder-name truncate">{folder.name}</span>
             {hasVariables ? (
-              <span className="folder-vars" title="This folder defines local variables">
+              <span className="folder-vars">
                 <Braces size={10} />
               </span>
             ) : null}
@@ -295,56 +298,47 @@ export function Sidebar({
     <aside className="sidebar">
       <div className="sidebar-head">
         <WorkspaceMenu />
-        <button
-          className="icon-btn"
-          style={{ marginLeft: 'auto' }}
+        <IconButton
+          label={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
+          className="ml-auto"
           onClick={toggleAll}
           disabled={workspaceFolders.length === 0}
-          title={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
-          aria-label={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
-          data-testid="button-toggle-all-folders"
+          testId="button-toggle-all-folders"
         >
-          {anyExpanded ? <ChevronsDownUp size={15} /> : <ChevronsUpDown size={15} />}
-        </button>
-        <button
-          className="icon-btn"
+          {anyExpanded ? <ChevronsDownUp /> : <ChevronsUpDown />}
+        </IconButton>
+        <IconButton label="New folder"
           onClick={() => setPrompt({ kind: 'new-folder', parentId: null })}
-          title="New folder"
-          aria-label="New folder"
-          data-testid="button-new-folder"
+          testId="button-new-folder"
         >
-          <FolderPlus size={15} />
-        </button>
-        <button
-          className="icon-btn"
+          <FolderPlus />
+        </IconButton>
+        <IconButton label="New request"
           onClick={() => addRequest(null)}
-          title="New request"
-          aria-label="New request"
-          data-testid="button-new-request"
+          testId="button-new-request"
         >
-          <FilePlus2 size={15} />
-        </button>
+          <FilePlus2 />
+        </IconButton>
         {/*
           The top bar has a toggle too, but on a narrow window the sidebar
           covers the top bar — so the control that hides it has to live inside
           the thing being hidden, or it cannot be reached at exactly the width
           where it is most needed.
         */}
-        <button
-          className="icon-btn"
+        <IconButton label="Hide the sidebar"
           onClick={onCollapse}
-          title={`Hide the sidebar (${MOD_LABEL} B)`}
-          aria-label="Hide the sidebar"
-          data-testid="button-collapse-sidebar"
+          hint={`${MOD_LABEL} B`}
+          testId="button-collapse-sidebar"
         >
-          <PanelLeftClose size={15} />
-        </button>
+          <PanelLeftClose />
+        </IconButton>
       </div>
 
       <div className="sidebar-search">
         <Search size={13} />
-        <input
+        <Input
           type="search"
+          className="h-7 pl-[26px] pr-2 placeholder:text-[var(--text-faint)]"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Filter requests"
@@ -375,12 +369,12 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-foot">
-        <button className="btn btn-sm btn-ghost" onClick={onImportCurl} data-testid="button-import-curl">
-          <Terminal size={13} /> Import curl
-        </button>
-        <button className="btn btn-sm btn-ghost" onClick={onImportPostman} data-testid="button-import-postman">
-          <FolderInput size={13} /> Import Postman
-        </button>
+        <Button variant="ghost" size="sm" onClick={onImportCurl} data-testid="button-import-curl">
+          <Terminal /> Import curl
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onImportPostman} data-testid="button-import-postman">
+          <FolderInput /> Import Postman
+        </Button>
       </div>
 
       {menu ? <ContextMenu x={menu.x} y={menu.y} entries={menu.entries} onClose={() => setMenu(null)} /> : null}

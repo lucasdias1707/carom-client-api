@@ -13,6 +13,11 @@ import { useWorkspace } from '@/state/workspace-store';
 import type { JsonTheme, PaneLayout, SendMode, ThemeName, WorkspaceState } from '@/types';
 import type { ProxyStatus } from '@/hooks/use-proxy-health';
 import tauriConfig from '../../../src-tauri/tauri.conf.json';
+import { SelectField } from '@/components/common/SelectField';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const PROXY_COPY: Record<ProxyStatus, string> = {
   checking: 'Checking whether the companion server is running…',
@@ -68,58 +73,64 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
   };
 
   return (
-    <Dialog title="Settings" onClose={onClose} testId="dialog-settings" footer={<button className="btn btn-primary" onClick={onClose}>Done</button>}>
+    <Dialog title="Settings" onClose={onClose} testId="dialog-settings" footer={<Button onClick={onClose}>Done</Button>}>
       <div className="stack" style={{ gap: 16 }}>
-        <label className="stack" style={{ gap: 6 }}>
-          <span className="section-label" style={{ margin: 0 }}>Theme</span>
-          <select
-            className="select"
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Theme</Label>
+          <SelectField
             value={settings.theme}
-            onChange={(event) => dispatch({ type: 'settings/update', patch: { theme: event.target.value as ThemeName } })}
-            data-testid="select-theme"
-          >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">Match system</option>
-          </select>
-        </label>
+            onChange={(theme: ThemeName) => dispatch({ type: 'settings/update', patch: { theme } })}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'Match system' },
+            ]}
+            ariaLabel="Theme"
+            testId="select-theme"
+            block
+          />
+        </div>
 
-        <label className="stack" style={{ gap: 6 }}>
-          <span className="section-label" style={{ margin: 0 }}>Pane layout</span>
-          <select
-            className="select"
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Pane layout</Label>
+          <SelectField
             value={settings.layout}
-            onChange={(event) => dispatch({ type: 'settings/update', patch: { layout: event.target.value as PaneLayout } })}
-            data-testid="select-layout"
-          >
-            <option value="horizontal">Side by side</option>
-            <option value="vertical">Stacked</option>
-          </select>
-        </label>
+            onChange={(layout: PaneLayout) => dispatch({ type: 'settings/update', patch: { layout } })}
+            options={[
+              { value: 'horizontal', label: 'Side by side' },
+              { value: 'vertical', label: 'Stacked' },
+            ]}
+            ariaLabel="Pane layout"
+            testId="select-layout"
+            block
+          />
+        </div>
 
-        <label className="stack" style={{ gap: 6 }}>
-          <span className="section-label" style={{ margin: 0 }}>Send requests through</span>
-          <select
-            className="select"
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Send requests through</Label>
+          <SelectField
             value={settings.sendMode}
-            onChange={(event) => dispatch({ type: 'settings/update', patch: { sendMode: event.target.value as SendMode } })}
-            data-testid="select-send-mode"
-          >
-            <option value="auto">{isDesktop() ? 'Auto — native (recommended)' : 'Auto — server when available'}</option>
-            <option value="proxy">Companion server only</option>
-            <option value="browser">Browser only</option>
-          </select>
+            onChange={(sendMode: SendMode) => dispatch({ type: 'settings/update', patch: { sendMode } })}
+            options={[
+              { value: 'auto', label: isDesktop() ? 'Auto — native (recommended)' : 'Auto — server when available' },
+              { value: 'proxy', label: 'Companion server only' },
+              { value: 'browser', label: 'Browser only' },
+            ]}
+            ariaLabel="Send requests through"
+            testId="select-send-mode"
+            block
+          />
           <span className="hint">
             {isDesktop()
               ? 'Running as a desktop app: requests are made natively, so CORS does not apply and private hosts are reachable. The companion server is not needed here.'
               : PROXY_COPY[proxyStatus]}
           </span>
-        </label>
+        </div>
 
-        <label className="stack" style={{ gap: 6 }}>
-          <span className="section-label" style={{ margin: 0 }}>Timeout (seconds)</span>
-          <input
-            className="field"
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0" htmlFor="settings-timeout">Timeout (seconds)</Label>
+          <Input
+            id="settings-timeout"
             type="number"
             min={1}
             max={300}
@@ -129,56 +140,48 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
             }
             data-testid="input-timeout"
           />
-        </label>
+        </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            className="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="checkbox-follow-redirects"
             checked={settings.followRedirects}
-            onChange={(event) => dispatch({ type: 'settings/update', patch: { followRedirects: event.target.checked } })}
+            onCheckedChange={(checked) => dispatch({ type: 'settings/update', patch: { followRedirects: checked === true } })}
             data-testid="checkbox-follow-redirects"
           />
-          Follow redirects
-        </label>
+          <Label htmlFor="checkbox-follow-redirects" className="font-normal">Follow redirects</Label>
+        </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            className="checkbox"
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="checkbox-persist-responses"
             checked={settings.persistResponses}
-            onChange={(event) => dispatch({ type: 'settings/update', patch: { persistResponses: event.target.checked } })}
+            onCheckedChange={(checked) => dispatch({ type: 'settings/update', patch: { persistResponses: checked === true } })}
             data-testid="checkbox-persist-responses"
           />
-          Keep response bodies between reloads
-        </label>
+          <Label htmlFor="checkbox-persist-responses" className="font-normal">Keep response bodies between reloads</Label>
+        </div>
 
         <div>
           <div className="section-label">
             JSON colours
             <span className="spacer" />
-            <select
-              className="select"
+            <SelectField
               value=""
-              onChange={(event) => {
-                const preset = JSON_THEME_PRESETS[event.target.value];
+              onChange={(name) => {
+                const preset = JSON_THEME_PRESETS[name];
                 if (preset) dispatch({ type: 'settings/update', patch: { jsonTheme: { ...preset } } });
               }}
-              aria-label="Colour preset"
-              data-testid="select-json-preset"
-            >
-              <option value="">Presets…</option>
-              {Object.keys(JSON_THEME_PRESETS).map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              options={Object.keys(JSON_THEME_PRESETS).map((name) => ({ value: name, label: name }))}
+              placeholder="Presets…"
+              ariaLabel="Colour preset"
+              testId="select-json-preset"
+            />
           </div>
           <div className="color-rows">
             {JSON_COLOR_FIELDS.map(({ field, label, sample }) => (
               <div className="color-row" key={field}>
-                <label htmlFor={`json-color-${field}`}>{label}</label>
+                <Label htmlFor={`json-color-${field}`} className="font-normal">{label}</Label>
                 <input
                   id={`json-color-${field}`}
                   type="color"
@@ -207,14 +210,13 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
         <div>
           <div className="section-label">Workspace data</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn" onClick={exportWorkspace} data-testid="button-export-workspace">
-              <Download size={13} /> Export JSON
-            </button>
-            <button className="btn" onClick={() => fileRef.current?.click()} data-testid="button-import-workspace">
-              <Upload size={13} /> Import JSON
-            </button>
-            <button
-              className="btn btn-danger"
+            <Button variant="secondary" onClick={exportWorkspace} data-testid="button-export-workspace">
+              <Download /> Export JSON
+            </Button>
+            <Button variant="secondary" onClick={() => fileRef.current?.click()} data-testid="button-import-workspace">
+              <Upload /> Import JSON
+            </Button>
+            <Button variant="destructive"
               onClick={() => {
                 dispatch({ type: 'state/replace', state: createSeedState() });
                 toast({ title: 'Workspace reset', kind: 'info' });
@@ -223,7 +225,7 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
               data-testid="button-reset-workspace"
             >
               Reset to sample workspace
-            </button>
+            </Button>
           </div>
           <input
             ref={fileRef}

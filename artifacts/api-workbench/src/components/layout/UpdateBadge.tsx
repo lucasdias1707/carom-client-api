@@ -1,6 +1,7 @@
 import { AlertTriangle, Download, RotateCw } from 'lucide-react';
 import { canSelfUpdate, describeUpdateBadge, releasePageUrl, restartApp } from '@/lib/updates';
 import { useUpdates } from '@/state/update-store';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * The update affordance in the top bar.
@@ -33,36 +34,44 @@ export function UpdateBadge() {
   // real link rather than a button pretending to be one.
   if (badge.action === 'release-page') {
     return (
-      <a
-        className={`icon-btn update-badge ${badge.tone}`}
-        href={releasePageUrl(updates.update?.version)}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={badge.label}
-        data-tooltip={badge.label}
-        data-testid="button-update-badge"
-      >
-        {icon}
-        <span className="update-dot" />
-      </a>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <a
+            className={`icon-btn update-badge ${badge.tone}`}
+            href={releasePageUrl(updates.update?.version)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={badge.label}
+            data-testid="button-update-badge"
+          >
+            {icon}
+            <span className="update-dot" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent>{badge.label}</TooltipContent>
+      </Tooltip>
     );
   }
 
   return (
-    <button
-      className={`icon-btn update-badge ${badge.tone}`}
-      onClick={() => {
-        if (badge.action === 'download') updates.download();
-        else if (badge.action === 'restart') void restartApp();
-      }}
-      disabled={badge.action === 'none'}
-      aria-label={badge.label}
-      data-tooltip={badge.label}
-      data-testid="button-update-badge"
-    >
-      {icon}
-      {/* A dot rather than a number: there is only ever one update waiting. */}
-      {badge.tone === 'busy' ? null : <span className="update-dot" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          className={`icon-btn update-badge ${badge.tone}`}
+          onClick={() => {
+            if (badge.action === 'download') updates.download();
+            else if (badge.action === 'restart') void restartApp();
+          }}
+          disabled={badge.action === 'none'}
+          aria-label={badge.label}
+          data-testid="button-update-badge"
+        >
+          {icon}
+          {/* A dot rather than a number: there is only ever one update waiting. */}
+          {badge.tone === 'busy' ? null : <span className="update-dot" />}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{badge.label}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -1,18 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { createId } from '@/lib/id';
+import { type ReactNode } from 'react';
+import { toast as sonnerToast } from 'sonner';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
 type ToastKind = 'success' | 'error' | 'info';
 
 /** One button on a toast. Undo is the reason this exists. */
 type ToastAction = { label: string; run: () => void };
-
-type Toast = {
-  id: string;
-  title: string;
-  description?: string;
-  kind: ToastKind;
-  action?: ToastAction;
-};
 
 type ToastApi = {
   toast: (toast: {
@@ -24,63 +17,73 @@ type ToastApi = {
   }) => void;
 };
 
-const ToastContext = createContext<ToastApi | null>(null);
 const TOAST_MS = 4200;
 /** An undo has to be read, understood and aimed at, which 4 seconds does not cover. */
 const ACTION_TOAST_MS = 9000;
 
+/**
+ * Toasts, over sonner.
+ *
+ * `toast.custom` rather than sonner's own layout, because the shape here
+ * carries meaning: the coloured left edge says at a glance whether something
+ * worked, and Undo has to be a real button, not a link at the end of a
+ * sentence. What sonner brings is the part that was hand-rolled before —
+ * stacking, the timer pausing while the pointer is over the stack or the tab
+ * is in the background, swipe to dismiss, and a live region that announces
+ * each toast once.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const dismiss = useCallback((id: string) => {
-    setToasts((current) => current.filter((item) => item.id !== id));
-  }, []);
-
-  const toast = useCallback<ToastApi['toast']>(
-    ({ title, description, kind = 'info', action, durationMs }) => {
-      const entry: Toast = { id: createId('toast'), title, description, kind, action };
-      setToasts((current) => [...current.slice(-3), entry]);
-      window.setTimeout(
-        () => setToasts((current) => current.filter((item) => item.id !== entry.id)),
-        durationMs ?? (action ? ACTION_TOAST_MS : TOAST_MS),
-      );
-    },
-    [],
-  );
-
-  const api = useMemo(() => ({ toast }), [toast]);
-
   return (
-    <ToastContext.Provider value={api}>
+    <>
       {children}
-      <div className="toast-stack" aria-live="polite">
-        {toasts.map((item) => (
-          <div key={item.id} className={`toast ${item.kind}`} role="status" data-testid="status-toast">
-            <div className="toast-text">
-              <strong>{item.title}</strong>
-              {item.description ? <span>{item.description}</span> : null}
-            </div>
-            {item.action ? (
-              <button
-                className="toast-action"
-                onClick={() => {
-                  item.action?.run();
-                  dismiss(item.id);
-                }}
-                data-testid="button-toast-action"
-              >
-                {item.action.label}
-              </button>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+      <SonnerToaster
+        position="bottom-right"
+        offset={14}
+        gap={8}
+        visibleToasts={4}
+        toastOptions={{ unstyled: true, classNames: { toast: 'w-full' } }}
+        style={{ width: 'min(340px, calc(100vw - 28px))' }}
+      />
+    </>
   );
 }
 
+/**
+ * Kept as a hook, and kept returning `{ toast }`, so the thirty-odd call sites
+ * did not have to change when what is underneath did.
+ */
 export function useToast(): ToastApi {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used inside a ToastProvider');
-  return context;
+  return { toast: showToast };
+}
+
+function showToast({
+  title,
+  description,
+  kind = 'info',
+  action,
+  durationMs,
+}: Parameters<ToastApi['toast']>[0]): void {
+  sonnerToast.custom(
+    (id) => (
+      <div className={`toast ${kind}`} role="status" data-testid="status-toast">
+        <div className="toast-text">
+          <strong>{title}</strong>
+          {description ? <span>{description}</span> : null}
+        </div>
+        {action ? (
+          <button
+            className="toast-action"
+            onClick={() => {
+              action.run();
+              sonnerToast.dismiss(id);
+            }}
+            data-testid="button-toast-action"
+          >
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    ),
+    { duration: durationMs ?? (action ? ACTION_TOAST_MS : TOAST_MS) },
+  );
 }
