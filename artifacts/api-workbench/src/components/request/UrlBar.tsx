@@ -1,6 +1,8 @@
 import { Loader2, Send, Square } from 'lucide-react';
 import { TemplateField } from '@/components/request/TemplateField';
 import { HTTP_METHODS, type HttpMethod, type VariableTable } from '@/types';
+import { Button } from '@/components/ui/button';
+import { SelectField } from '@/components/common/SelectField';
 
 type UrlBarProps = {
   method: HttpMethod;
@@ -25,19 +27,14 @@ export function UrlBar({
 }: UrlBarProps) {
   return (
     <div className="urlbar">
-      <select
-        className={`method-select m-${method.toLowerCase()}`}
+      <SelectField
         value={method}
-        onChange={(event) => onMethodChange(event.target.value as HttpMethod)}
-        aria-label="HTTP method"
-        data-testid="select-request-method"
-      >
-        {HTTP_METHODS.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </select>
+        onChange={onMethodChange}
+        options={HTTP_METHODS.map((item) => ({ value: item, label: item, className: `m-${item.toLowerCase()}` }))}
+        ariaLabel="HTTP method"
+        testId="select-request-method"
+        className={`method-select m-${method.toLowerCase()}`}
+      />
 
       <TemplateField
         value={url}
@@ -51,13 +48,13 @@ export function UrlBar({
       />
 
       {sending ? (
-        <button className="btn" onClick={onCancel} data-testid="button-cancel-request">
-          <Square size={12} /> Cancel
-        </button>
+        <Button variant="secondary" onClick={onCancel} data-testid="button-cancel-request">
+          <Square /> Cancel
+        </Button>
       ) : (
-        <button className="btn btn-primary" onClick={onSend} data-testid="button-send-request">
-          <Send size={13} /> Send
-        </button>
+        <Button onClick={onSend} data-testid="button-send-request">
+          <Send /> Send
+        </Button>
       )}
       {sending ? <Loader2 size={14} className="spin" aria-hidden="true" /> : null}
     </div>

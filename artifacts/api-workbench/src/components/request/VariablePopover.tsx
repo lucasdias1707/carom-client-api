@@ -1,9 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import { LOCAL_VARIABLE_COLOR } from '@/lib/template';
 import { row } from '@/lib/factories';
 import { useWorkspace } from '@/state/workspace-store';
 import type { ResolvedVariable } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 
 type VariablePopoverProps = {
   name: string;
@@ -20,34 +24,7 @@ type VariablePopoverProps = {
  */
 export function VariablePopover({ name, variable, anchor, onClose }: VariablePopoverProps) {
   const { state, dispatch, activeRequest } = useWorkspace();
-  const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(variable?.value ?? '');
-  const [position, setPosition] = useState({ left: anchor.left, top: anchor.bottom + 6 });
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const rect = element.getBoundingClientRect();
-    setPosition({
-      left: Math.max(8, Math.min(anchor.left, window.innerWidth - rect.width - 8)),
-      top: anchor.bottom + rect.height + 8 > window.innerHeight ? anchor.top - rect.height - 6 : anchor.bottom + 6,
-    });
-  }, [anchor]);
-
-  useEffect(() => {
-    const dismiss = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) onClose();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('mousedown', dismiss);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', dismiss);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [onClose]);
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId,
@@ -101,7 +78,33 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
   const accent = variable ? (variable.scope === 'folder' ? LOCAL_VARIABLE_COLOR : variable.color) : 'var(--red)';
 
   return (
-    <div className="var-popover" ref={ref} style={position} role="dialog" aria-label={`Edit ${name}`} data-testid="popover-variable">
+    <Popover
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      {/*
+        Radix hangs a popover off an element; the anchor here is a run of text
+        inside a textarea's mirror, which has no element of its own. So the
+        anchor is an empty box laid over exactly where that text is, and Radix
+        takes it from there — flipping above the caret when there is no room
+        below, Escape, the click outside, and the focus trip back.
+      */}
+      <PopoverAnchor asChild>
+        <span
+          aria-hidden
+          className="pointer-events-none fixed"
+          style={{ left: anchor.left, top: anchor.top, width: anchor.width, height: anchor.height }}
+        />
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        className="var-popover w-[300px] p-0"
+        aria-label={`Edit ${name}`}
+        data-testid="popover-variable"
+      >
       <div className="var-popover-head">
         <span className="var-dot" style={{ background: accent }} />
         <span className="mono" style={{ fontWeight: 600 }}>
@@ -109,13 +112,13 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
         </span>
         <span className="spacer" />
         {variable ? (
-          <span className="chip" style={{ color: accent }}>
+          <Badge variant="outline" className="chip" style={{ color: accent }}>
             {variable.scope === 'folder' ? 'local' : 'global'}
-          </span>
+          </Badge>
         ) : (
-          <span className="chip" style={{ color: 'var(--red)' }}>
+          <Badge variant="outline" className="chip" style={{ color: 'var(--red)' }}>
             undefined
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -125,8 +128,8 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
             from {variable.scope === 'folder' ? 'folder' : 'environment'} <strong>{variable.sourceName}</strong>
           </div>
           <div className="var-popover-row">
-            <input
-              className="field mono"
+            <Input
+              className="font-mono"
               value={value}
               autoFocus
               onChange={(event) => setValue(event.target.value)}
@@ -136,9 +139,9 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
               aria-label={`Value of ${name}`}
               data-testid="input-variable-value"
             />
-            <button className="btn btn-primary btn-sm" onClick={save} data-testid="button-save-variable">
-              <Check size={12} /> Save
-            </button>
+            <Button onClick={save} data-testid="button-save-variable">
+              <Check /> Save
+            </Button>
           </div>
           {variable.shadowed.length > 0 ? (
             <div className="var-popover-shadowed">
@@ -159,8 +162,8 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
         <>
           <div className="var-popover-origin">Not defined yet. Give it a value and pick where it lives.</div>
           <div className="var-popover-row">
-            <input
-              className="field mono"
+            <Input
+              className="font-mono"
               value={value}
               autoFocus
               placeholder="Value"
@@ -170,27 +173,26 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
             />
           </div>
           <div className="var-popover-row">
-            <button
-              className="btn btn-sm"
+            <Button variant="secondary" size="sm"
               onClick={() => define('folder')}
               disabled={!folder}
               title={folder ? `Local to ${folder.name}` : 'This request is not in a folder'}
               data-testid="button-define-local"
             >
-              <Plus size={12} /> Local {folder ? `(${folder.name})` : ''}
-            </button>
-            <button
-              className="btn btn-sm"
+              <Plus /> Local {folder ? `(${folder.name})` : ''}
+            </Button>
+            <Button variant="secondary" size="sm"
               onClick={() => define('global')}
               disabled={!target}
               title={target ? `Goes into the ${target.name} environment` : 'This workspace has no environment'}
               data-testid="button-define-global"
             >
-              <Plus size={12} /> Global {target ? `(${target.name})` : ''}
-            </button>
+              <Plus /> Global {target ? `(${target.name})` : ''}
+            </Button>
           </div>
         </>
       )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

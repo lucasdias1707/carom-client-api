@@ -14,6 +14,11 @@ import {
   type PostmanImport,
 } from '@/lib/postman';
 import { useWorkspace } from '@/state/workspace-store';
+import { SelectField } from '@/components/common/SelectField';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 const SAMPLE = `{
   "info": { "name": "My API", "schema": ".../v2.1.0/collection.json" },
@@ -139,9 +144,7 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
       return (
         <div key={node.id}>
           <div className="import-row" style={{ paddingLeft: 4 + node.depth * 14 }}>
-            <input
-              type="checkbox"
-              className="checkbox"
+            <Checkbox
               checked={selected.has(node.id)}
               onChange={() => toggle(node)}
               aria-label={node.name}
@@ -173,27 +176,25 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
       testId="dialog-import-postman"
       footer={
         <>
-          <button className="btn" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
           {preview ? (
-            <button
-              className="btn btn-primary"
+            <Button
               onClick={confirm}
               disabled={!canImport}
               data-testid="button-confirm-import-postman"
             >
               Import
-            </button>
+            </Button>
           ) : (
-            <button
-              className="btn btn-primary"
+            <Button
               onClick={() => read(raw)}
               disabled={!raw.trim()}
               data-testid="button-read-postman"
             >
               Continue
-            </button>
+            </Button>
           )}
         </>
       }
@@ -205,20 +206,18 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
             <span className="spacer" />
             {preview.environment ? null : (
               <>
-                <button
-                  className="btn btn-sm btn-ghost"
+                <Button variant="ghost" size="sm"
                   onClick={() => setSelected(new Set(allIds(tree)))}
                   data-testid="button-select-all-import"
                 >
                   All
-                </button>
-                <button
-                  className="btn btn-sm btn-ghost"
+                </Button>
+                <Button variant="ghost" size="sm"
                   onClick={() => setSelected(new Set())}
                   data-testid="button-select-none-import"
                 >
                   None
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -235,25 +234,23 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
           )}
 
           <div className="section-label">Where it goes</div>
-          <select
-            className="select"
+          <SelectField
             value={destination}
-            onChange={(event) => setDestination(event.target.value)}
-            aria-label="Destination workspace"
-            data-testid="select-import-workspace"
-          >
-            {state.workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-                {workspace.id === state.activeWorkspaceId ? ' (current)' : ''}
-              </option>
-            ))}
-            <option value={NEW_WORKSPACE}>New workspace…</option>
-          </select>
+            onChange={setDestination}
+            options={[
+              ...state.workspaces.map((workspace) => ({
+                value: workspace.id,
+                label: workspace.name + (workspace.id === state.activeWorkspaceId ? ' (current)' : ''),
+              })),
+              { value: NEW_WORKSPACE, label: 'New workspace…' },
+            ]}
+            ariaLabel="Destination workspace"
+            testId="select-import-workspace"
+            block
+          />
 
           {creatingWorkspace ? (
-            <input
-              className="field"
+            <Input
               value={newName}
               placeholder="Workspace name"
               onChange={(event) => setNewName(event.target.value)}
@@ -277,9 +274,9 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="stack" style={{ gap: 10 }}>
-          <button className="btn" onClick={() => fileRef.current?.click()} data-testid="button-pick-postman-file">
-            <Upload size={13} /> Choose a file
-          </button>
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} data-testid="button-pick-postman-file">
+            <Upload /> Choose a file
+          </Button>
           <input
             ref={fileRef}
             type="file"
@@ -290,9 +287,8 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
           />
 
           <div className="section-label">Or paste the JSON</div>
-          <textarea
-            className="editor"
-            style={{ minHeight: 150 }}
+          <Textarea
+            className="min-h-[150px] font-mono"
             value={raw}
             placeholder={SAMPLE}
             spellCheck={false}

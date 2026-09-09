@@ -76,8 +76,11 @@ Gatekeeper do macOS; mudou algo nesse fluxo, atualize os dois.
 - `components/response/SyntaxText.tsx` — bloco colorido só de leitura, pelos mesmos lexers
 - `components/request/CodeEditor.tsx` — textarea transparente sobre um espelho colorido
 - `components/layout/FolderPane.tsx` — o painel da pasta: variáveis, auth e scripts dela
+- `components/ui/*` — shadcn/ui: diálogos, menus, tabs, select, tooltip, toast, tabela
+- `components/common/IconButton.tsx` — botão de ícone com tooltip; um `label` só serve aos dois
+- `components/common/SelectField.tsx` — o dropdown do app sobre o listbox do Radix
 - `components/sidebar|request|response|dialogs|layout|common` — UI por área
-- `index.css` — design tokens (tema escuro e claro) e todos os componentes visuais
+- `index.css` — design tokens (tema escuro e claro), a camada shadcn e o que é sob medida
 
 ### Brand
 
@@ -161,6 +164,27 @@ barra de menu do macOS e a bandeja do Windows pedem.
   do editor pinta as variáveis por cima da coloração JSON (`lib/mirror-tokens.ts`). O
   invariante do lexer vale igual ali: juntar os tokens tem que reproduzir a entrada exatamente,
   senão as cores escorregam de baixo do cursor.
+- **A UI é shadcn/ui, e os tokens são os mesmos de sempre.** Os componentes de
+  `components/ui` pedem `--background`, `--primary`, `--border`; em vez de uma segunda
+  paleta, cada um desses aponta para o token que já existia (`--bg-app`, `--accent`,
+  `--border`). Uma cor tem uma definição só, e mudar `--accent` continua mudando o app
+  inteiro, botões e diálogos junto.
+- **O CSS do app vive em `@layer components`, e isso é estrutural.** CSS fora de camada
+  vence qualquer regra em camada, por mais específica que ela seja — enquanto essas regras
+  estavam soltas, um `font-mono` num componente perdia silenciosamente para o
+  `textarea { font: inherit }` do reset. Dentro da camada a ordem é a esperada: o
+  utilitário no elemento ganha.
+- **A escala dos primitivos foi ajustada no arquivo, não na chamada.** `button.tsx`,
+  `input.tsx`, `badge.tsx` e `tabs.tsx` têm as alturas deste app (28px, não 36px); os
+  arquivos do shadcn são nossos, então é lá que a densidade mora, em vez de cada chamada
+  sobrescrever uma altura.
+- **Tooltip em vez de `title`.** O atributo esperava a demora do navegador, não aceitava
+  estilo e não aparecia no foco por teclado. `IconButton` recebe um `label` só, que vira o
+  tooltip *e* o `aria-label` — um botão cujo tooltip diz uma coisa e cujo nome acessível
+  diz outra é um bug esperando quem não vê o tooltip.
+- **O `<textarea>` do editor de código continua cru.** Ele é transparente e fica exatamente
+  em cima do espelho, então tudo que move um glifo tem que vir da regra compartilhada
+  `.code-editor > *`. Um componente com padding e fonte próprios separaria os dois.
 - **O editor de body ocupa o painel; a tabela não.** Um body que é um documento (JSON, XML,
   texto, GraphQL) cresce até o fim do painel, porque o que falta ali é altura. Um form de três
   campos numa caixa de altura total seriam três campos e muito vazio, então ele fica do
@@ -235,8 +259,10 @@ Registradas em [`CLAUDE.md`](./CLAUDE.md), que é o arquivo que o Claude Code l�
   texto puro no localStorage; use um ambiente separado e evite máquinas compartilhadas.
 - Alterar `lib/api-spec/openapi.yaml` exige rodar o codegen: os arquivos em
   `lib/api-zod/src/generated` e `lib/api-client-react/src/generated` são gerados.
-- `artifacts/api-workbench/src/components/ui` é o scaffold do shadcn/ui e não é usado pelo app,
-  que tem seu próprio sistema visual em `index.css`.
+- `artifacts/api-workbench/src/components/ui` é o shadcn/ui, e agora é a UI de verdade:
+  diálogo, menu, tabs, select, tooltip, toast, popover, tabela e os painéis redimensionáveis
+  saem de lá. O que sobra em `index.css` é o que o shadcn não tem — o espelho colorido do
+  editor, a árvore da sidebar, as cores de método e as do JSON.
 
 ## Desktop
 

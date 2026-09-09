@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Wand2 } from 'lucide-react';
+import { SelectField } from '@/components/common/SelectField';
+import { Button } from '@/components/ui/button';
 import { CodeEditor } from '@/components/request/CodeEditor';
 import { useWorkspace } from '@/state/workspace-store';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
@@ -74,22 +76,18 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
       <div className="section-label">
         Body
         <span className="spacer" />
-        <select
-          className="select"
+        <SelectField
           value={request.bodyType}
-          onChange={(event) => onChange({ bodyType: event.target.value as BodyType })}
-          aria-label="Body type"
-          data-testid="select-body-type"
-        >
-          {BODY_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {BODY_LABELS[type]}
-            </option>
-          ))}
-        </select>
+          onChange={(bodyType) => onChange({ bodyType })}
+          options={BODY_TYPES.map((type) => ({ value: type, label: BODY_LABELS[type] }))}
+          ariaLabel="Body type"
+          testId="select-body-type"
+          className="min-w-[150px]"
+        />
         {formats ? (
-          <button
-            className="btn btn-sm"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={format}
             disabled={!formatSubject.trim()}
             title={
@@ -99,8 +97,8 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
             }
             data-testid="button-format-body"
           >
-            <Wand2 size={12} /> Format
-          </button>
+            <Wand2 /> Format
+          </Button>
         ) : null}
       </div>
 

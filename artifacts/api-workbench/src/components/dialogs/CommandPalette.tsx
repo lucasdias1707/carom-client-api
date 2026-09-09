@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { CornerDownLeft } from 'lucide-react';
+import {
+  Command as CommandRoot,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Dialog as UiDialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useWorkspace } from '@/state/workspace-store';
 import { folderPath } from '@/state/selectors';
 
@@ -16,97 +25,81 @@ type CommandPaletteProps = {
   onClose: () => void;
 };
 
-/** ⌘K launcher: fuzzy-ish search over actions and every request in the workspace. */
+/**
+ * ⌘K launcher: search over actions and every request in the workspace.
+ *
+ * The filtering and the arrow-key cursor were hand-written before, including
+ * the `scrollIntoView` that kept the highlighted row visible. cmdk does all of
+ * that, and does the part that was missing: the list is a real listbox, so the
+ * highlighted row is announced as you move rather than just changing colour.
+ *
+ * Two commands can share a label — "Delete resource" the request and Delete
+ * the action — so the item value is the id with the label appended: the id
+ * keeps them apart, the label is what gets matched.
+ */
 export function CommandPalette({ commands, onClose }: CommandPaletteProps) {
   const { state, dispatch } = useWorkspace();
-  const [query, setQuery] = useState('');
-  const [index, setIndex] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
 
-  const entries = useMemo<Command[]>(() => {
-    const requestCommands = state.requests
-      .filter((request) => request.workspaceId === state.activeWorkspaceId)
-      .map<Command>((request) => ({
-        id: `open-${request.id}`,
-        label: request.name,
-        hint: [...folderPath(state, request.folderId), request.method].join(' · '),
-        run: () => dispatch({ type: 'request/open', id: request.id }),
-      }));
-    const all = [...commands, ...requestCommands];
-    const term = query.trim().toLowerCase();
-    if (!term) return all.slice(0, 40);
-    return all
-      .filter((entry) => `${entry.label} ${entry.hint ?? ''}`.toLowerCase().includes(term))
-      .slice(0, 40);
-  }, [commands, dispatch, query, state]);
+  const requestCommands = useMemo<Command[]>(
+    () =>
+      state.requests
+        .filter((request) => request.workspaceId === state.activeWorkspaceId)
+        .map((request) => ({
+          id: `open-${request.id}`,
+          label: request.name,
+          hint: [...folderPath(state, request.folderId), request.method].join(' · '),
+          run: () => dispatch({ type: 'request/open', id: request.id }),
+        })),
+    [dispatch, state],
+  );
 
-  useEffect(() => setIndex(0), [query]);
-
-  useEffect(() => {
-    listRef.current?.querySelector('.palette-item.active')?.scrollIntoView({ block: 'nearest' });
-  }, [index]);
-
-  const run = (command: Command | undefined) => {
-    if (!command) return;
+  const run = (command: Command) => {
     command.run();
     onClose();
   };
 
+  const row = (entry: Command) => (
+    <CommandItem
+      key={entry.id}
+      value={`${entry.id} ${entry.label} ${entry.hint ?? ''}`}
+      onSelect={() => run(entry)}
+      className="palette-item gap-2 text-[13px] data-[selected=true]:bg-[var(--bg-active)]"
+      data-testid={`palette-item-${entry.id}`}
+    >
+      {entry.icon}
+      <span className="truncate">{entry.label}</span>
+      <span className="flex-1" />
+      {entry.hint ? <span className="tree-count">{entry.hint}</span> : null}
+      <CornerDownLeft size={12} className="opacity-0 group-data-[selected=true]:opacity-100" />
+    </CommandItem>
+  );
+
   return (
-    <div
-      className="overlay top"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+    <UiDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
     >
-      <div className="dialog palette" role="dialog" aria-modal="true" aria-label="Command palette" data-testid="dialog-command-palette">
-        <input
-          className="palette-input"
-          value={query}
-          autoFocus
-          placeholder="Search requests and actions…"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowDown') {
-              event.preventDefault();
-              setIndex((current) => Math.min(current + 1, entries.length - 1));
-            } else if (event.key === 'ArrowUp') {
-              event.preventDefault();
-              setIndex((current) => Math.max(current - 1, 0));
-            } else if (event.key === 'Enter') {
-              event.preventDefault();
-              run(entries[index]);
-            } else if (event.key === 'Escape') {
-              event.preventDefault();
-              onClose();
-            }
-          }}
-          aria-label="Search commands"
-          data-testid="input-command-palette"
-        />
-        <div className="palette-list" ref={listRef}>
-          {entries.length === 0 ? (
-            <div className="tree-empty">No matches.</div>
-          ) : (
-            entries.map((entry, entryIndex) => (
-              <button
-                key={entry.id}
-                className={`palette-item ${entryIndex === index ? 'active' : ''}`}
-                onMouseEnter={() => setIndex(entryIndex)}
-                onClick={() => run(entry)}
-                data-testid={`palette-item-${entry.id}`}
-              >
-                {entry.icon}
-                <span className="truncate">{entry.label}</span>
-                <span className="spacer" />
-                {entry.hint ? <span className="tree-count">{entry.hint}</span> : null}
-                {entryIndex === index ? <CornerDownLeft size={12} /> : null}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+      <DialogContent
+        className="top-[12vh] max-w-[620px] translate-y-0 gap-0 overflow-hidden rounded-[10px] border-[var(--border-strong)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-pop)] [&>button]:hidden"
+        data-testid="dialog-command-palette"
+      >
+        <DialogTitle className="sr-only">Command palette</DialogTitle>
+        <DialogDescription className="sr-only">Search requests and actions</DialogDescription>
+        <CommandRoot loop className="bg-transparent">
+          <CommandInput
+            placeholder="Search requests and actions…"
+            className="h-11 text-[15px]"
+            data-testid="input-command-palette"
+          />
+          <CommandList className="max-h-[52vh]">
+            <CommandEmpty className="tree-empty py-6">No matches.</CommandEmpty>
+            <CommandGroup>{commands.map(row)}</CommandGroup>
+            <CommandGroup heading="Requests">{requestCommands.map(row)}</CommandGroup>
+          </CommandList>
+        </CommandRoot>
+      </DialogContent>
+    </UiDialog>
   );
 }

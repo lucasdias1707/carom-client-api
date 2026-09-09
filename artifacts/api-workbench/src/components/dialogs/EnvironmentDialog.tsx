@@ -8,6 +8,9 @@ import { createEnvironment, ENVIRONMENT_COLORS } from '@/lib/factories';
 import { useDeleteWithUndo } from '@/hooks/use-delete-with-undo';
 import { useWorkspace } from '@/state/workspace-store';
 import type { KeyValue } from '@/types';
+import { IconButton } from '@/components/common/IconButton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
  * Editor for the base environment plus any number of overlays. The base always
@@ -52,9 +55,9 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
       footer={
         <>
           <span className="spacer" />
-          <button className="btn btn-primary" onClick={onClose} data-testid="button-close-environments">
+          <Button onClick={onClose} data-testid="button-close-environments">
             Done
-          </button>
+          </Button>
         </>
       }
     >
@@ -63,9 +66,9 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
           <div className="section-label">
             Environments
             <span className="spacer" />
-            <button className="icon-btn" onClick={addEnvironment} aria-label="Add environment" data-testid="button-add-environment">
-              <Plus size={14} />
-            </button>
+            <IconButton label="Add environment" onClick={addEnvironment} testId="button-add-environment">
+              <Plus />
+            </IconButton>
           </div>
           <div style={{ display: 'grid', gap: 2 }}>
             {environments.map((environment) => (
@@ -89,18 +92,16 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
             {selected.isBase ? 'Base variables' : 'Name'}
             <span className="spacer" />
             {selected.isBase ? null : (
-              <button
-                className="btn btn-sm btn-danger"
+              <Button variant="destructive"
                 onClick={() => setConfirming(true)}
                 data-testid="button-delete-environment"
               >
-                <Trash2 size={12} /> Delete
-              </button>
+                <Trash2 /> Delete
+              </Button>
             )}
           </div>
           {selected.isBase ? null : (
-            <input
-              className="field"
+            <Input
               value={selected.name}
               data-autofocus
               onChange={(event) => dispatch({ type: 'environment/update', id: selected.id, patch: { name: event.target.value } })}
@@ -139,9 +140,9 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
           <div className="section-label" style={{ margin: 0 }}>
             Variables
             <span className="spacer" />
-            <button className="btn btn-sm" onClick={() => setCopying(true)} data-testid="button-copy-variables">
-              <ArrowDownToLine size={12} /> Copy from…
-            </button>
+            <Button variant="secondary" size="sm" onClick={() => setCopying(true)} data-testid="button-copy-variables">
+              <ArrowDownToLine /> Copy from…
+            </Button>
           </div>
           <KeyValueTable
             items={selected.variables}
