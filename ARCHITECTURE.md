@@ -60,7 +60,7 @@ Gatekeeper do macOS; mudou algo nesse fluxo, atualize os dois.
 - `lib/template.ts` — resolução em escopos com procedência (o que ganhou, o que foi sombreado)
 - `lib/query.ts` — espelha a query string da URL na tabela de Params (a URL mantém a sua)
 - `lib/inherit.ts` — de onde vêm a auth e os scripts de uma request: pasta mais próxima, ou ela mesma
-- `lib/mirror-tokens.ts` — sobrepõe as `{{variáveis}}` na coloração JSON do editor
+- `lib/mirror-tokens.ts` — sobrepõe as `{{variáveis}}` na coloração JSON ou XML do editor
 - `lib/variables.ts` — copiar variáveis de um ambiente ou pasta para outro
 - `lib/scripts.ts` — executa os scripts pré/pós, coletando variáveis, headers, logs e testes
 - `lib/pm.ts` — objeto `pm` no formato do Postman, para scripts importados rodarem sem reescrita
@@ -71,7 +71,9 @@ Gatekeeper do macOS; mudou algo nesse fluxo, atualize os dois.
 - `components/layout/UpdateBadge.tsx` — o botão de download na topbar (`describeUpdateBadge` decide o que ele diz)
 - `lib/export.ts` — recorte de workspace: uma pasta com tudo abaixo dela, ou uma requisição
 - `lib/json-lexer.ts` — tokeniza JSON incompleto para colorir enquanto se digita
-- `lib/editor-keys.ts` — Tab, auto-fechamento de `{ [ "` e envolver seleção, como funções puras
+- `lib/xml.ts` — o mesmo para XML, mais o `Format` e a checagem de tags que não fecham
+- `lib/editor-keys.ts` — Tab, auto-fechamento de `{ [ "` (e de `<` em XML) e envolver seleção, como funções puras
+- `components/response/SyntaxText.tsx` — bloco colorido só de leitura, pelos mesmos lexers
 - `components/request/CodeEditor.tsx` — textarea transparente sobre um espelho colorido
 - `components/layout/FolderPane.tsx` — o painel da pasta: variáveis, auth e scripts dela
 - `components/sidebar|request|response|dialogs|layout|common` — UI por área
@@ -159,6 +161,15 @@ barra de menu do macOS e a bandeja do Windows pedem.
   do editor pinta as variáveis por cima da coloração JSON (`lib/mirror-tokens.ts`). O
   invariante do lexer vale igual ali: juntar os tokens tem que reproduzir a entrada exatamente,
   senão as cores escorregam de baixo do cursor.
+- **O editor de body ocupa o painel; a tabela não.** Um body que é um documento (JSON, XML,
+  texto, GraphQL) cresce até o fim do painel, porque o que falta ali é altura. Um form de três
+  campos numa caixa de altura total seriam três campos e muito vazio, então ele fica do
+  tamanho das linhas que tem.
+- **XML se colore com as mesmas variáveis do JSON.** O nome da tag usa a cor de "key", o valor
+  do atributo a de "string" — então o tema escolhido em Settings vale para os dois, em vez de
+  existir uma segunda paleta que ninguém sabe onde configurar.
+- **O `<` do XML fecha sozinho; o do JSON não.** Num body JSON `<` é um caractere comum, e
+  auto-fechar poria um `>` no meio de todo `"a < b"`. Por isso o par é por linguagem.
 - **Uma variável "global" nova vai para o ambiente selecionado**, não para o Base. Definir uma
   URL de staging com staging ativo e ela cair no Base, valendo para todos, não é o que aquele
   clique quer dizer.

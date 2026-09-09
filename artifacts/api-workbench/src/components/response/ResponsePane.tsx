@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Copy, Download, History, Search, Trash2, Waypoints } from 'lucide-react';
 import { JsonTree } from '@/components/response/JsonTree';
+import { SyntaxText } from '@/components/response/SyntaxText';
 import { useToast } from '@/components/common/Toaster';
 import { byteLength, contentTypeLabel, formatBytes, formatDuration, formatRelative, statusFamily, tryPrettyJson } from '@/lib/format';
 import { useWorkspace } from '@/state/workspace-store';
 import type { ScriptLogEntry, ScriptTest } from '@/lib/scripts';
+import { prettyXml } from '@/lib/xml';
 import type { ResponseRecord } from '@/types';
 
 type ResponseTab = 'pretty' | 'raw' | 'preview' | 'headers' | 'cookies' | 'console' | 'history';
@@ -19,6 +21,19 @@ type ResponsePaneProps = {
 
 function headerValue(response: ResponseRecord, name: string): string | undefined {
   return response.headers.find((header) => header.key.toLowerCase() === name)?.value;
+}
+
+/**
+ * Whether to read this body as XML.
+ *
+ * Deliberately narrow: the server has to say so, or the body has to open with
+ * a prolog. Anything that merely starts with `<` would drag HTML in too, and
+ * HTML's void elements (`<br>`, `<img>`) never close, so indenting it by depth
+ * would walk off to the right. HTML has the Preview tab for that.
+ */
+function looksLikeXml(body: string, contentType: string | undefined): boolean {
+  if (contentType && /xml/i.test(contentType)) return true;
+  return body.trimStart().startsWith('<?xml');
 }
 
 /** Split a `set-cookie` header into its name, value and attributes. */
@@ -75,7 +90,11 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
   }
 
   const family = statusFamily(response.status);
-  const prettyText = parsed !== null ? tryPrettyJson(response.body).text : response.body;
+  const xml = parsed === null && !response.error && looksLikeXml(response.body, contentType);
+  const prettyText =
+    parsed !== null ? tryPrettyJson(response.body).text
+    : xml ? prettyXml(response.body).text
+    : response.body;
   const filteredHeaders = response.headers.filter((header) =>
     `${header.key} ${header.value}`.toLowerCase().includes(filter.toLowerCase()),
   );
@@ -85,7 +104,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `response-${response.status}.${parsed !== null ? 'json' : 'txt'}`;
+    link.download = `response-${response.status}.${parsed !== null ? 'json' : xml ? 'xml' : 'txt'}`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -191,8 +210,10 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         {tab === 'pretty' ? (
           parsed !== null ? (
             <JsonTree data={parsed} term={filter} />
+          ) : xml ? (
+            <SyntaxText text={prettyText} language="xml" wrap={wrap} testId="display-response-body" />
           ) : (
-            <pre className={`code ${wrap ? 'wrap' : ''}`} data-testid="display-response-body">
+            <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-body">
               {prettyText || '(empty response body)'}
             </pre>
           )
@@ -228,7 +249,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         ) : null}
 
         {tab === 'raw' ? (
-          <pre className={`code ${wrap ? 'wrap' : ''}`} data-testid="display-response-raw">
+          <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-raw">
             {response.body || '(empty response body)'}
           </pre>
         ) : null}
@@ -338,7 +359,7 @@ function Preview({ body, contentType }: { body: string; contentType: string | un
     );
   }
   return (
-    <pre className="code wrap" data-testid="display-response-preview">
+    <pre className="code wrap fill" data-testid="display-response-preview">
       {body || '(empty response body)'}
     </pre>
   );

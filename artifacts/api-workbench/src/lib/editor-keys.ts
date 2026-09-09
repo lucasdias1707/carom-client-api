@@ -23,7 +23,19 @@ export const INDENT = '  ';
 /** Typing the opening half of one of these inserts the closing half too. */
 export const PAIRS: Record<string, string> = { '{': '}', '[': ']', '"': '"' };
 
-const CLOSERS = new Set(Object.values(PAIRS));
+/**
+ * XML adds the angle bracket, so `<` gives you `<>` with the caret between and
+ * the name is all that is left to type.
+ *
+ * It is per-language rather than global on purpose: in a JSON body `<` is an
+ * ordinary character, and auto-closing it would put a `>` in the middle of
+ * every `"a < b"` anyone writes.
+ */
+export const XML_PAIRS: Record<string, string> = { ...PAIRS, '<': '>' };
+
+export function pairsFor(language: 'json' | 'xml' | 'plain'): Record<string, string> {
+  return language === 'xml' ? XML_PAIRS : PAIRS;
+}
 
 function splice(value: string, start: number, end: number, text: string): string {
   return value.slice(0, start) + text + value.slice(end);
@@ -96,8 +108,8 @@ export function indent(selection: EditorSelection, outdent: boolean): EditorEdit
  * quoting a word is select-then-press. With no selection, both halves are
  * inserted and the caret lands between them.
  */
-export function closePair(selection: EditorSelection, opener: string): EditorEdit {
-  const closer = PAIRS[opener];
+export function closePair(selection: EditorSelection, opener: string, pairs = PAIRS): EditorEdit {
+  const closer = pairs[opener];
   if (!closer) return null;
   const { value, start, end } = selection;
 
@@ -106,9 +118,10 @@ export function closePair(selection: EditorSelection, opener: string): EditorEdi
     return { value: splice(value, start, end, opener + inner + closer), start: start + 1, end: end + 1 };
   }
 
-  // Auto-closing a quote right before a word would cut that word out of the
-  // string it is about to join. Braces do not have this problem.
-  if (opener === '"' && /[A-Za-z0-9_]/.test(value[start] ?? '')) return null;
+  // Auto-closing right before a word would cut that word out of the thing it
+  // is about to join — the string for a quote, the tag for a `<`. Braces do
+  // not have this problem, so they always close.
+  if ((opener === '"' || opener === '<') && /[A-Za-z0-9_]/.test(value[start] ?? '')) return null;
 
   return { value: splice(value, start, start, opener + closer), start: start + 1, end: start + 1 };
 }
@@ -117,19 +130,19 @@ export function closePair(selection: EditorSelection, opener: string): EditorEdi
  * Typing the closing half when it is already there just steps over it, so
  * finishing a pair by hand does not leave a stray `}}`.
  */
-export function skipClosing(selection: EditorSelection, closer: string): EditorEdit {
+export function skipClosing(selection: EditorSelection, closer: string, pairs = PAIRS): EditorEdit {
   const { value, start, end } = selection;
   if (start !== end) return null;
-  if (!CLOSERS.has(closer) || value[start] !== closer) return null;
+  if (!Object.values(pairs).includes(closer) || value[start] !== closer) return null;
   return { value, start: start + 1, end: start + 1 };
 }
 
 /** Backspace inside an empty pair takes both halves. */
-export function deletePair(selection: EditorSelection): EditorEdit {
+export function deletePair(selection: EditorSelection, pairs = PAIRS): EditorEdit {
   const { value, start, end } = selection;
   if (start !== end || start === 0) return null;
   const before = value[start - 1];
-  if (PAIRS[before] !== value[start]) return null;
+  if (pairs[before] !== value[start]) return null;
   return { value: splice(value, start - 1, start + 1, ''), start: start - 1, end: start - 1 };
 }
 
@@ -138,14 +151,19 @@ export function deletePair(selection: EditorSelection): EditorEdit {
  * handle it. Quotes are ambiguous — the same key both opens and closes — so
  * stepping over an existing one wins over opening a new pair.
  */
-export function handleEditorKey(selection: EditorSelection, key: string, shiftKey: boolean): EditorEdit {
+export function handleEditorKey(
+  selection: EditorSelection,
+  key: string,
+  shiftKey: boolean,
+  pairs = PAIRS,
+): EditorEdit {
   if (key === 'Tab') return indent(selection, shiftKey);
-  if (key === 'Backspace') return deletePair(selection);
-  if (CLOSERS.has(key)) {
-    const skipped = skipClosing(selection, key);
+  if (key === 'Backspace') return deletePair(selection, pairs);
+  if (Object.values(pairs).includes(key)) {
+    const skipped = skipClosing(selection, key, pairs);
     if (skipped) return skipped;
   }
-  if (key in PAIRS) return closePair(selection, key);
+  if (key in pairs) return closePair(selection, key, pairs);
   return null;
 }
 

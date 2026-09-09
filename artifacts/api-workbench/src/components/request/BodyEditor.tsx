@@ -4,6 +4,8 @@ import { CodeEditor } from '@/components/request/CodeEditor';
 import { useWorkspace } from '@/state/workspace-store';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { tryPrettyJson } from '@/lib/format';
+import type { MirrorLanguage } from '@/lib/mirror-tokens';
+import { prettyXml, xmlError } from '@/lib/xml';
 import type { BodyType, KeyValue, RequestRecord } from '@/types';
 import { BODY_TYPES } from '@/types';
 
@@ -17,6 +19,19 @@ const BODY_LABELS: Record<BodyType, string> = {
   graphql: 'GraphQL',
 };
 
+/** Body types that are one text document rather than a table of rows. */
+const TEXT_BODIES: BodyType[] = ['json', 'text', 'xml'];
+
+/** Plain text has no structure to colour, and no brackets worth closing. */
+const LANGUAGES: Partial<Record<BodyType, MirrorLanguage>> = { json: 'json', xml: 'xml' };
+
+/**
+ * A body that is a document fills the tab; one that is a table of rows does
+ * not, because a form with three fields in a full-height box is just three
+ * fields and a lot of nothing.
+ */
+const FILLS: BodyType[] = ['json', 'text', 'xml', 'graphql'];
+
 type BodyEditorProps = {
   request: RequestRecord;
   onChange: (patch: Partial<RequestRecord>) => void;
@@ -24,8 +39,14 @@ type BodyEditorProps = {
 
 export function BodyEditor({ request, onChange }: BodyEditorProps) {
   const { variableTable } = useWorkspace();
-  const jsonError = useMemo(() => {
-    if (request.bodyType !== 'json' || !request.body.trim()) return null;
+
+  // Why the body will not parse, in the language it is written in. Shown under
+  // the editor and as a red border, so a stray comma or an unclosed tag is
+  // caught here rather than by the server.
+  const bodyError = useMemo(() => {
+    if (!request.body.trim()) return null;
+    if (request.bodyType === 'xml') return xmlError(request.body);
+    if (request.bodyType !== 'json') return null;
     try {
       JSON.parse(request.body);
       return null;
@@ -36,8 +57,20 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
 
   const setRows = (field: 'form' | 'multipart') => (items: KeyValue[]) => onChange({ [field]: items });
 
+  // GraphQL formats its variables, which are JSON; the query is left alone,
+  // since re-indenting a query means understanding it.
+  const formats = request.bodyType === 'json' || request.bodyType === 'xml' || request.bodyType === 'graphql';
+  const formatSubject = request.bodyType === 'graphql' ? request.graphql.variables : request.body;
+  const format = () => {
+    if (request.bodyType === 'json') onChange({ body: tryPrettyJson(request.body).text });
+    else if (request.bodyType === 'xml') onChange({ body: prettyXml(request.body).text });
+    else if (request.bodyType === 'graphql') {
+      onChange({ graphql: { ...request.graphql, variables: tryPrettyJson(request.graphql.variables).text } });
+    }
+  };
+
   return (
-    <div className="pane-pad stack">
+    <div className={`pane-pad stack ${FILLS.includes(request.bodyType) ? 'fills' : ''}`}>
       <div className="section-label">
         Body
         <span className="spacer" />
@@ -54,12 +87,17 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
             </option>
           ))}
         </select>
-        {request.bodyType === 'json' ? (
+        {formats ? (
           <button
             className="btn btn-sm"
-            onClick={() => onChange({ body: tryPrettyJson(request.body).text })}
-            disabled={!request.body.trim()}
-            data-testid="button-format-json"
+            onClick={format}
+            disabled={!formatSubject.trim()}
+            title={
+              request.bodyType === 'graphql'
+                ? 'Re-indent the variables'
+                : `Re-indent this ${BODY_LABELS[request.bodyType]} body`
+            }
+            data-testid="button-format-body"
           >
             <Wand2 size={12} /> Format
           </button>
@@ -85,7 +123,7 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
 
       {request.bodyType === 'graphql' ? (
         <>
-          <div>
+          <div className="editor-fill">
             <div className="section-label">Query</div>
             <CodeEditor
               variables={variableTable}
@@ -110,21 +148,25 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
         </>
       ) : null}
 
-      {(['json', 'text', 'xml'] as BodyType[]).includes(request.bodyType) ? (
-        <div>
+      {TEXT_BODIES.includes(request.bodyType) ? (
+        <div className="editor-fill">
           <CodeEditor
             variables={variableTable}
             value={request.body}
             onChange={(body) => onChange({ body })}
-            language={request.bodyType === 'json' ? 'json' : 'plain'}
-            invalid={Boolean(jsonError)}
-            placeholder={request.bodyType === 'json' ? '{\n  "key": "value"\n}' : 'Request payload'}
+            language={LANGUAGES[request.bodyType] ?? 'plain'}
+            invalid={Boolean(bodyError)}
+            placeholder={
+              request.bodyType === 'json' ? '{\n  "key": "value"\n}'
+              : request.bodyType === 'xml' ? '<request>\n  <field>value</field>\n</request>'
+              : 'Request payload'
+            }
             ariaLabel="Request body"
             testId="textarea-request-body"
           />
-          {jsonError ? (
-            <div className="hint" style={{ color: 'var(--red)', marginTop: 6 }} data-testid="text-json-error">
-              {jsonError}
+          {bodyError ? (
+            <div className="hint" style={{ color: 'var(--red)', marginTop: 6 }} data-testid="text-body-error">
+              {bodyError}
             </div>
           ) : null}
         </div>

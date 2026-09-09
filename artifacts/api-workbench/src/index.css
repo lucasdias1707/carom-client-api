@@ -647,6 +647,35 @@ textarea.field { height: auto; padding: 7px 8px; resize: vertical; font-family: 
 .section-label .spacer { flex: 1; }
 .stack { display: grid; gap: 14px; }
 
+/* A tab whose content is one document rather than a list of rows: the editor
+   grows to the bottom of the pane instead of sitting in a fixed box with dead
+   space under it. Grid would stretch every child; flex lets the label keep its
+   own height and gives the rest to the editor. */
+.stack.fills {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+/* Everything but the editor keeps its natural height; without this a flex item
+   is free to shrink below its content, and GraphQL's variables box — the one
+   child with a height of its own — would be squeezed by a long query. */
+.stack.fills > * { flex: 0 0 auto; }
+.stack.fills > .editor-fill { flex: 1 1 auto; }
+.editor-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+}
+.editor-fill > .code-editor {
+  flex: 1;
+  /* `min-height` is what the box was sized by before; inside a flex column it
+     would fight the growing, and a body longer than the pane would push the
+     pane into a scroll instead of scrolling itself. */
+  min-height: 0;
+  /* The drag-to-resize handle is meaningless once the height is the pane's. */
+  resize: none;
+}
+
 /* ==========================================================================
    Code and response
    ========================================================================== */
@@ -663,6 +692,9 @@ textarea.field { height: auto; padding: 7px 8px; resize: vertical; font-family: 
   tab-size: 2;
 }
 .code.wrap { white-space: pre-wrap; word-break: break-word; }
+/* Fill the pane so the code surface is the whole tab, not a strip the height
+   of the payload with the pane's own background showing under it. */
+.code.fill { min-height: 100%; }
 
 .editor {
   width: 100%;
@@ -744,6 +776,18 @@ textarea.field { height: auto; padding: 7px 8px; resize: vertical; font-family: 
 .jt-null { color: var(--json-null, var(--text-faint)); }
 .jt-punctuation { color: var(--json-punct, var(--text-faint)); }
 .jt-plain { color: var(--text); }
+
+/* XML, drawn from the same variables as JSON so the theme in Settings reaches
+   both: a tag name is the "key" colour, an attribute value the "string"
+   colour, the brackets the punctuation colour. */
+.jt-tag { color: var(--json-key, var(--purple)); }
+.jt-tag-punct { color: var(--json-punct, var(--text-faint)); }
+.jt-attr { color: var(--json-boolean, var(--blue)); }
+.jt-attr-value { color: var(--json-string, var(--green)); }
+.jt-cdata { color: var(--json-string, var(--green)); }
+.jt-meta { color: var(--json-null, var(--text-faint)); }
+.jt-comment { color: var(--text-faint); font-style: italic; }
+.jt-text { color: var(--text); }
 
 /* Release notes come from the GitHub release body, so they arrive as markdown
    of unknown length: scroll rather than let the dialog grow off-screen. */
