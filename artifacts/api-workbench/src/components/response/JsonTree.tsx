@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -119,9 +120,9 @@ function Node({ label, value, depth, term, isLast }: NodeProps) {
               />
             ))}
             {entries.length > limit ? (
-              <button className="btn btn-sm btn-ghost" onClick={() => setLimit((current) => current + PAGE_SIZE * 5)}>
+              <Button variant="ghost" size="sm" onClick={() => setLimit((current) => current + PAGE_SIZE * 5)}>
                 Show {Math.min(PAGE_SIZE * 5, entries.length - limit)} more of {entries.length}
-              </button>
+              </Button>
             ) : null}
           </div>
           <div className="json-line">

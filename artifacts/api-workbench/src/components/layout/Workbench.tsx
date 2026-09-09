@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import {
   Columns2,
   FilePlus2,
@@ -34,6 +33,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { createRequest } from '@/lib/factories';
 import { clampSidebarWidth } from '@/lib/sidebar';
 import { useWorkspace } from '@/state/workspace-store';
+import { IconButton } from '@/components/common/IconButton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 type Overlay = 'palette' | 'environments' | 'settings' | 'curl' | 'postman' | 'shortcuts' | null;
 
@@ -143,77 +146,68 @@ export function Workbench() {
 
       <main className="main">
         <div className="topbar">
-          <button
-            className="icon-btn"
+          <IconButton label="Toggle sidebar"
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            title={`Toggle sidebar (${MOD_LABEL} B)`}
-            aria-label="Toggle sidebar"
-            data-testid="button-toggle-sidebar"
+            hint={`${MOD_LABEL} B`}
+            testId="button-toggle-sidebar"
           >
-            <PanelLeft size={15} />
-          </button>
+            <PanelLeft />
+          </IconButton>
 
           <TabStrip />
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
-            <button
-              className="icon-btn"
+            <IconButton label="Environments"
               onClick={() => setOverlay('environments')}
-              title={`Environments (${MOD_LABEL} E)`}
-              aria-label="Environments"
-              data-testid="button-environments"
+              hint={`${MOD_LABEL} E`}
+              testId="button-environments"
             >
-              <Layers size={15} />
-            </button>
-            <button
-              className="icon-btn"
+              <Layers />
+            </IconButton>
+            <IconButton label="Switch pane layout"
               onClick={() =>
                 dispatch({
                   type: 'settings/update',
                   patch: { layout: state.settings.layout === 'horizontal' ? 'vertical' : 'horizontal' },
                 })
               }
-              title="Switch pane layout"
-              aria-label="Switch pane layout"
-              data-testid="button-toggle-layout"
+              testId="button-toggle-layout"
             >
-              {state.settings.layout === 'horizontal' ? <Rows2 size={15} /> : <Columns2 size={15} />}
-            </button>
+              {state.settings.layout === 'horizontal' ? <Rows2 /> : <Columns2 />}
+            </IconButton>
             <UpdateBadge />
-            <button
-              className="icon-btn"
+            <IconButton label="Settings"
               onClick={() => setOverlay('settings')}
-              title={`Settings (${MOD_LABEL} ,)`}
-              aria-label="Settings"
-              data-testid="button-settings"
+              hint={`${MOD_LABEL} ,`}
+              testId="button-settings"
             >
-              <Settings size={15} />
-            </button>
+              <Settings />
+            </IconButton>
           </div>
         </div>
 
         {activeFolder ? (
           <FolderPane folder={activeFolder} />
         ) : activeRequest ? (
-          <PanelGroup
+          <ResizablePanelGroup
             className="panes"
             direction={state.settings.layout}
             autoSaveId={`workbench-panes-${state.settings.layout}`}
           >
-            <Panel defaultSize={50} minSize={22} order={1}>
+            <ResizablePanel defaultSize={50} minSize={22} order={1}>
               <RequestPane request={activeRequest} sending={sending} onSend={sendActive} onCancel={cancel} />
-            </Panel>
-            <PanelResizeHandle className="pane-divider" />
-            <Panel defaultSize={50} minSize={22} order={2}>
+            </ResizablePanel>
+            <ResizableHandle className="pane-divider" />
+            <ResizablePanel defaultSize={50} minSize={22} order={2}>
               <ResponsePane
                 requestId={activeRequest.id}
                 sending={sending}
                 scriptLogs={scriptLogs}
                 scriptTests={scriptTests}
               />
-            </Panel>
-          </PanelGroup>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         ) : (
           <div className="empty" data-testid="empty-workspace">
             <div>
@@ -224,9 +218,9 @@ export function Workbench() {
               <p>
                 Pick one from the sidebar, or press <span className="kbd">{MOD_LABEL} N</span> to start a new one.
               </p>
-              <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={newRequest} data-testid="button-empty-new-request">
-                <FilePlus2 size={13} /> New request
-              </button>
+              <Button style={{ marginTop: 14 }} onClick={newRequest} data-testid="button-empty-new-request">
+                <FilePlus2 /> New request
+              </Button>
             </div>
           </div>
         )}

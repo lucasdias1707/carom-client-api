@@ -1,6 +1,9 @@
 import { Trash2 } from 'lucide-react';
 import { row } from '@/lib/factories';
 import type { KeyValue } from '@/types';
+import { IconButton } from '@/components/common/IconButton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 
 type KeyValueTableProps = {
   items: KeyValue[];
@@ -45,18 +48,17 @@ export function KeyValueTable({
         return (
           <div className={`kv-row ${!item.enabled && !isPlaceholder ? 'disabled' : ''}`} key={item.id} style={{ display: 'contents' }}>
             <div className="kv-cell center">
-              <input
-                type="checkbox"
-                className="checkbox"
+              <Checkbox
                 checked={item.enabled}
                 disabled={isPlaceholder}
-                onChange={(event) => update(index, { enabled: event.target.checked })}
+                onCheckedChange={(checked) => update(index, { enabled: checked === true })}
                 aria-label={`Enable row ${index + 1}`}
                 data-testid={`checkbox-${testPrefix}-${index}`}
               />
             </div>
             <div className="kv-cell">
-              <input
+              <Input
+                className="h-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
                 value={item.key}
                 spellCheck={false}
                 placeholder={isPlaceholder ? keyPlaceholder : ''}
@@ -66,7 +68,8 @@ export function KeyValueTable({
               />
             </div>
             <div className="kv-cell">
-              <input
+              <Input
+                className="h-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
                 value={item.value}
                 spellCheck={false}
                 placeholder={isPlaceholder ? valuePlaceholder : ''}
@@ -77,15 +80,15 @@ export function KeyValueTable({
             </div>
             <div className="kv-cell center">
               {isPlaceholder ? null : (
-                <button
-                  className="icon-btn"
-                  style={{ width: 22, height: 22 }}
+                <IconButton
+                  label={`Remove row ${index + 1}`}
+                  tone="danger"
+                  className="h-[22px] w-[22px] [&_svg]:size-[13px]"
                   onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
-                  aria-label={`Remove row ${index + 1}`}
-                  data-testid={`button-remove-${testPrefix}-${index}`}
+                  testId={`button-remove-${testPrefix}-${index}`}
                 >
-                  <Trash2 size={12} />
-                </button>
+                  <Trash2 />
+                </IconButton>
               )}
             </div>
           </div>

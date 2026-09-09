@@ -1,6 +1,9 @@
 import { TemplateField } from '@/components/request/TemplateField';
 import { resolveAuth } from '@/lib/inherit';
 import type { Auth, AuthType, Folder, VariableTable } from '@/types';
+import { SelectField } from '@/components/common/SelectField';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const AUTH_LABELS: Record<AuthType, string> = {
   inherit: 'Inherit from parent',
@@ -48,19 +51,14 @@ export function AuthEditor({ auth, onChange, chain = [], subject, variables }: A
       <div className="section-label">
         Authentication
         <span className="spacer" />
-        <select
-          className="select"
+        <SelectField
           value={auth.type}
-          onChange={(event) => setAuth({ type: event.target.value as AuthType })}
-          aria-label="Auth type"
-          data-testid="select-auth-type"
-        >
-          {types.map((type) => (
-            <option key={type} value={type}>
-              {AUTH_LABELS[type]}
-            </option>
-          ))}
-        </select>
+          onChange={(type) => setAuth({ type })}
+          options={types.map((type) => ({ value: type, label: AUTH_LABELS[type] }))}
+          ariaLabel="Auth type"
+          testId="select-auth-type"
+          className="min-w-[170px]"
+        />
       </div>
 
       {auth.type === 'inherit' ? (
@@ -72,9 +70,9 @@ export function AuthEditor({ auth, onChange, chain = [], subject, variables }: A
                 <strong>{inherited.folder.name}</strong>. Editing it there changes every{' '}
                 {subject === 'folder' ? 'folder and request' : 'request'} beneath that still inherits.
               </p>
-              <button className="btn btn-sm" onClick={detach} data-testid="button-auth-detach">
+              <Button variant="secondary" size="sm" onClick={detach} data-testid="button-auth-detach">
                 Give this {subject} its own
-              </button>
+              </Button>
             </>
           ) : (
             <p>
@@ -131,8 +129,8 @@ export function AuthEditor({ auth, onChange, chain = [], subject, variables }: A
               on screen. A `{{variable}}` still resolves here — it just cannot
               be shown as a chip without unmasking everything around it.
             */}
-            <input
-              className="field mono"
+            <Input
+              className="font-mono"
               type="password"
               value={auth.password}
               onChange={(event) => setAuth({ password: event.target.value })}
@@ -173,15 +171,17 @@ export function AuthEditor({ auth, onChange, chain = [], subject, variables }: A
             <span className="section-label" style={{ margin: 0 }}>
               Send in
             </span>
-            <select
-              className="select"
+            <SelectField
               value={auth.apiKeyIn}
-              onChange={(event) => setAuth({ apiKeyIn: event.target.value as 'header' | 'query' })}
-              data-testid="select-auth-key-in"
-            >
-              <option value="header">Header</option>
-              <option value="query">Query parameter</option>
-            </select>
+              onChange={(apiKeyIn) => setAuth({ apiKeyIn })}
+              options={[
+                { value: 'header', label: 'Header' },
+                { value: 'query', label: 'Query parameter' },
+              ]}
+              ariaLabel="Send the key in"
+              testId="select-auth-key-in"
+              block
+            />
           </label>
         </div>
       ) : null}

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0' +
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[15px] [&_svg]:shrink-0' +
     ' hover-elevate active-elevate-2',
   {
     variants: {
@@ -27,11 +27,13 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        // changed sizes
-        default: 'min-h-9 px-4 py-2',
-        sm: 'min-h-8 rounded-md px-3 text-xs',
-        lg: 'min-h-10 rounded-md px-8',
-        icon: 'h-9 w-9',
+        // Tuned for this app rather than shadcn's defaults: it is a dense
+        // tool, and a 36px button next to a 28px row reads as a different
+        // product. Changed here so no call site has to override a height.
+        default: 'min-h-8 px-3 py-1 text-[13px]',
+        sm: 'min-h-7 rounded-md px-2.5 text-[12.5px]',
+        lg: 'min-h-9 rounded-md px-6',
+        icon: 'h-7 w-7',
       },
     },
     defaultVariants: {

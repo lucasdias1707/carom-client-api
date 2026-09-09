@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export type MenuEntry =
   | { kind: 'item'; label: string; icon?: ReactNode; danger?: boolean; onSelect: () => void }
@@ -11,63 +18,54 @@ type ContextMenuProps = {
   onClose: () => void;
 };
 
-/** Small floating menu positioned at a point, kept inside the viewport. */
+/**
+ * The right-click menu, opened at a point.
+ *
+ * Radix menus hang off a trigger element, and there is no element here — the
+ * anchor is wherever the pointer was. So the trigger is an empty span pinned
+ * at that point: zero-sized, so the menu opens exactly there, and Radix then
+ * owns everything the hand-written version had to do by hand or did not do at
+ * all — flipping when it would fall off the screen, Escape, the click outside,
+ * arrow keys and typeahead through the items, and giving focus back to the
+ * tree afterwards.
+ */
 export function ContextMenu({ x, y, entries, onClose }: ContextMenuProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const rect = element.getBoundingClientRect();
-    setPosition({
-      left: Math.min(x, window.innerWidth - rect.width - 8),
-      top: Math.min(y, window.innerHeight - rect.height - 8),
-    });
-  }, [x, y]);
-
-  useEffect(() => {
-    const dismiss = () => onClose();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('mousedown', dismiss);
-    window.addEventListener('resize', dismiss);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', dismiss);
-      window.removeEventListener('resize', dismiss);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [onClose]);
-
   return (
-    <div
-      className="menu"
-      ref={ref}
-      style={position}
-      role="menu"
-      onMouseDown={(event) => event.stopPropagation()}
-      data-testid="context-menu"
+    <DropdownMenu
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      {entries.map((entry, index) =>
-        entry.kind === 'separator' ? (
-          <div className="menu-sep" key={`sep-${index}`} />
-        ) : (
-          <button
-            key={entry.label}
-            className={`menu-item ${entry.danger ? 'danger' : ''}`}
-            role="menuitem"
-            onClick={() => {
-              entry.onSelect();
-              onClose();
-            }}
-          >
-            {entry.icon}
-            {entry.label}
-          </button>
-        ),
-      )}
-    </div>
+      <DropdownMenuTrigger asChild>
+        <span aria-hidden className="fixed h-0 w-0" style={{ left: x, top: y }} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="bottom"
+        sideOffset={0}
+        className="min-w-[184px] border-[var(--border-strong)] bg-[var(--bg-raised)] text-[13px] shadow-[var(--shadow-pop)]"
+        data-testid="context-menu"
+      >
+        {entries.map((entry, index) =>
+          entry.kind === 'separator' ? (
+            <DropdownMenuSeparator key={`sep-${index}`} className="bg-[var(--border)]" />
+          ) : (
+            <DropdownMenuItem
+              key={entry.label}
+              onSelect={entry.onSelect}
+              className={
+                entry.danger
+                  ? 'gap-2 text-[13px] text-[var(--red)] focus:text-[var(--red)] [&_svg]:size-[14px]'
+                  : 'gap-2 text-[13px] [&_svg]:size-[14px]'
+              }
+            >
+              {entry.icon}
+              {entry.label}
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
