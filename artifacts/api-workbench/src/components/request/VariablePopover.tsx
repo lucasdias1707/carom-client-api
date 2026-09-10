@@ -15,6 +15,9 @@ type VariablePopoverProps = {
   /** `null` when the variable is referenced but defined nowhere yet. */
   variable: ResolvedVariable | null;
   anchor: DOMRect;
+  /** The pointer arriving, so the field it came from can stop the close timer. */
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
   onClose: () => void;
 };
 
@@ -22,8 +25,13 @@ type VariablePopoverProps = {
  * Edit the definition a variable actually resolves to, without leaving the
  * request. Writes back to whichever folder or environment supplied the value,
  * so the edit lands where the reader expects.
+ *
+ * It opens on hover now, which is why nothing in here takes focus on its own:
+ * the caret is in the URL the pointer happened to pass over, and a popover
+ * that appears under the mouse must not steal the keystrokes being typed
+ * somewhere else. Clicking into the value field is what hands focus over.
  */
-export function VariablePopover({ name, variable, anchor, onClose }: VariablePopoverProps) {
+export function VariablePopover({ name, variable, anchor, onPointerEnter, onPointerLeave, onClose }: VariablePopoverProps) {
   const { state, dispatch, activeRequest } = useWorkspace();
   const [value, setValue] = useState(variable?.value ?? '');
 
@@ -110,6 +118,9 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
         sideOffset={6}
         className="var-popover w-[min(360px,calc(100vw-20px))] p-2.5"
         aria-label={`Edit ${name}`}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
         data-testid="popover-variable"
       >
       <div className="var-popover-head">
@@ -138,7 +149,6 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
             <Input
               className="font-mono"
               value={value}
-              autoFocus
               onChange={(event) => setValue(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') save();
@@ -172,7 +182,6 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
             <Input
               className="font-mono"
               value={value}
-              autoFocus
               placeholder="Value"
               onChange={(event) => setValue(event.target.value)}
               aria-label={`Value of ${name}`}
