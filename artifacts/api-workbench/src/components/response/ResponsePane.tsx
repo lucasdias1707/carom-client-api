@@ -209,7 +209,13 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
       {response.error ? (
         <div className="error-box" data-testid="status-network-error">
           <strong>Could not reach this endpoint</strong>
-          {response.error}
+          {/* The reason first, then why this transport tends to fail that way;
+              run together they read as one confused sentence. */}
+          {response.error.split('\n\n').map((paragraph, index) => (
+            <p key={index} className={index > 0 ? 'error-note' : undefined}>
+              {paragraph}
+            </p>
+          ))}
         </div>
       ) : null}
 

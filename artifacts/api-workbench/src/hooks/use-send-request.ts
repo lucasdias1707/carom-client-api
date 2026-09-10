@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { prepareRequest, sendRequest, toErrorResponse } from '@/lib/http';
+import { prepareRequest, sendRequest, toErrorResponse, type PreparedRequest } from '@/lib/http';
 import { scriptChain } from '@/lib/inherit';
 import { applyVariableWrites, runScripts, type ScriptLogEntry, type ScriptTest } from '@/lib/scripts';
 import { row } from '@/lib/factories';
@@ -66,6 +66,9 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         });
       };
 
+      /** Set once the URL and headers are resolved, for the failure record. */
+      let sent: PreparedRequest | null = null;
+
       try {
         const view = {
           method: request.method,
@@ -93,6 +96,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
 
         const prepared = prepareRequest(request, resolved, { folders: chain, extraHeaders: pre.headers });
         if (!prepared.url.trim()) throw new Error('Enter a URL before sending.');
+        sent = prepared;
 
         const result = await sendRequest(prepared, {
           mode: state.settings.sendMode,
@@ -122,8 +126,11 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
           setLastError(controller.signal.reason === 'timeout' ? 'Request timed out.' : null);
           return;
         }
-        const prepared = { method: request.method, url: request.url, headers: [], body: { type: 'none' } as const };
-        const failure = toErrorResponse(prepared, error, Math.round(performance.now() - started));
+        // The prepared request when there is one: a failure recorded with the
+        // raw `{{apiUrl}}/path` instead of the address actually attempted is a
+        // history row that cannot be read back later.
+        const attempted = sent ?? { method: request.method, url: request.url, headers: [], body: { type: 'none' } as const };
+        const failure = toErrorResponse(attempted, error, Math.round(performance.now() - started));
         dispatch({ type: 'response/add', response: { ...failure, requestId: request.id } });
         setLastError(failure.error ?? 'Request failed.');
       } finally {

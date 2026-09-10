@@ -345,6 +345,34 @@ async function sendViaProxy(prepared: PreparedRequest, config: SendConfig): Prom
 /** Raised when the proxy itself fails, as opposed to the upstream endpoint. */
 export class ProxyError extends Error {}
 
+/**
+ * A send that failed, carrying the transport it failed on.
+ *
+ * Which one was used is known here and nowhere else — the fallback from the
+ * proxy to the browser happens inside `sendRequest` — and the failure record
+ * used to guess "browser" for all of them, so a desktop request that could not
+ * connect was labelled as if a browser had blocked it.
+ */
+export class SendFailure extends Error {
+  constructor(
+    message: string,
+    readonly via: SendResult['via'],
+  ) {
+    super(message);
+    this.name = 'SendFailure';
+  }
+}
+
+function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/** Cancellation is not a failure, and a failure is not re-wrapped twice. */
+function asFailure(error: unknown, via: SendResult['via']): unknown {
+  if (isAbort(error) || error instanceof SendFailure) return error;
+  return new SendFailure(reasonOf(error), via);
+}
+
 export type Transport = 'desktop' | 'proxy' | 'browser';
 
 /**
@@ -375,24 +403,95 @@ export async function sendRequest(prepared: PreparedRequest, config: SendConfig)
     proxyAvailable: config.proxyAvailable,
   });
 
-  if (transport === 'desktop') {
-    return sendDirect(prepared, config, { fetch: await desktopFetch(), via: 'desktop' });
-  }
-  if (transport === 'browser') return sendDirect(prepared, config);
-
   try {
-    return await sendViaProxy(prepared, config);
+    if (transport === 'desktop') {
+      return await sendDirect(prepared, config, { fetch: await desktopFetch(), via: 'desktop' });
+    }
+    if (transport === 'browser') return await sendDirect(prepared, config);
+
+    try {
+      return await sendViaProxy(prepared, config);
+    } catch (error) {
+      if (config.mode === 'proxy' || isAbort(error)) throw error;
+      // The proxy was a preference, not an instruction; the browser is the
+      // fallback, and it is the browser that failed if this throws.
+      try {
+        return await sendDirect(prepared, config);
+      } catch (fallback) {
+        throw asFailure(fallback, 'browser');
+      }
+    }
   } catch (error) {
-    if (config.mode === 'proxy' || (error instanceof DOMException && error.name === 'AbortError')) throw error;
-    return sendDirect(prepared, config);
+    throw asFailure(error, transport);
   }
 }
 
+/**
+ * What actually went wrong, in the caller's words wherever there are any.
+ *
+ * The desktop plugin rejects with a **string** from Rust — "error sending
+ * request for url (...): tcp connect error: Connection refused" — and reading
+ * only `Error.message` threw exactly that away, leaving the one line that says
+ * nothing. Every shape a reject can arrive in is unwrapped here instead.
+ */
+export function reasonOf(error: unknown): string {
+  if (typeof error === 'string' && error.trim()) return error.trim();
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object') {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message.trim();
+  }
+  return 'The request could not be completed.';
+}
+
+/** True for a host that only exists on this machine or this network. */
+export function isLocalHost(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      /^127\./.test(hostname) ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The sentence after the reason: why *this* transport tends to fail this way.
+ *
+ * A browser's `fetch` reports a blocked request and a refused connection
+ * identically — a bare TypeError with no status — so the app cannot tell them
+ * apart and should not pretend to. What it can do is name both, and say which
+ * of the two ways out applies.
+ */
+export function failureHint(url: string, via: SendResult['via']): string | null {
+  if (via === 'desktop') {
+    return isLocalHost(url)
+      ? 'Sent natively, so CORS is not involved: either nothing is listening on that port, or it is listening on the other loopback address — try 127.0.0.1 in place of localhost, or the reverse.'
+      : null;
+  }
+  if (via === 'browser') {
+    return isLocalHost(url)
+      ? 'Sent from the browser, where this reads the same whether the server refused the connection or the browser blocked it for CORS. The desktop app sends natively and has neither problem; the companion server is the way out in a tab.'
+      : 'Sent from the browser, so a missing CORS header on the endpoint looks exactly like an unreachable host. The desktop app sends natively; the companion server does the same for a tab.';
+  }
+  return null;
+}
+
 export function toErrorResponse(prepared: PreparedRequest, error: unknown, durationMs: number): SendResult {
-  const message =
-    error instanceof Error
-      ? error.message
-      : 'The request could not be completed.';
+  // A failure that reached here through `sendRequest` knows its own transport;
+  // anything else (a script throwing, an empty URL) never left the app.
+  const via: SendResult['via'] = error instanceof SendFailure ? error.via : 'browser';
+  const reason = reasonOf(error);
+  const hint = error instanceof SendFailure ? failureHint(prepared.url, via) : null;
+  const message = hint ? `${reason}\n\n${hint}` : reason;
   return {
     id: createId('res'),
     url: prepared.url,
@@ -405,7 +504,7 @@ export function toErrorResponse(prepared: PreparedRequest, error: unknown, durat
     size: 0,
     durationMs,
     sentAt: new Date().toISOString(),
-    via: 'browser',
+    via,
     error: message,
   };
 }

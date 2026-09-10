@@ -1297,6 +1297,14 @@
 
 
 
+  /* The second paragraph of a failure: the reason is what happened, this is
+     why this way of sending tends to fail like that. Quieter, and set apart. */
+  .error-box .error-note {
+    margin-top: 6px;
+    color: var(--text-dim);
+    font-size: 12.5px;
+  }
+
   .toast {
     position: relative;
     display: flex;
