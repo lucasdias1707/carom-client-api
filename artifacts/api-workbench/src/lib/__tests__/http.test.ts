@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildUrl, chooseTransport, isDesktop, prepareRequest } from '@/lib/http';
+import { buildUrl, chooseTransport, isDesktop, prepareRequest, toFetchBody } from '@/lib/http';
+import { toCurl } from '@/lib/curl';
 import { createRequest, emptyAuth, row } from '@/lib/factories';
 import type { RequestRecord } from '@/types';
 
@@ -155,5 +156,38 @@ describe('isDesktop', () => {
   it('is true once the Tauri shell has injected its bridge', () => {
     Object.defineProperty(globalThis, 'window', { value: { __TAURI_INTERNALS__: {} }, configurable: true });
     expect(isDesktop()).toBe(true);
+  });
+});
+
+describe('multipart with files', () => {
+  const withFile = () =>
+    make({
+      method: 'POST',
+      bodyType: 'multipart',
+      multipart: [
+        { id: 'r1', key: 'note', value: 'hello', enabled: true },
+        { id: 'r2', key: 'doc', value: '', enabled: true, file: { name: 'a.pdf', type: 'application/pdf', size: 9 } },
+        { id: 'r3', key: 'off', value: 'x', enabled: false },
+      ],
+    });
+
+  it('carries the row id through, so the bytes can be found when the body is built', () => {
+    expect(prepareRequest(withFile(), {}).body).toEqual({
+      type: 'multipart',
+      fields: [
+        { key: 'note', value: 'hello' },
+        { key: 'doc', rowId: 'r2', file: { name: 'a.pdf', type: 'application/pdf', size: 9 } },
+      ],
+    });
+  });
+
+  it('refuses to send a file whose bytes are gone rather than sending the field empty', () => {
+    // Metadata is persisted, bytes are not: this is what a reload leaves
+    // behind, and it has to be said out loud instead of posting an empty part.
+    expect(() => toFetchBody(prepareRequest(withFile(), {}).body)).toThrow(/no longer loaded/);
+  });
+
+  it('writes a file part the way curl writes one', () => {
+    expect(toCurl(prepareRequest(withFile(), {}))).toContain('doc=@a.pdf');
   });
 });

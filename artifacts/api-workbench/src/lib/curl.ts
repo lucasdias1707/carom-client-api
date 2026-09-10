@@ -255,7 +255,13 @@ export function toCurl(prepared: PreparedRequest): string {
   } else if (body.type === 'form') {
     for (const field of body.fields) parts.push('\\\n  --data-urlencode', shellQuote(`${field.key}=${field.value}`));
   } else if (body.type === 'multipart') {
-    for (const field of body.fields) parts.push('\\\n  --form', shellQuote(`${field.key}=${field.value}`));
+    for (const field of body.fields) {
+      // curl reads a file with `@name`, which is the closest thing to what the
+      // app is doing — and it means the copied command works if the file is
+      // sitting in the directory it runs from.
+      const part = 'file' in field ? `${field.key}=@${field.file.name}` : `${field.key}=${field.value}`;
+      parts.push('\\\n  --form', shellQuote(part));
+    }
   }
   return parts.join(' ');
 }

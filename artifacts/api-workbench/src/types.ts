@@ -19,6 +19,8 @@ export type BodyType = (typeof BODY_TYPES)[number];
  */
 export type AuthType = 'inherit' | 'none' | 'bearer' | 'basic' | 'apikey';
 
+import type { FileMeta } from '@/lib/files';
+
 export type KeyValue = {
   id: string;
   key: string;
@@ -30,6 +32,13 @@ export type KeyValue = {
    * everything else, including every row written before this existed.
    */
   source?: 'url';
+  /**
+   * Set on a multipart row that carries a file. Only what describes the file
+   * lives here — the bytes are held for the session in `lib/files.ts`, keyed by
+   * this row's id, because the whole state is written to localStorage and one
+   * attachment could evict every request in it.
+   */
+  file?: FileMeta;
 };
 
 export type Auth = {

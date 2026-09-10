@@ -661,7 +661,10 @@
 
   .kv {
     display: grid;
-    grid-template-columns: 26px minmax(90px, 0.8fr) minmax(120px, 1.2fr) 26px;
+    /* The last column holds the row's actions. Multipart rows carry two of
+       them — attach and remove — so it is sized for two and the tables that
+       only remove simply centre one in it. */
+    grid-template-columns: 26px minmax(90px, 0.8fr) minmax(120px, 1.2fr) 52px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
@@ -697,6 +700,18 @@
   }
   .kv-cell input:focus { background: var(--bg-raised); outline: none; }
   .kv-cell.center { justify-content: center; }
+  /* An attached file reads as one object, not as a value someone typed. */
+  .kv-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 4px 0 8px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .kv-file .hint { font-size: 11px; }
   .kv-row.disabled .kv-cell input { color: var(--text-faint); text-decoration: line-through; }
 
 

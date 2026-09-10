@@ -1,8 +1,10 @@
-import { Trash2 } from 'lucide-react';
+import { useRef } from 'react';
+import { Paperclip, Trash2, X } from 'lucide-react';
 import { row } from '@/lib/factories';
 import type { KeyValue } from '@/types';
 import { IconButton } from '@/components/common/IconButton';
 import { useToast } from '@/components/common/Toaster';
+import { describeFile, dropFile, putFile } from '@/lib/files';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 
@@ -12,6 +14,11 @@ type KeyValueTableProps = {
   keyPlaceholder?: string;
   valuePlaceholder?: string;
   testPrefix: string;
+  /**
+   * Multipart rows can carry a file instead of typed text. Only multipart: a
+   * query parameter or a header has nowhere to put one.
+   */
+  allowFiles?: boolean;
 };
 
 /**
@@ -31,12 +38,28 @@ export function KeyValueTable({
   keyPlaceholder = 'Name',
   valuePlaceholder = 'Value',
   testPrefix,
+  allowFiles = false,
 }: KeyValueTableProps) {
   const { toast } = useToast();
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const pickingFor = useRef<number>(-1);
   const rows = [...items, row('', '', true)];
+
+  const attach = (index: number, file: File) => {
+    const target = index === items.length ? row('', '', true) : items[index];
+    const meta = putFile(target.id, file);
+    if (index === items.length) onChange([...items, { ...target, key: target.key || file.name, file: meta }]);
+    else update(index, { file: meta, value: '' });
+  };
+
+  const detach = (index: number) => {
+    dropFile(items[index].id);
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, file: undefined } : item)));
+  };
 
   const remove = (index: number) => {
     const removed = items[index];
+    dropFile(removed.id);
     const previous = items;
     onChange(items.filter((_, itemIndex) => itemIndex !== index));
     toast({
@@ -88,17 +111,48 @@ export function KeyValueTable({
               />
             </div>
             <div className="kv-cell">
-              <Input
-                className="h-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
-                value={item.value}
-                spellCheck={false}
-                placeholder={isPlaceholder ? valuePlaceholder : ''}
-                onChange={(event) => update(index, { value: event.target.value })}
-                aria-label={`${valuePlaceholder} ${index + 1}`}
-                data-testid={`input-${testPrefix}-value-${index}`}
-              />
+              {item.file ? (
+                <div className="kv-file" data-testid={`file-${testPrefix}-${index}`}>
+                  <Paperclip size={12} />
+                  <span className="truncate" title={item.file.name}>
+                    {item.file.name}
+                  </span>
+                  <span className="hint mono shrink-0">{describeFile(item.file)}</span>
+                  <IconButton
+                    label={`Remove the file from row ${index + 1}`}
+                    className="ml-auto h-[20px] w-[20px] [&_svg]:size-[12px]"
+                    onClick={() => detach(index)}
+                    testId={`button-detach-${testPrefix}-${index}`}
+                  >
+                    <X />
+                  </IconButton>
+                </div>
+              ) : (
+                <Input
+                  className="h-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
+                  value={item.value}
+                  spellCheck={false}
+                  placeholder={isPlaceholder ? valuePlaceholder : ''}
+                  onChange={(event) => update(index, { value: event.target.value })}
+                  aria-label={`${valuePlaceholder} ${index + 1}`}
+                  data-testid={`input-${testPrefix}-value-${index}`}
+                />
+              )}
             </div>
-            <div className="kv-cell center">
+            <div className="kv-cell center gap-0.5">
+              {allowFiles && !item.file ? (
+                <IconButton
+                  label={`Attach a file to row ${index + 1}`}
+                  className="h-[22px] w-[22px] [&_svg]:size-[13px]"
+                  onClick={() => {
+                    pickingFor.current = index;
+                    pickerRef.current?.click();
+                  }}
+                  testId={`button-attach-${testPrefix}-${index}`}
+                >
+                  <Paperclip />
+                </IconButton>
+              ) : null}
               {isPlaceholder ? null : (
                 <IconButton
                   label={`Remove row ${index + 1}`}
@@ -114,6 +168,25 @@ export function KeyValueTable({
           </div>
         );
       })}
+      {/* One picker for the table rather than one per row; the row that asked
+          is remembered while the native dialog is up. */}
+      {allowFiles ? (
+        <input
+          ref={pickerRef}
+          type="file"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file && pickingFor.current >= 0) attach(pickingFor.current, file);
+            // Clearing lets the same file be picked twice in a row.
+            event.target.value = '';
+            pickingFor.current = -1;
+          }}
+          data-testid={`input-file-${testPrefix}`}
+        />
+      ) : null}
     </div>
   );
 }
