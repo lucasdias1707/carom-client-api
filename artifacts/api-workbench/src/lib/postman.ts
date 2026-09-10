@@ -78,7 +78,11 @@ type PostmanEnvironment = {
   _postman_variable_scope?: string;
 };
 
-export type PostmanImport = {
+/**
+ * What every importer produces, whatever file it read. Named for the shape
+ * rather than for Postman, now that Insomnia, OpenAPI and HAR land here too.
+ */
+export type ParsedImport = {
   /** What the collection or environment was called, for the toast. */
   name: string;
   folders: Folder[];
@@ -101,6 +105,9 @@ export type PostmanImport = {
    */
   variables: KeyValue[];
 };
+
+/** The name this shape was introduced under, kept for the Postman module. */
+export type PostmanImport = ParsedImport;
 
 function text(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -285,7 +292,7 @@ export function isPostmanEnvironment(value: unknown): value is PostmanEnvironmen
  * root: a collection is a unit in Postman, it carries its own variables, auth
  * and scripts, and there is nowhere else for those to live.
  */
-export function importPostman(payload: unknown, workspaceId: string, startIndex = 0): PostmanImport {
+export function importPostman(payload: unknown, workspaceId: string, startIndex = 0): ParsedImport {
   if (isPostmanEnvironment(payload)) {
     const name = text(payload.name) || 'Imported environment';
     return {
@@ -377,7 +384,7 @@ export function importPostman(payload: unknown, workspaceId: string, startIndex 
 }
 
 /** Parse the file text, with a message worth reading when it is not JSON. */
-export function parsePostman(raw: string, workspaceId: string, startIndex = 0): PostmanImport {
+export function parsePostman(raw: string, workspaceId: string, startIndex = 0): ParsedImport {
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
@@ -396,7 +403,7 @@ export type ImportNode =
   | { kind: 'request'; id: string; name: string; method: HttpMethod; depth: number };
 
 /** Build that tree out of an already-parsed import. */
-export function importTree(imported: PostmanImport): ImportNode[] {
+export function importTree(imported: ParsedImport): ImportNode[] {
   const build = (parentId: string | null, depth: number): ImportNode[] => [
     ...imported.folders
       .filter((folder) => folder.parentId === parentId)
@@ -441,7 +448,7 @@ export function allIds(nodes: ImportNode[]): string[] {
  * is the whole point of a per-row checkbox.
  */
 export function pruneImport(
-  imported: PostmanImport,
+  imported: ParsedImport,
   selected: ReadonlySet<string>,
 ): { folders: Folder[]; requests: RequestRecord[] } {
   const requests = imported.requests.filter((request) => selected.has(request.id));
@@ -475,7 +482,7 @@ export function pruneImport(
  * Ids are left alone on purpose: the dialog's tick boxes are keyed on them, and
  * changing the destination must not throw the selection away.
  */
-export function retargetImport(imported: PostmanImport, workspaceId: string): PostmanImport {
+export function retargetImport(imported: ParsedImport, workspaceId: string): ParsedImport {
   return {
     ...imported,
     folders: imported.folders.map((folder) => ({ ...folder, workspaceId })),

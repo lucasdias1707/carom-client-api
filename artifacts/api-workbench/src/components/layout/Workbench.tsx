@@ -15,7 +15,7 @@ import {
 import { CommandPalette, type Command } from '@/components/dialogs/CommandPalette';
 import { EnvironmentDialog } from '@/components/dialogs/EnvironmentDialog';
 import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
-import { ImportPostmanDialog } from '@/components/dialogs/ImportPostmanDialog';
+import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
@@ -39,7 +39,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
-type Overlay = 'palette' | 'environments' | 'settings' | 'curl' | 'postman' | 'shortcuts' | null;
+type Overlay = 'palette' | 'environments' | 'settings' | 'curl' | 'import' | 'shortcuts' | null;
 
 export function Workbench() {
   const { state, dispatch, activeRequest, activeFolder } = useWorkspace();
@@ -107,7 +107,7 @@ export function Workbench() {
     { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: `${MOD_LABEL} ⏎`, run: sendActive },
     { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: `${MOD_LABEL} E`, run: () => setOverlay('environments') },
     { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
-    { id: 'import-postman', label: 'Import a Postman collection', icon: <FolderInput size={13} />, run: () => setOverlay('postman') },
+    { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
     { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: `${MOD_LABEL} ,`, run: () => setOverlay('settings') },
     { id: 'shortcuts', label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
     {
@@ -140,7 +140,7 @@ export function Workbench() {
     >
       <Sidebar
         onImportCurl={() => setOverlay('curl')}
-        onImportPostman={() => setOverlay('postman')}
+        onImport={() => setOverlay('import')}
         locate={locate}
       />
       {sidebarVisible ? (
@@ -243,7 +243,7 @@ export function Workbench() {
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'settings' ? <SettingsDialog onClose={() => setOverlay(null)} proxyStatus={proxyStatus} /> : null}
       {overlay === 'curl' ? <ImportCurlDialog onClose={() => setOverlay(null)} /> : null}
-      {overlay === 'postman' ? <ImportPostmanDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'import' ? <ImportDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
     </div>
   );

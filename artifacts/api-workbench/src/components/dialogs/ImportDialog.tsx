@@ -6,13 +6,13 @@ import { createEnvironment, createWorkspace } from '@/lib/factories';
 import {
   allIds,
   importTree,
-  parsePostman,
   pruneImport,
   retargetImport,
   subtreeIds,
   type ImportNode,
-  type PostmanImport,
+  type ParsedImport,
 } from '@/lib/postman';
+import { FORMAT_LABELS, readImport, type ImportFormat } from '@/lib/import-formats';
 import { useWorkspace } from '@/state/workspace-store';
 import { SelectField } from '@/components/common/SelectField';
 import { Button } from '@/components/ui/button';
@@ -21,27 +21,34 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 
 const SAMPLE = `{
-  "info": { "name": "My API", "schema": ".../v2.1.0/collection.json" },
-  "item": [ ... ]
+  "openapi": "3.0.0",
+  "info": { "title": "My API" },
+  "paths": { "/things": { "get": { "summary": "List things" } } }
 }`;
 
 /** The value the destination picker uses for "somewhere that does not exist yet". */
 const NEW_WORKSPACE = 'new';
 
 /**
- * Import a Postman export.
+ * Import from another tool.
  *
- * Two steps, because a collection is usually bigger than what someone wants:
- * read the file, then choose what comes across and where it lands. Both ways in
- * are offered — the file Postman wrote is the usual case, and pasting is what
+ * Two steps, because an export is usually bigger than what someone wants: read
+ * the file, then choose what comes across and where it lands. Both ways in are
+ * offered — the file the other app wrote is the usual case, and pasting is what
  * is left when the JSON arrived in a chat message rather than as a download.
+ *
+ * The format is detected from the content rather than asked for. Every one of
+ * these is a `.json` dragged out of a different app, and making someone
+ * classify their own export before the app will look at it is a question the
+ * file itself can answer.
  */
-export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
+export function ImportDialog({ onClose }: { onClose: () => void }) {
   const { state, dispatch } = useWorkspace();
   const { toast } = useToast();
   const [raw, setRaw] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PostmanImport | null>(null);
+  const [preview, setPreview] = useState<ParsedImport | null>(null);
+  const [format, setFormat] = useState<ImportFormat | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [destination, setDestination] = useState(state.activeWorkspaceId);
@@ -52,7 +59,12 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
 
   const read = (contents: string) => {
     try {
-      const parsed = parsePostman(contents, state.activeWorkspaceId, state.requests.length);
+      const { format: detected, imported: parsed } = readImport(
+        contents,
+        state.activeWorkspaceId,
+        state.requests.length,
+      );
+      setFormat(detected);
       setPreview(parsed);
       // Everything starts ticked: the common case is "all of it", and unticking
       // what you do not want is less work than ticking what you do.
@@ -61,6 +73,7 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
       setError(null);
     } catch (importError) {
       setPreview(null);
+      setFormat(null);
       setError(importError instanceof Error ? importError.message : 'Could not read that file.');
     }
   };
@@ -170,10 +183,14 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog
-      title="Import from Postman"
-      description="A collection (v2.1) or an environment, exported from Postman."
+      title="Import"
+      description={
+        format
+          ? `Read as ${FORMAT_LABELS[format]}.`
+          : 'Postman, Insomnia v4, OpenAPI or Swagger, or a HAR from a browser. The format is worked out from the file.'
+      }
       onClose={onClose}
-      testId="dialog-import-postman"
+      testId="dialog-import"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -183,7 +200,7 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
             <Button
               onClick={confirm}
               disabled={!canImport}
-              data-testid="button-confirm-import-postman"
+              data-testid="button-confirm-import"
             >
               Import
             </Button>

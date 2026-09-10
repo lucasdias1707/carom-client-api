@@ -27,11 +27,11 @@ type ConfirmState = { kind: 'folder'; folder: Folder } | { kind: 'request'; requ
 
 export function Sidebar({
   onImportCurl,
-  onImportPostman,
+  onImport,
   locate,
 }: {
   onImportCurl: () => void;
-  onImportPostman: () => void;
+  onImport: () => void;
   /**
    * A request to reveal, and a nonce so asking for the same one twice still
    * counts as asking twice.
@@ -422,8 +422,8 @@ export function Sidebar({
         <Button variant="ghost" size="sm" onClick={onImportCurl} data-testid="button-import-curl">
           <Terminal /> Import curl
         </Button>
-        <Button variant="ghost" size="sm" onClick={onImportPostman} data-testid="button-import-postman">
-          <FolderInput /> Import Postman
+        <Button variant="ghost" size="sm" onClick={onImport} data-testid="button-import">
+          <FolderInput /> Import
         </Button>
       </div>
 
