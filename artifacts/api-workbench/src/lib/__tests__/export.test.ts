@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { createFolder, createRequest, createWorkspace } from '@/lib/factories';
-import { exportFileName, exportFolder, exportRequest, isSubtreeExport, subtreeFolderIds } from '@/lib/export';
+import { createEnvironment, createFolder, createRequest, createWorkspace, row } from '@/lib/factories';
+import {
+  exportFileName,
+  exportFolder,
+  exportRequest,
+  exportSelection,
+  isSubtreeExport,
+  subtreeFolderIds,
+} from '@/lib/export';
+import { importSubtree } from '@/lib/carom';
+import { detectFormat, readImport } from '@/lib/import-formats';
 import { defaultSettings } from '@/lib/settings';
 import type { Folder, RequestRecord, WorkspaceState } from '@/types';
 
@@ -144,5 +153,108 @@ describe('isSubtreeExport', () => {
   it('rejects values that are not objects', () => {
     expect(isSubtreeExport(null)).toBe(false);
     expect(isSubtreeExport('workspace-subtree')).toBe(false);
+  });
+});
+
+describe('exportSelection', () => {
+  it('takes exactly what was ticked, and the folders that hold it', () => {
+    const { state, api, v2, requests } = fixture();
+    const result = exportSelection(state, { name: 'Slice', selected: new Set([requests.deep.id]) });
+    // The pokemon folder is not ticked, but "deep" lives in it, and that folder
+    // lives in v2, which lives in api — all four are the path to the request.
+    expect(result.requests.map((request) => request.name)).toEqual(['deep']);
+    expect(result.folders.map((folder) => folder.name).sort()).toEqual(['API', 'pokemon', 'v2']);
+    // "Other" holds nothing that was ticked, so it stays behind.
+    expect(result.folders.map((folder) => folder.id)).not.toContain(state.folders[3].id);
+    expect(result.folders.find((folder) => folder.id === v2.id)?.parentId).toBe(api.id);
+  });
+
+  it('leaves out the environments nobody ticked, and keeps the ones they did', () => {
+    const { state } = fixture();
+    const staging = createEnvironment(state.activeWorkspaceId, 'Staging', false, [row('host', 'https://stg')]);
+    const other = createEnvironment(state.activeWorkspaceId, 'Prod', false, []);
+    const withEnvironments = { ...state, environments: [staging, other] };
+
+    const result = exportSelection(withEnvironments, {
+      name: 'W',
+      selected: new Set(),
+      environmentIds: new Set([staging.id]),
+    });
+    expect(result.environments?.map((environment) => environment.name)).toEqual(['Staging']);
+  });
+
+  it('writes no environments key at all when none were ticked', () => {
+    // A version 1 reader sees exactly the file it used to see.
+    const { state } = fixture();
+    expect('environments' in exportSelection(state, { name: 'W', selected: new Set() })).toBe(false);
+  });
+
+  it('exports only the active workspace, whatever else is in state', () => {
+    const { state, requests } = fixture();
+    const elsewhere = createRequest({ workspaceId: 'other-ws', name: 'not mine' });
+    const wider = { ...state, requests: [...state.requests, elsewhere] };
+    const result = exportSelection(wider, {
+      name: 'W',
+      selected: new Set([requests.atRoot.id, elsewhere.id]),
+    });
+    expect(result.requests.map((request) => request.name)).toEqual(['at root']);
+  });
+});
+
+describe('importSubtree', () => {
+  const roundTrip = () => {
+    const { state, api, requests } = fixture();
+    const base = createEnvironment(state.activeWorkspaceId, 'Base', true, [row('token', 'abc')]);
+    const staging = createEnvironment(state.activeWorkspaceId, 'Staging', false, [row('host', 'https://stg')]);
+    const file = exportSelection({ ...state, environments: [base, staging] }, {
+      name: 'API',
+      selected: new Set(subtreeFolderIds(state, api.id).concat([requests.deep.id, requests.atApi.id, requests.atV2.id])),
+      environmentIds: new Set([base.id, staging.id]),
+    });
+    return { file, state, api, requests };
+  };
+
+  it('reads back what was written, tree and all', () => {
+    const { file } = roundTrip();
+    const imported = importSubtree(JSON.parse(JSON.stringify(file)), 'ws2');
+    expect(imported.requests.map((request) => request.name).sort()).toEqual(['at api', 'at v2', 'deep']);
+
+    const byName = new Map(imported.folders.map((folder) => [folder.name, folder]));
+    expect(byName.get('v2')?.parentId).toBe(byName.get('API')?.id);
+    expect(byName.get('API')?.parentId).toBeNull();
+    expect(imported.requests.find((request) => request.name === 'deep')?.folderId).toBe(byName.get('pokemon')?.id);
+  });
+
+  it('issues fresh ids, so importing a slice beside its own origin does not collide', () => {
+    const { file, api, requests } = roundTrip();
+    const imported = importSubtree(JSON.parse(JSON.stringify(file)), 'ws2');
+    expect(imported.folders.map((folder) => folder.id)).not.toContain(api.id);
+    expect(imported.requests.map((request) => request.id)).not.toContain(requests.deep.id);
+    expect(imported.folders.every((folder) => folder.workspaceId === 'ws2')).toBe(true);
+  });
+
+  it('sends the exported base into base variables, not into a second base', () => {
+    // A workspace has exactly one base and it already exists, so the file's
+    // base becomes variables the reducer merges into it.
+    const { file } = roundTrip();
+    const imported = importSubtree(JSON.parse(JSON.stringify(file)), 'ws2');
+    expect(imported.variables.map((item) => item.key)).toEqual(['token']);
+    expect(imported.environments?.map((environment) => environment.name)).toEqual(['Staging']);
+    expect(imported.environment).toBeNull();
+  });
+
+  it('is what detectFormat picks, ahead of every other reader', () => {
+    const { file } = roundTrip();
+    expect(detectFormat(JSON.parse(JSON.stringify(file)))).toBe('carom');
+    expect(readImport(JSON.stringify(file), 'ws2').format).toBe('carom');
+  });
+
+  it('lands a folder whose parent was left out at the top rather than nowhere', () => {
+    const { state, v2, requests } = fixture();
+    // v2 exported without API above it: its parent id is not in the file.
+    const file = exportSelection(state, { name: 'v2', selected: new Set([v2.id, requests.atV2.id]) });
+    const partial = { ...file, folders: file.folders.filter((folder) => folder.name !== 'API') };
+    const imported = importSubtree(JSON.parse(JSON.stringify(partial)), 'ws2');
+    expect(imported.folders.find((folder) => folder.name === 'v2')?.parentId).toBeNull();
   });
 });

@@ -4,8 +4,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { AuthEditor } from '@/components/request/AuthEditor';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { ScriptEditor } from '@/components/request/ScriptEditor';
-import { downloadJson } from '@/lib/download';
-import { exportFileName, exportFolder } from '@/lib/export';
+import { subtreeFolderIds } from '@/lib/export';
 import { createFolder, createRequest } from '@/lib/factories';
 import { LOCAL_VARIABLE_COLOR } from '@/lib/template';
 import { folderPath } from '@/state/selectors';
@@ -32,7 +31,7 @@ const TABS: Array<{ id: FolderTab; label: string }> = [
  * variables, the auth its contents inherit, and the scripts that wrap them.
  * That is the whole reason a folder is a unit and not just a label.
  */
-export function FolderPane({ folder }: { folder: Folder }) {
+export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (selection?: string[]) => void }) {
   const { state, dispatch, chainFor, tableFor } = useWorkspace();
   const [tab, setTab] = useState<FolderTab>('variables');
   const [confirming, setConfirming] = useState(false);
@@ -95,10 +94,7 @@ export function FolderPane({ folder }: { folder: Folder }) {
           <FolderPlus />
         </IconButton>
         <IconButton label="Export folder"
-          onClick={() => {
-            const payload = exportFolder(state, folder.id);
-            if (payload) downloadJson(exportFileName(folder.name), payload);
-          }}
+          onClick={() => onExport(subtreeFolderIds(state, folder.id))}
           testId="button-folder-export"
         >
           <Download />

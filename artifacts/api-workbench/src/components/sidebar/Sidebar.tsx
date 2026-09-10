@@ -1,11 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Braces, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Download, FilePlus2, FolderInput, FolderPlus, PanelLeftClose, Pencil, Search, Terminal, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Braces, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, Download, FilePlus2, FolderInput, FolderPlus, Pencil, Search, Terminal, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
-import { MOD_LABEL } from '@/hooks/use-hotkeys';
 import { PromptDialog } from '@/components/common/PromptDialog';
-import { downloadJson } from '@/lib/download';
-import { exportFileName, exportFolder, exportRequest } from '@/lib/export';
+import { subtreeFolderIds } from '@/lib/export';
 import { createFolder, createRequest } from '@/lib/factories';
 import { buildTree, countRequests, isDescendantFolder, type TreeNode } from '@/state/selectors';
 import { WorkspaceMenu } from '@/components/sidebar/WorkspaceMenu';
@@ -15,6 +13,7 @@ import type { Folder, RequestRecord } from '@/types';
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type MenuState = { x: number; y: number; entries: MenuEntry[] } | null;
 type PromptState =
@@ -27,17 +26,61 @@ type ConfirmState = { kind: 'folder'; folder: Folder } | { kind: 'request'; requ
 
 export function Sidebar({
   onImportCurl,
-  onImportPostman,
-  onCollapse,
+  onImport,
+  onExport,
+  locate,
 }: {
   onImportCurl: () => void;
-  onImportPostman: () => void;
-  onCollapse: () => void;
+  onImport: () => void;
+  /** Opens the export dialog, ticking what was clicked. Nothing means all of it. */
+  onExport: (selection?: string[]) => void;
+  /**
+   * A request to reveal, and a nonce so asking for the same one twice still
+   * counts as asking twice.
+   */
+  locate?: { id: string; nonce: number } | null;
 }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, chainFor } = useWorkspace();
+  const [located, setLocated] = useState<string | null>(null);
   const deleteWithUndo = useDeleteWithUndo();
   const [search, setSearch] = useState('');
+
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  /**
+   * Reveal a request asked for from elsewhere — today the tab's "Locate".
+   *
+   * Expanding is enough on its own: the tree only renders what is open, so
+   * scrolling has to wait for the row to exist, which is why the scroll happens
+   * a frame later rather than in the same pass.
+   */
+  useEffect(() => {
+    if (!locate) return;
+    const request = state.requests.find((item) => item.id === locate.id);
+    if (!request) return;
+
+    const ancestors = chainFor(request.folderId).map((folder) => folder.id);
+    setCollapsed((current) => {
+      const next = { ...current };
+      for (const id of ancestors) delete next[id];
+      return next;
+    });
+    dispatch({ type: 'request/open', id: request.id });
+    setLocated(request.id);
+
+    const frame = requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-testid="button-request-${request.id}"]`)
+        ?.scrollIntoView({ block: 'nearest' });
+    });
+    // Long enough to catch the eye, short enough not to look like selection.
+    const fade = window.setTimeout(() => setLocated(null), 1200);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(fade);
+    };
+    // The nonce is the signal: locating the same request twice must still fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locate?.id, locate?.nonce]);
   const [menu, setMenu] = useState<MenuState>(null);
   const [prompt, setPrompt] = useState<PromptState>(null);
   const [confirming, setConfirming] = useState<ConfirmState>(null);
@@ -102,15 +145,12 @@ export function Sidebar({
     setCollapsed(Object.fromEntries(workspaceFolders.map((item) => [item.id, true])));
   };
 
-  const saveFolder = (folder: Folder) => {
-    const payload = exportFolder(state, folder.id);
-    if (payload) downloadJson(exportFileName(folder.name), payload);
-  };
-
-  const saveRequest = (request: RequestRecord) => {
-    const payload = exportRequest(state, request.id);
-    if (payload) downloadJson(exportFileName(request.name), payload);
-  };
+  // Both go through the export dialog rather than writing a file on the spot:
+  // it starts ticked on what was clicked, so the one-click case is one extra
+  // click, and everything else — a second folder, an environment, where to put
+  // it — is now reachable from the same place.
+  const saveFolder = (folder: Folder) => onExport(subtreeFolderIds(state, folder.id));
+  const saveRequest = (request: RequestRecord) => onExport([request.id]);
 
   const folderMenu = (folder: Folder): MenuEntry[] => [
     { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: () => addRequest(folder.id) },
@@ -120,7 +160,7 @@ export function Sidebar({
     { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-folder', folder }) },
     {
       kind: 'item',
-      label: 'Export folder',
+      label: 'Export folder…',
       icon: <Download size={13} />,
       onSelect: () => saveFolder(folder),
     },
@@ -136,7 +176,7 @@ export function Sidebar({
   const requestMenu = (request: RequestRecord): MenuEntry[] => [
     { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-request', request }) },
     { kind: 'item', label: 'Duplicate', icon: <Copy size={13} />, onSelect: () => dispatch({ type: 'request/duplicate', id: request.id }) },
-    { kind: 'item', label: 'Export request', icon: <Download size={13} />, onSelect: () => saveRequest(request) },
+    { kind: 'item', label: 'Export request…', icon: <Download size={13} />, onSelect: () => saveRequest(request) },
     { kind: 'separator' },
     {
       kind: 'item',
@@ -180,11 +220,20 @@ export function Sidebar({
         const request = node.request;
         const selected = request.id === state.activeRequestId;
         return (
+          /*
+            The row truncates, so the name it shows is often not the whole name.
+            A `title` carried one or the other — it read `url || name`, so a
+            request with a URL never showed its own name — and only after the
+            browser's own delay. This shows both, straight away, and on keyboard
+            focus too. The content only mounts while it is open, so a tree of
+            hundreds of rows pays for the wrapper, not for the card.
+          */
+          <Tooltip key={request.id}>
+            <TooltipTrigger asChild>
           <div
-            key={request.id}
-            className={`tree-row ${selected ? 'selected' : ''} ${dragging?.id === request.id ? 'dragging' : ''} ${
-              dropTarget === `before:${request.id}` ? 'drop-before' : ''
-            }`}
+            className={`tree-row ${selected ? 'selected' : ''} ${located === request.id ? 'located' : ''} ${
+              dragging?.id === request.id ? 'dragging' : ''
+            } ${dropTarget === `before:${request.id}` ? 'drop-before' : ''}`}
             style={{ paddingLeft: 8 + node.depth * 12 }}
             role="button"
             tabIndex={0}
@@ -221,12 +270,19 @@ export function Sidebar({
               }
             }}
             onContextMenu={(event) => openMenu(event, requestMenu(request))}
-            title={request.url || request.name}
             data-testid={`button-request-${request.id}`}
           >
             <span className={`tree-method m-${request.method.toLowerCase()}`}>{request.method}</span>
             <span className="tree-name truncate">{request.name}</span>
           </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-[420px]">
+              <div className="font-medium">{request.name}</div>
+              {request.url ? (
+                <div className="mt-0.5 font-mono text-[11px] opacity-70 break-all">{request.url}</div>
+              ) : null}
+            </TooltipContent>
+          </Tooltip>
         );
       }
 
@@ -298,40 +354,33 @@ export function Sidebar({
     <aside className="sidebar">
       <div className="sidebar-head">
         <WorkspaceMenu />
-        <IconButton
-          label={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
-          className="ml-auto"
-          onClick={toggleAll}
-          disabled={workspaceFolders.length === 0}
-          testId="button-toggle-all-folders"
-        >
-          {anyExpanded ? <ChevronsDownUp /> : <ChevronsUpDown />}
-        </IconButton>
-        <IconButton label="New folder"
-          onClick={() => setPrompt({ kind: 'new-folder', parentId: null })}
-          testId="button-new-folder"
-        >
-          <FolderPlus />
-        </IconButton>
-        <IconButton label="New request"
-          onClick={() => addRequest(null)}
-          testId="button-new-request"
-        >
-          <FilePlus2 />
-        </IconButton>
         {/*
-          The top bar has a toggle too, but on a narrow window the sidebar
-          covers the top bar — so the control that hides it has to live inside
-          the thing being hidden, or it cannot be reached at exactly the width
-          where it is most needed.
+          The actions sit on their own row rather than fighting the workspace
+          name for one line. The sidebar's own hide button used to live here
+          too; there is a single toggle in the top bar now, and the narrow-window
+          overlay starts below the top bar so that one stays reachable.
         */}
-        <IconButton label="Hide the sidebar"
-          onClick={onCollapse}
-          hint={`${MOD_LABEL} B`}
-          testId="button-collapse-sidebar"
-        >
-          <PanelLeftClose />
-        </IconButton>
+        <div className="sidebar-actions">
+          <IconButton
+            label={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
+            onClick={toggleAll}
+            disabled={workspaceFolders.length === 0}
+            testId="button-toggle-all-folders"
+          >
+            {anyExpanded ? <ChevronsDownUp /> : <ChevronsUpDown />}
+          </IconButton>
+          <span className="flex-1" />
+          <IconButton
+            label="New folder"
+            onClick={() => setPrompt({ kind: 'new-folder', parentId: null })}
+            testId="button-new-folder"
+          >
+            <FolderPlus />
+          </IconButton>
+          <IconButton label="New request" onClick={() => addRequest(null)} testId="button-new-request">
+            <FilePlus2 />
+          </IconButton>
+        </div>
       </div>
 
       <div className="sidebar-search">
@@ -368,12 +417,21 @@ export function Sidebar({
         )}
       </div>
 
+      {/*
+        Three labelled buttons do not fit a sidebar someone has narrowed, and
+        the one that overflowed ended up under the resize handle. curl keeps
+        its meaning as an icon with a tooltip; the two that name a direction
+        keep their words.
+      */}
       <div className="sidebar-foot">
-        <Button variant="ghost" size="sm" onClick={onImportCurl} data-testid="button-import-curl">
-          <Terminal /> Import curl
+        <IconButton label="Import from curl" onClick={onImportCurl} testId="button-import-curl">
+          <Terminal />
+        </IconButton>
+        <Button variant="ghost" size="sm" onClick={onImport} data-testid="button-import">
+          <FolderInput /> Import
         </Button>
-        <Button variant="ghost" size="sm" onClick={onImportPostman} data-testid="button-import-postman">
-          <FolderInput /> Import Postman
+        <Button variant="ghost" size="sm" onClick={() => onExport()} data-testid="button-export">
+          <Download /> Export
         </Button>
       </div>
 

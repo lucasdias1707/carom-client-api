@@ -5,12 +5,22 @@ import { resolveAuth } from '@/lib/inherit';
 import { splitQuery } from '@/lib/query';
 import { interpolate } from '@/lib/template';
 import type { Folder, HttpMethod, KeyValue, RequestRecord, ResponseRecord, SendMode } from '@/types';
+import { getFile, type FileMeta } from '@/lib/files';
 
 export type PreparedBody =
   | { type: 'none' }
   | { type: 'text'; text: string; contentType: string }
   | { type: 'form'; fields: Array<{ key: string; value: string }> }
-  | { type: 'multipart'; fields: Array<{ key: string; value: string }> };
+  | { type: 'multipart'; fields: MultipartField[] };
+
+/**
+ * A multipart part is either typed text or an attached file. The file case
+ * carries the row id rather than the bytes: the bytes live in `lib/files.ts`
+ * for the session, and are fetched at the moment the body is built.
+ */
+export type MultipartField =
+  | { key: string; value: string }
+  | { key: string; rowId: string; file: FileMeta };
 
 export type PreparedRequest = {
   method: HttpMethod;
@@ -56,7 +66,19 @@ function defaultContentType(request: RequestRecord): string {
 function buildBody(request: RequestRecord, variables: Record<string, string>, hasExplicitContentType: boolean): PreparedBody {
   if (request.bodyType === 'none' || METHODS_WITHOUT_BODY.includes(request.method)) return { type: 'none' };
   if (request.bodyType === 'form') return { type: 'form', fields: activeRows(request.form, variables) };
-  if (request.bodyType === 'multipart') return { type: 'multipart', fields: activeRows(request.multipart, variables) };
+  if (request.bodyType === 'multipart') {
+    return {
+      type: 'multipart',
+      fields: request.multipart
+        .filter((rowItem) => rowItem.enabled && rowItem.key.trim())
+        .map<MultipartField>((rowItem) => {
+          const key = interpolate(rowItem.key, variables).trim();
+          return rowItem.file
+            ? { key, rowId: rowItem.id, file: rowItem.file }
+            : { key, value: interpolate(rowItem.value, variables) };
+        }),
+    };
+  }
   if (request.bodyType === 'graphql') {
     let parsedVariables: unknown = {};
     const rawVariables = interpolate(request.graphql.variables, variables).trim();
@@ -163,7 +185,7 @@ export function buildUrl(rawUrl: string, params: Array<{ key: string; value: str
   }
 }
 
-function toFetchBody(body: PreparedBody): BodyInit | undefined {
+export function toFetchBody(body: PreparedBody): BodyInit | undefined {
   switch (body.type) {
     case 'none':
       return undefined;
@@ -176,7 +198,21 @@ function toFetchBody(body: PreparedBody): BodyInit | undefined {
     }
     case 'multipart': {
       const form = new FormData();
-      for (const field of body.fields) form.append(field.key, field.value);
+      for (const field of body.fields) {
+        if (!('file' in field)) {
+          form.append(field.key, field.value);
+          continue;
+        }
+        const attached = getFile(field.rowId);
+        // The metadata survived a reload; the bytes did not. Better to say so
+        // than to send the field empty and let the server puzzle over it.
+        if (!attached) {
+          throw new Error(
+            `The file for "${field.key}" (${field.file.name}) is no longer loaded. Attach it again — files are kept for the session, not saved with the workspace.`,
+          );
+        }
+        form.append(field.key, attached, field.file.name);
+      }
       return form;
     }
   }

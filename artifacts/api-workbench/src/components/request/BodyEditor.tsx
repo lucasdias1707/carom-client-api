@@ -114,8 +114,19 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
 
       {request.bodyType === 'multipart' ? (
         <>
-          <KeyValueTable items={request.multipart} onChange={setRows('multipart')} testPrefix="multipart" keyPlaceholder="Field" />
-          <p className="hint">Multipart fields are sent as text values. File uploads are not supported yet.</p>
+          <KeyValueTable
+            items={request.multipart}
+            onChange={setRows('multipart')}
+            testPrefix="multipart"
+            keyPlaceholder="Field"
+            valuePlaceholder="Value or file"
+            allowFiles
+          />
+          <p className="hint">
+            A field takes typed text or a file — use the paperclip to attach one. Files are kept for this session
+            rather than saved with the workspace, so a reload asks for them again: the whole workspace lives in
+            the browser&rsquo;s storage, and one attachment could evict everything else in it.
+          </p>
         </>
       ) : null}
 

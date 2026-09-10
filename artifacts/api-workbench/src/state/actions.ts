@@ -45,6 +45,8 @@ export type Action =
       folders: Folder[];
       requests: RequestRecord[];
       environment: Environment | null;
+      /** Further environments, when the file carried more than one. */
+      environments?: Environment[];
       workspace?: Workspace | null;
       /** Base environment for a workspace created by this import. */
       baseEnvironment?: Environment | null;

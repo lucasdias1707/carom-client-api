@@ -299,7 +299,7 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return { ...state, responses: state.responses.filter((response) => response.requestId !== action.requestId) };
 
     case 'import/merge': {
-      const added = [action.baseEnvironment, action.environment].filter(
+      const added = [action.baseEnvironment, action.environment, ...(action.environments ?? [])].filter(
         (environment): environment is Environment => Boolean(environment),
       );
       const destination = action.workspaceId ?? action.workspace?.id ?? state.activeWorkspaceId;

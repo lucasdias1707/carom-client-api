@@ -23,6 +23,11 @@ pub fn run() {
         // so the desktop build is not subject to CORS and can reach private
         // hosts directly. Scope is declared in capabilities/default.json.
         .plugin(tauri_plugin_http::init())
+        // Exporting asks where to put the file and then writes it. Both are
+        // scoped in capabilities/default.json to the one dialog-chosen path,
+        // so the app can write what someone just named and nothing else.
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![install_kind]);
 
     // Updating means replacing the installed files and starting the new binary,

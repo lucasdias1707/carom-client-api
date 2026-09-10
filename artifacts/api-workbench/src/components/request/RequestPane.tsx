@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AuthEditor } from '@/components/request/AuthEditor';
 import { BodyEditor } from '@/components/request/BodyEditor';
+import { DocFieldsTable } from '@/components/request/DocFieldsTable';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { ScriptEditor } from '@/components/request/ScriptEditor';
 import { UrlBar } from '@/components/request/UrlBar';
@@ -214,8 +215,11 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
               aria-label="Request description"
               data-testid="textarea-request-description"
             />
+            <DocFieldsTable request={request} onChange={(fields) => patch({ docs: { fields } })} />
+
             <p className="hint">
-              {path.length > 0 ? `In ${path.join(' / ')} · ` : ''}Saved locally in this browser.
+              {path.length > 0 ? `In ${path.join(' / ')} · ` : ''}Saved locally in this browser. Exporting to OpenAPI
+              turns what is above into an operation, its parameters and its body schema.
             </p>
           </div>
         </TabsContent>

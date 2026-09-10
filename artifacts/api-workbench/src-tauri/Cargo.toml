@@ -23,6 +23,12 @@ serde_json = "1"
 # and lets it reach localhost and the LAN like any other native client.
 tauri-plugin-http = "2"
 
+# The native save dialog, and writing the file it names. This is what makes
+# "export" mean "choose a folder" on the desktop instead of "it went to
+# Downloads"; the web build has no such choice and keeps the browser download.
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
 # Self-update from the GitHub releases. Desktop only: there is nothing to
 # replace on mobile, and the plugins refuse to build for those targets.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

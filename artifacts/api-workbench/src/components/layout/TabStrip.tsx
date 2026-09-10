@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { X, XCircle } from 'lucide-react';
+import { Copy, Crosshair, X, XCircle } from 'lucide-react';
 import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
 import { useWorkspace } from '@/state/workspace-store';
 
+type TabStripProps = {
+  /** Reveal this request in the sidebar: expand its folders and scroll to it. */
+  onLocate: (id: string) => void;
+};
+
 /** Open-request tabs, mirroring how a desktop client keeps several in flight. */
-export function TabStrip() {
+export function TabStrip({ onLocate }: TabStripProps) {
   const { state, dispatch } = useWorkspace();
   const [menu, setMenu] = useState<{ x: number; y: number; entries: MenuEntry[] } | null>(null);
   const tabs = state.openTabIds
@@ -19,6 +24,21 @@ export function TabStrip() {
    * would act on something the pointer is nowhere near.
    */
   const tabMenu = (id: string): MenuEntry[] => [
+    {
+      kind: 'item',
+      label: 'Locate in the sidebar',
+      icon: <Crosshair size={13} />,
+      onSelect: () => onLocate(id),
+    },
+    {
+      kind: 'item',
+      label: 'Duplicate',
+      icon: <Copy size={13} />,
+      // The same action the sidebar's own menu dispatches, so the copy is made
+      // one way rather than two.
+      onSelect: () => dispatch({ type: 'request/duplicate', id }),
+    },
+    { kind: 'separator' },
     { kind: 'item', label: 'Close', icon: <X size={13} />, onSelect: () => dispatch({ type: 'request/close-tab', id }) },
     {
       kind: 'item',

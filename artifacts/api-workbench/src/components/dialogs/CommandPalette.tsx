@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { CornerDownLeft } from 'lucide-react';
+import { Box, CornerDownLeft } from 'lucide-react';
 import {
   Command as CommandRoot,
   CommandEmpty,
@@ -20,9 +20,24 @@ export type Command = {
   run: () => void;
 };
 
+/**
+ * `all` is ⌘K. The rest are the IDE habit: one key straight to a request, one
+ * straight to a workspace, one straight to the actions — each without typing
+ * past a list of things that were not what you meant.
+ */
+export type PaletteMode = 'all' | 'requests' | 'workspaces' | 'commands';
+
 type CommandPaletteProps = {
   commands: Command[];
+  mode?: PaletteMode;
   onClose: () => void;
+};
+
+const PLACEHOLDERS: Record<PaletteMode, string> = {
+  all: 'Search requests and actions…',
+  requests: 'Go to a request…',
+  workspaces: 'Switch workspace…',
+  commands: 'Run a command…',
 };
 
 /**
@@ -37,7 +52,7 @@ type CommandPaletteProps = {
  * the action — so the item value is the id with the label appended: the id
  * keeps them apart, the label is what gets matched.
  */
-export function CommandPalette({ commands, onClose }: CommandPaletteProps) {
+export function CommandPalette({ commands, mode = 'all', onClose }: CommandPaletteProps) {
   const { state, dispatch } = useWorkspace();
 
   const requestCommands = useMemo<Command[]>(
@@ -53,9 +68,30 @@ export function CommandPalette({ commands, onClose }: CommandPaletteProps) {
     [dispatch, state],
   );
 
+  const workspaceCommands = useMemo<Command[]>(
+    () =>
+      state.workspaces.map((workspace) => ({
+        id: `workspace-${workspace.id}`,
+        label: workspace.name,
+        icon: <Box size={13} />,
+        hint:
+          workspace.id === state.activeWorkspaceId
+            ? 'current'
+            : `${state.requests.filter((request) => request.workspaceId === workspace.id).length} requests`,
+        run: () => dispatch({ type: 'workspace/activate', id: workspace.id }),
+      })),
+    [dispatch, state],
+  );
+
+  /*
+    Close first, run second, and the order matters. Both are a `setOverlay` on
+    the same state in the same handler, so whichever is called last is the one
+    that sticks — with `run` first, picking "Settings" or "Keyboard shortcuts"
+    from the palette closed the palette and opened nothing.
+  */
   const run = (command: Command) => {
-    command.run();
     onClose();
+    command.run();
   };
 
   const row = (entry: Command) => (
@@ -89,14 +125,19 @@ export function CommandPalette({ commands, onClose }: CommandPaletteProps) {
         <DialogDescription className="sr-only">Search requests and actions</DialogDescription>
         <CommandRoot loop className="bg-transparent">
           <CommandInput
-            placeholder="Search requests and actions…"
+            placeholder={PLACEHOLDERS[mode]}
             className="h-11 text-[15px]"
             data-testid="input-command-palette"
           />
           <CommandList className="max-h-[52vh]">
             <CommandEmpty className="tree-empty py-6">No matches.</CommandEmpty>
-            <CommandGroup>{commands.map(row)}</CommandGroup>
-            <CommandGroup heading="Requests">{requestCommands.map(row)}</CommandGroup>
+            {mode === 'all' || mode === 'commands' ? <CommandGroup>{commands.map(row)}</CommandGroup> : null}
+            {mode === 'all' || mode === 'requests' ? (
+              <CommandGroup heading="Requests">{requestCommands.map(row)}</CommandGroup>
+            ) : null}
+            {mode === 'workspaces' ? (
+              <CommandGroup heading="Workspaces">{workspaceCommands.map(row)}</CommandGroup>
+            ) : null}
           </CommandList>
         </CommandRoot>
       </DialogContent>

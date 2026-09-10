@@ -76,6 +76,7 @@ export function WorkspaceMenu() {
             </>
           }
           confirmLabel="Delete workspace"
+          requireText={active?.name}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             deleteWithUndo(

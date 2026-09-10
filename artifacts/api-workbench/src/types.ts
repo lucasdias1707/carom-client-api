@@ -6,6 +6,9 @@
  * interpolated into every outgoing request.
  */
 
+import type { Binding, CommandId } from '@/lib/shortcuts';
+import type { FontTheme } from '@/lib/themes';
+
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
 
@@ -19,6 +22,8 @@ export type BodyType = (typeof BODY_TYPES)[number];
  */
 export type AuthType = 'inherit' | 'none' | 'bearer' | 'basic' | 'apikey';
 
+import type { FileMeta } from '@/lib/files';
+
 export type KeyValue = {
   id: string;
   key: string;
@@ -30,6 +35,13 @@ export type KeyValue = {
    * everything else, including every row written before this existed.
    */
   source?: 'url';
+  /**
+   * Set on a multipart row that carries a file. Only what describes the file
+   * lives here — the bytes are held for the session in `lib/files.ts`, keyed by
+   * this row's id, because the whole state is written to localStorage and one
+   * attachment could evict every request in it.
+   */
+  file?: FileMeta;
 };
 
 export type Auth = {
@@ -43,6 +55,31 @@ export type Auth = {
   apiKeyName: string;
   apiKeyValue: string;
   apiKeyIn: 'header' | 'query';
+};
+
+/** Where a documented field travels. */
+export const DOC_FIELD_LOCATIONS = ['query', 'path', 'header', 'body'] as const;
+export type DocFieldIn = (typeof DOC_FIELD_LOCATIONS)[number];
+
+export const DOC_FIELD_TYPES = ['string', 'number', 'integer', 'boolean', 'array', 'object'] as const;
+export type DocFieldType = (typeof DOC_FIELD_TYPES)[number];
+
+/**
+ * One documented field of a request.
+ *
+ * The params and headers tables already say what is *sent*; this says what a
+ * field *means* — whether it is required, what type it holds, an example worth
+ * showing. That is the part an OpenAPI description needs and a key/value row
+ * cannot carry.
+ */
+export type DocField = {
+  id: string;
+  in: DocFieldIn;
+  name: string;
+  description: string;
+  required: boolean;
+  type: DocFieldType;
+  example: string;
 };
 
 export type GraphQLBody = {
@@ -67,6 +104,11 @@ export type RequestRecord = {
   multipart: KeyValue[];
   graphql: GraphQLBody;
   auth: Auth;
+  /**
+   * Documented fields. Optional, and absent on every request written before
+   * the Docs tab could hold them — `hydrate` needs no migration for that.
+   */
+  docs?: { fields: DocField[] };
   /** Runs before the request is sent, outermost folder first. */
   preScript: string;
   /** Runs after the response arrives, innermost first. */
@@ -174,6 +216,22 @@ export type Settings = {
    */
   sidebarCollapsed: boolean;
   jsonTheme: JsonTheme;
+  /**
+   * Which colour palette the tokens come from. Absent means the one built into
+   * the stylesheet, which is why the default overrides nothing.
+   */
+  palette?: string;
+  /** Which font theme is in use, built-in or saved. */
+  fontTheme?: string;
+  /** Font themes someone made here. The built-in ones are not stored. */
+  fontThemes?: FontTheme[];
+  /**
+   * Rebound shortcuts, keyed by command. Only what was changed is stored, so a
+   * default that moves in a later version moves for everyone who never touched
+   * it — and an unknown id left behind by an older build is ignored rather than
+   * resurrected.
+   */
+  keyBindings?: Partial<Record<CommandId, Binding>>;
 };
 
 export type ResponseRecord = {

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import {
   Columns2,
+  Download,
   FilePlus2,
   FolderInput,
   Keyboard,
   Layers,
   PanelLeft,
+  PanelLeftClose,
   Rows2,
   Send,
   Settings,
@@ -13,8 +15,9 @@ import {
 } from 'lucide-react';
 import { CommandPalette, type Command } from '@/components/dialogs/CommandPalette';
 import { EnvironmentDialog } from '@/components/dialogs/EnvironmentDialog';
+import { ExportDialog } from '@/components/dialogs/ExportDialog';
 import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
-import { ImportPostmanDialog } from '@/components/dialogs/ImportPostmanDialog';
+import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
@@ -26,7 +29,8 @@ import { RequestPane } from '@/components/request/RequestPane';
 import { ResponsePane } from '@/components/response/ResponsePane';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { useToast } from '@/components/common/Toaster';
-import { useHotkeys, MOD_LABEL } from '@/hooks/use-hotkeys';
+import { useHotkeys, type Hotkey } from '@/hooks/use-hotkeys';
+import { formatBinding, resolveBindings, type CommandId } from '@/lib/shortcuts';
 import { useProxyHealth } from '@/hooks/use-proxy-health';
 import { useSendRequest } from '@/hooks/use-send-request';
 import { useTheme } from '@/hooks/use-theme';
@@ -38,7 +42,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
-type Overlay = 'palette' | 'environments' | 'settings' | 'curl' | 'postman' | 'shortcuts' | null;
+type Overlay =
+  | 'palette'
+  | 'palette.requests'
+  | 'palette.workspaces'
+  | 'palette.commands'
+  | 'environments'
+  | 'settings'
+  | 'curl'
+  | 'import'
+  | 'export'
+  | 'shortcuts'
+  | null;
 
 export function Workbench() {
   const { state, dispatch, activeRequest, activeFolder } = useWorkspace();
@@ -46,6 +61,17 @@ export function Workbench() {
   const { status: proxyStatus } = useProxyHealth();
   const { sending, send, cancel, scriptLogs, scriptTests } = useSendRequest(proxyStatus);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  /**
+   * A request the sidebar should reveal. The nonce is what makes asking twice
+   * for the same request count twice.
+   */
+  const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null);
+  /** What the export dialog opens ticked; undefined means the whole workspace. */
+  const [exporting, setExporting] = useState<string[] | undefined>(undefined);
+  const openExport = (selection?: string[]) => {
+    setExporting(selection);
+    setOverlay('export');
+  };
   // Kept in settings rather than component state: someone who narrows the
   // window and hides the tree means it, and should not have to say so again on
   // the next launch.
@@ -54,7 +80,7 @@ export function Workbench() {
   const setSidebarVisible = (visible: boolean) =>
     dispatch({ type: 'settings/update', patch: { sidebarCollapsed: !visible } });
 
-  useTheme(state.settings.theme);
+  useTheme(state.settings);
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId && !environment.isBase,
@@ -79,30 +105,42 @@ export function Workbench() {
     void send(activeRequest);
   };
 
+  /*
+    Every shortcut in the app comes from here, so what the screen shows and what
+    the keyboard does cannot drift apart — and rebinding one in the shortcuts
+    screen moves the handler, the hint on the button and the hint in the palette
+    together.
+  */
+  const bindings = resolveBindings(state.settings);
+  const bind = (id: CommandId, handler: () => void): Hotkey => ({
+    ...bindings[id],
+    allowInInput: true,
+    handler,
+  });
+
   useHotkeys([
-    { key: 'k', mod: true, allowInInput: true, handler: () => setOverlay('palette') },
-    { key: 'enter', mod: true, allowInInput: true, handler: sendActive },
-    { key: 'n', mod: true, allowInInput: true, handler: newRequest },
-    { key: 'e', mod: true, allowInInput: true, handler: () => setOverlay('environments') },
-    { key: 'b', mod: true, allowInInput: true, handler: () => setSidebarVisible(!sidebarVisible) },
-    { key: ',', mod: true, allowInInput: true, handler: () => setOverlay('settings') },
-    {
-      key: 'w',
-      mod: true,
-      allowInInput: true,
-      handler: () => {
-        if (state.activeRequestId) dispatch({ type: 'request/close-tab', id: state.activeRequestId });
-      },
-    },
+    bind('palette', () => setOverlay('palette')),
+    bind('palette.requests', () => setOverlay('palette.requests')),
+    bind('palette.workspaces', () => setOverlay('palette.workspaces')),
+    bind('palette.commands', () => setOverlay('palette.commands')),
+    bind('send', sendActive),
+    bind('newRequest', newRequest),
+    bind('environments', () => setOverlay('environments')),
+    bind('toggleSidebar', () => setSidebarVisible(!sidebarVisible)),
+    bind('settings', () => setOverlay('settings')),
+    bind('closeTab', () => {
+      if (state.activeRequestId) dispatch({ type: 'request/close-tab', id: state.activeRequestId });
+    }),
   ]);
 
   const commands: Command[] = [
-    { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: `${MOD_LABEL} N`, run: newRequest },
-    { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: `${MOD_LABEL} ⏎`, run: sendActive },
-    { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: `${MOD_LABEL} E`, run: () => setOverlay('environments') },
+    { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: formatBinding(bindings.newRequest), run: newRequest },
+    { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: formatBinding(bindings.send), run: sendActive },
+    { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
     { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
-    { id: 'import-postman', label: 'Import a Postman collection', icon: <FolderInput size={13} />, run: () => setOverlay('postman') },
-    { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: `${MOD_LABEL} ,`, run: () => setOverlay('settings') },
+    { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
+    { id: 'export', label: 'Export requests and environments', icon: <Download size={13} />, run: () => openExport() },
+    { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
     { id: 'shortcuts', label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
     {
       id: 'layout',
@@ -134,8 +172,9 @@ export function Workbench() {
     >
       <Sidebar
         onImportCurl={() => setOverlay('curl')}
-        onImportPostman={() => setOverlay('postman')}
-        onCollapse={() => setSidebarVisible(false)}
+        onImport={() => setOverlay('import')}
+        onExport={openExport}
+        locate={locate}
       />
       {sidebarVisible ? (
         <SidebarResizer
@@ -146,21 +185,28 @@ export function Workbench() {
 
       <main className="main">
         <div className="topbar">
-          <IconButton label="Toggle sidebar"
+          {/*
+            One toggle, saying which way it goes. There used to be a second one
+            inside the sidebar, for the width where the sidebar covered this
+            bar; the overlay now starts below the bar instead, so this one is
+            always reachable.
+          */}
+          <IconButton
+            label={sidebarVisible ? 'Hide the sidebar' : 'Show the sidebar'}
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            hint={`${MOD_LABEL} B`}
+            hint={formatBinding(bindings.toggleSidebar)}
             testId="button-toggle-sidebar"
           >
-            <PanelLeft />
+            {sidebarVisible ? <PanelLeftClose /> : <PanelLeft />}
           </IconButton>
 
-          <TabStrip />
+          <TabStrip onLocate={(id) => setLocate({ id, nonce: Date.now() })} />
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
             <IconButton label="Environments"
               onClick={() => setOverlay('environments')}
-              hint={`${MOD_LABEL} E`}
+              hint={formatBinding(bindings.environments)}
               testId="button-environments"
             >
               <Layers />
@@ -179,7 +225,7 @@ export function Workbench() {
             <UpdateBadge />
             <IconButton label="Settings"
               onClick={() => setOverlay('settings')}
-              hint={`${MOD_LABEL} ,`}
+              hint={formatBinding(bindings.settings)}
               testId="button-settings"
             >
               <Settings />
@@ -188,7 +234,7 @@ export function Workbench() {
         </div>
 
         {activeFolder ? (
-          <FolderPane folder={activeFolder} />
+          <FolderPane folder={activeFolder} onExport={openExport} />
         ) : activeRequest ? (
           <ResizablePanelGroup
             className="panes"
@@ -216,7 +262,7 @@ export function Workbench() {
               </div>
               <h3>No request open</h3>
               <p>
-                Pick one from the sidebar, or press <span className="kbd">{MOD_LABEL} N</span> to start a new one.
+                Pick one from the sidebar, or press <span className="kbd">{formatBinding(bindings.newRequest)}</span> to start a new one.
               </p>
               <Button style={{ marginTop: 14 }} onClick={newRequest} data-testid="button-empty-new-request">
                 <FilePlus2 /> New request
@@ -226,11 +272,28 @@ export function Workbench() {
         )}
       </main>
 
-      {overlay === 'palette' ? <CommandPalette commands={commands} onClose={() => setOverlay(null)} /> : null}
+      {overlay?.startsWith('palette') ? (
+        <CommandPalette
+          commands={commands}
+          mode={
+            overlay === 'palette.requests'
+              ? 'requests'
+              : overlay === 'palette.workspaces'
+                ? 'workspaces'
+                : overlay === 'palette.commands'
+                  ? 'commands'
+                  : 'all'
+          }
+          onClose={() => setOverlay(null)}
+        />
+      ) : null}
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'settings' ? <SettingsDialog onClose={() => setOverlay(null)} proxyStatus={proxyStatus} /> : null}
       {overlay === 'curl' ? <ImportCurlDialog onClose={() => setOverlay(null)} /> : null}
-      {overlay === 'postman' ? <ImportPostmanDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'import' ? <ImportDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'export' ? (
+        <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
+      ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
     </div>
   );
