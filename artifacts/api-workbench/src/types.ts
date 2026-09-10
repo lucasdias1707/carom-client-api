@@ -6,6 +6,8 @@
  * interpolated into every outgoing request.
  */
 
+import type { Binding, CommandId } from '@/lib/shortcuts';
+
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
 
@@ -183,6 +185,13 @@ export type Settings = {
    */
   sidebarCollapsed: boolean;
   jsonTheme: JsonTheme;
+  /**
+   * Rebound shortcuts, keyed by command. Only what was changed is stored, so a
+   * default that moves in a later version moves for everyone who never touched
+   * it — and an unknown id left behind by an older build is ignored rather than
+   * resurrected.
+   */
+  keyBindings?: Partial<Record<CommandId, Binding>>;
 };
 
 export type ResponseRecord = {

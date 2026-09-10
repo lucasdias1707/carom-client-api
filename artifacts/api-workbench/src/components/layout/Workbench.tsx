@@ -27,7 +27,8 @@ import { RequestPane } from '@/components/request/RequestPane';
 import { ResponsePane } from '@/components/response/ResponsePane';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { useToast } from '@/components/common/Toaster';
-import { useHotkeys, MOD_LABEL } from '@/hooks/use-hotkeys';
+import { useHotkeys, type Hotkey } from '@/hooks/use-hotkeys';
+import { formatBinding, resolveBindings, type CommandId } from '@/lib/shortcuts';
 import { useProxyHealth } from '@/hooks/use-proxy-health';
 import { useSendRequest } from '@/hooks/use-send-request';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +40,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
-type Overlay = 'palette' | 'environments' | 'settings' | 'curl' | 'import' | 'shortcuts' | null;
+type Overlay =
+  | 'palette'
+  | 'palette.requests'
+  | 'palette.workspaces'
+  | 'environments'
+  | 'settings'
+  | 'curl'
+  | 'import'
+  | 'shortcuts'
+  | null;
 
 export function Workbench() {
   const { state, dispatch, activeRequest, activeFolder } = useWorkspace();
@@ -85,30 +95,40 @@ export function Workbench() {
     void send(activeRequest);
   };
 
+  /*
+    Every shortcut in the app comes from here, so what the screen shows and what
+    the keyboard does cannot drift apart — and rebinding one in the shortcuts
+    screen moves the handler, the hint on the button and the hint in the palette
+    together.
+  */
+  const bindings = resolveBindings(state.settings);
+  const bind = (id: CommandId, handler: () => void): Hotkey => ({
+    ...bindings[id],
+    allowInInput: true,
+    handler,
+  });
+
   useHotkeys([
-    { key: 'k', mod: true, allowInInput: true, handler: () => setOverlay('palette') },
-    { key: 'enter', mod: true, allowInInput: true, handler: sendActive },
-    { key: 'n', mod: true, allowInInput: true, handler: newRequest },
-    { key: 'e', mod: true, allowInInput: true, handler: () => setOverlay('environments') },
-    { key: 'b', mod: true, allowInInput: true, handler: () => setSidebarVisible(!sidebarVisible) },
-    { key: ',', mod: true, allowInInput: true, handler: () => setOverlay('settings') },
-    {
-      key: 'w',
-      mod: true,
-      allowInInput: true,
-      handler: () => {
-        if (state.activeRequestId) dispatch({ type: 'request/close-tab', id: state.activeRequestId });
-      },
-    },
+    bind('palette', () => setOverlay('palette')),
+    bind('palette.requests', () => setOverlay('palette.requests')),
+    bind('palette.workspaces', () => setOverlay('palette.workspaces')),
+    bind('send', sendActive),
+    bind('newRequest', newRequest),
+    bind('environments', () => setOverlay('environments')),
+    bind('toggleSidebar', () => setSidebarVisible(!sidebarVisible)),
+    bind('settings', () => setOverlay('settings')),
+    bind('closeTab', () => {
+      if (state.activeRequestId) dispatch({ type: 'request/close-tab', id: state.activeRequestId });
+    }),
   ]);
 
   const commands: Command[] = [
-    { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: `${MOD_LABEL} N`, run: newRequest },
-    { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: `${MOD_LABEL} ⏎`, run: sendActive },
-    { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: `${MOD_LABEL} E`, run: () => setOverlay('environments') },
+    { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: formatBinding(bindings.newRequest), run: newRequest },
+    { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: formatBinding(bindings.send), run: sendActive },
+    { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
     { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
     { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
-    { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: `${MOD_LABEL} ,`, run: () => setOverlay('settings') },
+    { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
     { id: 'shortcuts', label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
     {
       id: 'layout',
@@ -161,7 +181,7 @@ export function Workbench() {
           <IconButton
             label={sidebarVisible ? 'Hide the sidebar' : 'Show the sidebar'}
             onClick={() => setSidebarVisible(!sidebarVisible)}
-            hint={`${MOD_LABEL} B`}
+            hint={formatBinding(bindings.toggleSidebar)}
             testId="button-toggle-sidebar"
           >
             {sidebarVisible ? <PanelLeftClose /> : <PanelLeft />}
@@ -173,7 +193,7 @@ export function Workbench() {
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
             <IconButton label="Environments"
               onClick={() => setOverlay('environments')}
-              hint={`${MOD_LABEL} E`}
+              hint={formatBinding(bindings.environments)}
               testId="button-environments"
             >
               <Layers />
@@ -192,7 +212,7 @@ export function Workbench() {
             <UpdateBadge />
             <IconButton label="Settings"
               onClick={() => setOverlay('settings')}
-              hint={`${MOD_LABEL} ,`}
+              hint={formatBinding(bindings.settings)}
               testId="button-settings"
             >
               <Settings />
@@ -229,7 +249,7 @@ export function Workbench() {
               </div>
               <h3>No request open</h3>
               <p>
-                Pick one from the sidebar, or press <span className="kbd">{MOD_LABEL} N</span> to start a new one.
+                Pick one from the sidebar, or press <span className="kbd">{formatBinding(bindings.newRequest)}</span> to start a new one.
               </p>
               <Button style={{ marginTop: 14 }} onClick={newRequest} data-testid="button-empty-new-request">
                 <FilePlus2 /> New request
@@ -239,7 +259,13 @@ export function Workbench() {
         )}
       </main>
 
-      {overlay === 'palette' ? <CommandPalette commands={commands} onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'palette' || overlay === 'palette.requests' || overlay === 'palette.workspaces' ? (
+        <CommandPalette
+          commands={commands}
+          mode={overlay === 'palette.requests' ? 'requests' : overlay === 'palette.workspaces' ? 'workspaces' : 'all'}
+          onClose={() => setOverlay(null)}
+        />
+      ) : null}
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'settings' ? <SettingsDialog onClose={() => setOverlay(null)} proxyStatus={proxyStatus} /> : null}
       {overlay === 'curl' ? <ImportCurlDialog onClose={() => setOverlay(null)} /> : null}
