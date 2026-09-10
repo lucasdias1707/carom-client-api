@@ -1,4 +1,5 @@
-import type { Folder, RequestRecord, WorkspaceState } from '@/types';
+import { pruneTree } from '@/lib/tree';
+import type { Environment, Folder, RequestRecord, WorkspaceState } from '@/types';
 
 /**
  * A slice of a workspace: one folder with everything under it, or one request.
@@ -9,7 +10,8 @@ import type { Folder, RequestRecord, WorkspaceState } from '@/types';
  * its own marker.
  */
 export const SUBTREE_FORMAT = 'workspace-subtree';
-export const SUBTREE_VERSION = 1;
+/** 2 added `environments`. A version 1 file simply has none, and still reads. */
+export const SUBTREE_VERSION = 2;
 
 export type SubtreeExport = {
   format: typeof SUBTREE_FORMAT;
@@ -20,6 +22,14 @@ export type SubtreeExport = {
   /** Empty when a single request was exported. Ordered outermost first. */
   folders: Folder[];
   requests: RequestRecord[];
+  /**
+   * Environments that were ticked, base included when it was.
+   *
+   * Absent in a version 1 file. They travel with the requests deliberately: a
+   * request whose URL is `{{baseUrl}}/orders` is not much use to the person
+   * you sent it to without the environment that says what `baseUrl` is.
+   */
+  environments?: Environment[];
 };
 
 /** True for any object carrying our slice marker, however old its version. */
@@ -55,7 +65,12 @@ export function subtreeFolderIds(state: WorkspaceState, folderId: string): strin
   return collected;
 }
 
-function envelope(name: string, folders: Folder[], requests: RequestRecord[]): SubtreeExport {
+function envelope(
+  name: string,
+  folders: Folder[],
+  requests: RequestRecord[],
+  environments: Environment[] = [],
+): SubtreeExport {
   return {
     format: SUBTREE_FORMAT,
     version: SUBTREE_VERSION,
@@ -63,7 +78,31 @@ function envelope(name: string, folders: Folder[], requests: RequestRecord[]): S
     exportedAt: new Date().toISOString(),
     folders,
     requests,
+    ...(environments.length > 0 ? { environments } : {}),
   };
+}
+
+/**
+ * Whatever was ticked in the export dialog.
+ *
+ * The ticking rules are the tree's, the same ones the import dialog uses: a
+ * folder that was not ticked still comes along when something under it was,
+ * because it is the path to that request.
+ */
+export function exportSelection(
+  state: WorkspaceState,
+  selection: { name: string; selected: ReadonlySet<string>; environmentIds?: ReadonlySet<string> },
+): SubtreeExport {
+  const workspace = state.activeWorkspaceId;
+  const scoped = {
+    folders: state.folders.filter((folder) => folder.workspaceId === workspace),
+    requests: state.requests.filter((request) => request.workspaceId === workspace),
+  };
+  const { folders, requests } = pruneTree(scoped, selection.selected);
+  const environments = state.environments.filter(
+    (environment) => environment.workspaceId === workspace && selection.environmentIds?.has(environment.id),
+  );
+  return envelope(selection.name, folders, requests, environments);
 }
 
 /** One folder, its nested folders, and every request inside any of them. */

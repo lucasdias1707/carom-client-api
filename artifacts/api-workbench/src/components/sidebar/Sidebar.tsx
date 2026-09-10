@@ -3,8 +3,7 @@ import { Braces, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
 import { PromptDialog } from '@/components/common/PromptDialog';
-import { downloadJson } from '@/lib/download';
-import { exportFileName, exportFolder, exportRequest } from '@/lib/export';
+import { subtreeFolderIds } from '@/lib/export';
 import { createFolder, createRequest } from '@/lib/factories';
 import { buildTree, countRequests, isDescendantFolder, type TreeNode } from '@/state/selectors';
 import { WorkspaceMenu } from '@/components/sidebar/WorkspaceMenu';
@@ -28,10 +27,13 @@ type ConfirmState = { kind: 'folder'; folder: Folder } | { kind: 'request'; requ
 export function Sidebar({
   onImportCurl,
   onImport,
+  onExport,
   locate,
 }: {
   onImportCurl: () => void;
   onImport: () => void;
+  /** Opens the export dialog, ticking what was clicked. Nothing means all of it. */
+  onExport: (selection?: string[]) => void;
   /**
    * A request to reveal, and a nonce so asking for the same one twice still
    * counts as asking twice.
@@ -143,15 +145,12 @@ export function Sidebar({
     setCollapsed(Object.fromEntries(workspaceFolders.map((item) => [item.id, true])));
   };
 
-  const saveFolder = (folder: Folder) => {
-    const payload = exportFolder(state, folder.id);
-    if (payload) downloadJson(exportFileName(folder.name), payload);
-  };
-
-  const saveRequest = (request: RequestRecord) => {
-    const payload = exportRequest(state, request.id);
-    if (payload) downloadJson(exportFileName(request.name), payload);
-  };
+  // Both go through the export dialog rather than writing a file on the spot:
+  // it starts ticked on what was clicked, so the one-click case is one extra
+  // click, and everything else — a second folder, an environment, where to put
+  // it — is now reachable from the same place.
+  const saveFolder = (folder: Folder) => onExport(subtreeFolderIds(state, folder.id));
+  const saveRequest = (request: RequestRecord) => onExport([request.id]);
 
   const folderMenu = (folder: Folder): MenuEntry[] => [
     { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: () => addRequest(folder.id) },
@@ -161,7 +160,7 @@ export function Sidebar({
     { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-folder', folder }) },
     {
       kind: 'item',
-      label: 'Export folder',
+      label: 'Export folder…',
       icon: <Download size={13} />,
       onSelect: () => saveFolder(folder),
     },
@@ -177,7 +176,7 @@ export function Sidebar({
   const requestMenu = (request: RequestRecord): MenuEntry[] => [
     { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-request', request }) },
     { kind: 'item', label: 'Duplicate', icon: <Copy size={13} />, onSelect: () => dispatch({ type: 'request/duplicate', id: request.id }) },
-    { kind: 'item', label: 'Export request', icon: <Download size={13} />, onSelect: () => saveRequest(request) },
+    { kind: 'item', label: 'Export request…', icon: <Download size={13} />, onSelect: () => saveRequest(request) },
     { kind: 'separator' },
     {
       kind: 'item',
@@ -418,12 +417,21 @@ export function Sidebar({
         )}
       </div>
 
+      {/*
+        Three labelled buttons do not fit a sidebar someone has narrowed, and
+        the one that overflowed ended up under the resize handle. curl keeps
+        its meaning as an icon with a tooltip; the two that name a direction
+        keep their words.
+      */}
       <div className="sidebar-foot">
-        <Button variant="ghost" size="sm" onClick={onImportCurl} data-testid="button-import-curl">
-          <Terminal /> Import curl
-        </Button>
+        <IconButton label="Import from curl" onClick={onImportCurl} testId="button-import-curl">
+          <Terminal />
+        </IconButton>
         <Button variant="ghost" size="sm" onClick={onImport} data-testid="button-import">
           <FolderInput /> Import
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => onExport()} data-testid="button-export">
+          <Download /> Export
         </Button>
       </div>
 

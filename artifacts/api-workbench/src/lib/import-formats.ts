@@ -1,3 +1,4 @@
+import { importSubtree, looksLikeSubtree } from '@/lib/carom';
 import { importHar, looksLikeHar } from '@/lib/har';
 import { importInsomnia, looksLikeInsomnia, looksLikeInsomniaV5 } from '@/lib/insomnia';
 import { importOpenApi, looksLikeOpenApi } from '@/lib/openapi';
@@ -16,7 +17,7 @@ import { importPostman, type ParsedImport } from '@/lib/postman';
  * similar is not mistaken for one.
  */
 
-export type ImportFormat = 'postman' | 'insomnia' | 'openapi' | 'har';
+export type ImportFormat = 'postman' | 'insomnia' | 'openapi' | 'har' | 'carom';
 
 /** Written with the article, so a sentence can use them without patching one in. */
 export const FORMAT_LABELS: Record<ImportFormat, string> = {
@@ -24,9 +25,11 @@ export const FORMAT_LABELS: Record<ImportFormat, string> = {
   insomnia: 'an Insomnia export',
   openapi: 'an OpenAPI description',
   har: 'a HAR network log',
+  carom: 'a Carom export',
 };
 
 export function detectFormat(payload: unknown): ImportFormat | null {
+  if (looksLikeSubtree(payload)) return 'carom';
   if (looksLikeOpenApi(payload)) return 'openapi';
   if (looksLikeInsomnia(payload)) return 'insomnia';
   if (looksLikeHar(payload)) return 'har';
@@ -45,6 +48,7 @@ const READERS: Record<ImportFormat, (payload: unknown, workspaceId: string, star
   insomnia: importInsomnia,
   openapi: importOpenApi,
   har: importHar,
+  carom: importSubtree,
 };
 
 export type ReadResult = { format: ImportFormat; imported: ParsedImport };
@@ -67,13 +71,13 @@ export function readImport(raw: string, workspaceId: string, startIndex = 0): Re
         'That is an Insomnia v5 export, which is YAML. Export again choosing “Insomnia v4 (JSON)”, and this will read it.',
       );
     }
-    throw new Error('That file is not valid JSON. Postman, Insomnia v4, OpenAPI and HAR files all are.');
+    throw new Error('That file is not valid JSON. Carom, Postman, Insomnia v4, OpenAPI and HAR files all are.');
   }
 
   const format = detectFormat(payload);
   if (!format) {
     throw new Error(
-      'That JSON is not a format this understands. It reads Postman collections and environments, Insomnia v4 exports, OpenAPI or Swagger descriptions, and HAR logs.',
+      'That JSON is not a format this understands. It reads its own exports, Postman collections and environments, Insomnia v4 exports, OpenAPI or Swagger descriptions, and HAR logs.',
     );
   }
   return { format, imported: READERS[format](payload, workspaceId, startIndex) };

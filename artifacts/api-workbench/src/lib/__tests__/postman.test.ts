@@ -2,18 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createRequest } from '@/lib/factories';
 import { prepareRequest } from '@/lib/http';
 import { paramsMatchUrl, splitQuery } from '@/lib/query';
-import {
-  allIds,
-  importPostman,
-  importTree,
-  parsePostman,
-  pruneImport,
-  retargetImport,
-  subtreeIds,
-  toAuth,
-  toBody,
-  toUrl,
-} from '@/lib/postman';
+import { importPostman, parsePostman, retargetImport, toAuth, toBody, toUrl } from '@/lib/postman';
+import { allIds, buildTree, pruneTree, subtreeIds } from '@/lib/tree';
 
 const collection = (overrides: Record<string, unknown> = {}) => ({
   info: { name: 'My API', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
@@ -320,7 +310,7 @@ describe('choosing what to import', () => {
     );
 
   it('builds the tree the dialog draws, nested as the collection was', () => {
-    const tree = importTree(nested());
+    const tree = buildTree(nested());
     expect(tree).toHaveLength(1);
     expect(tree[0]).toMatchObject({ kind: 'folder', name: 'My API', depth: 0 });
 
@@ -331,20 +321,20 @@ describe('choosing what to import', () => {
   });
 
   it('carries the method through, so a row reads like the sidebar', () => {
-    const tree = importTree(nested());
+    const tree = buildTree(nested());
     const ping = tree[0].kind === 'folder' ? tree[0].children.at(-1) : null;
     expect(ping).toMatchObject({ kind: 'request', name: 'Ping', method: 'GET' });
   });
 
   it('lists every id once, which is what "select all" ticks', () => {
     const imported = nested();
-    const ids = allIds(importTree(imported));
+    const ids = allIds(buildTree(imported));
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toHaveLength(imported.folders.length + imported.requests.length);
   });
 
   it('ticking a folder means everything under it', () => {
-    const tree = importTree(nested());
+    const tree = buildTree(nested());
     const users = tree[0].kind === 'folder' ? tree[0].children[0] : null;
     if (users?.kind !== 'folder') throw new Error('expected a folder');
     // Users, its three children, Admin's own request.
@@ -354,7 +344,7 @@ describe('choosing what to import', () => {
   it('keeps only what was ticked', () => {
     const imported = nested();
     const ping = imported.requests.find((request) => request.name === 'Ping')!;
-    const pruned = pruneImport(imported, new Set([ping.id]));
+    const pruned = pruneTree(imported, new Set([ping.id]));
     expect(pruned.requests.map((request) => request.name)).toEqual(['Ping']);
   });
 
@@ -362,7 +352,7 @@ describe('choosing what to import', () => {
     // Otherwise the request would have nowhere to sit, or would silently move.
     const imported = nested();
     const ban = imported.requests.find((request) => request.name === 'Ban user')!;
-    const pruned = pruneImport(imported, new Set([ban.id]));
+    const pruned = pruneTree(imported, new Set([ban.id]));
     expect(pruned.folders.map((folder) => folder.name)).toEqual(['My API', 'Users', 'Admin']);
     expect(pruned.requests).toHaveLength(1);
   });
@@ -371,20 +361,20 @@ describe('choosing what to import', () => {
     const imported = nested();
     const users = imported.folders.find((folder) => folder.name === 'Users')!;
     const list = imported.requests.find((request) => request.name === 'List users')!;
-    const pruned = pruneImport(imported, new Set([users.id, list.id]));
+    const pruned = pruneTree(imported, new Set([users.id, list.id]));
     expect(pruned.requests.map((request) => request.name)).toEqual(['List users']);
   });
 
   it('keeps an empty folder that was ticked on its own', () => {
     const imported = nested();
     const admin = imported.folders.find((folder) => folder.name === 'Admin')!;
-    const pruned = pruneImport(imported, new Set([admin.id]));
+    const pruned = pruneTree(imported, new Set([admin.id]));
     expect(pruned.folders.map((folder) => folder.name)).toEqual(['My API', 'Users', 'Admin']);
     expect(pruned.requests).toEqual([]);
   });
 
   it('takes nothing when nothing is ticked', () => {
-    expect(pruneImport(nested(), new Set())).toEqual({ folders: [], requests: [] });
+    expect(pruneTree(nested(), new Set())).toEqual({ folders: [], requests: [] });
   });
 });
 

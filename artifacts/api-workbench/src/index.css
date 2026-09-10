@@ -423,6 +423,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    /* The sidebar is resizable down to 180px; below what these fit in, they
+       stack rather than sliding out under the resize handle. */
+    flex-wrap: wrap;
   }
 
   /* ==========================================================================
@@ -1384,7 +1387,7 @@
   [data-tooltip]:focus-visible::after { opacity: 1; }
 
   /* The Postman import picker: a scrollable tree of what is in the file. */
-  .import-tree {
+  .pick-tree {
     max-height: 240px;
     overflow: auto;
     padding: 4px;
@@ -1392,7 +1395,7 @@
     border-radius: var(--radius);
     background: var(--bg-raised);
   }
-  .import-row {
+  .pick-row {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1401,8 +1404,8 @@
     font-size: 13px;
     color: var(--text);
   }
-  .import-row:hover { background: var(--bg-hover); }
-  .import-caret {
+  .pick-row:hover { background: var(--bg-hover); }
+  .pick-caret {
     display: inline-flex;
     padding: 0;
     border: 0;

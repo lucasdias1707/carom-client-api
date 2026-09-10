@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Columns2,
+  Download,
   FilePlus2,
   FolderInput,
   Keyboard,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CommandPalette, type Command } from '@/components/dialogs/CommandPalette';
 import { EnvironmentDialog } from '@/components/dialogs/EnvironmentDialog';
+import { ExportDialog } from '@/components/dialogs/ExportDialog';
 import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
@@ -48,6 +50,7 @@ type Overlay =
   | 'settings'
   | 'curl'
   | 'import'
+  | 'export'
   | 'shortcuts'
   | null;
 
@@ -62,6 +65,12 @@ export function Workbench() {
    * for the same request count twice.
    */
   const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null);
+  /** What the export dialog opens ticked; undefined means the whole workspace. */
+  const [exporting, setExporting] = useState<string[] | undefined>(undefined);
+  const openExport = (selection?: string[]) => {
+    setExporting(selection);
+    setOverlay('export');
+  };
   // Kept in settings rather than component state: someone who narrows the
   // window and hides the tree means it, and should not have to say so again on
   // the next launch.
@@ -128,6 +137,7 @@ export function Workbench() {
     { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
     { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
     { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
+    { id: 'export', label: 'Export requests and environments', icon: <Download size={13} />, run: () => openExport() },
     { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
     { id: 'shortcuts', label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
     {
@@ -161,6 +171,7 @@ export function Workbench() {
       <Sidebar
         onImportCurl={() => setOverlay('curl')}
         onImport={() => setOverlay('import')}
+        onExport={openExport}
         locate={locate}
       />
       {sidebarVisible ? (
@@ -221,7 +232,7 @@ export function Workbench() {
         </div>
 
         {activeFolder ? (
-          <FolderPane folder={activeFolder} />
+          <FolderPane folder={activeFolder} onExport={openExport} />
         ) : activeRequest ? (
           <ResizablePanelGroup
             className="panes"
@@ -270,6 +281,9 @@ export function Workbench() {
       {overlay === 'settings' ? <SettingsDialog onClose={() => setOverlay(null)} proxyStatus={proxyStatus} /> : null}
       {overlay === 'curl' ? <ImportCurlDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'import' ? <ImportDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'export' ? (
+        <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
+      ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
     </div>
   );

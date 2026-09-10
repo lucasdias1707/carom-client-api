@@ -4,7 +4,7 @@ import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
 import { UpdatesSection } from '@/components/dialogs/UpdatesSection';
-import { downloadJson } from '@/lib/download';
+import { saveJson, saveMessage } from '@/lib/save';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
 import { createSeedState } from '@/lib/seed';
@@ -47,15 +47,21 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
   const fileRef = useRef<HTMLInputElement>(null);
   const settings = state.settings;
 
-  const exportWorkspace = () => downloadJson('workspace.json', { ...state, responses: [] });
+  // Everything, settings included, so it restores rather than merges. On the
+  // desktop this asks where to put it; in a browser it lands in Downloads.
+  const exportWorkspace = async () => {
+    const message = saveMessage(await saveJson('workspace.json', { ...state, responses: [] }), 'the workspace');
+    if (message) toast({ ...message, kind: 'success' });
+  };
 
   const importWorkspace = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text()) as WorkspaceState;
       if (isSubtreeExport(parsed)) {
-        // Naming what it is beats "not a valid export" for someone who just
-        // exported a folder and reached for the only import button there is.
-        throw new Error('That is a folder or request export. Only whole workspaces can be imported here.');
+        // A slice is merged into a workspace rather than replacing one, which
+        // is the Import dialog's job — so this points there instead of doing
+        // something destructive with a file that means the opposite.
+        throw new Error('That is a folder or request export. Use Import in the sidebar to merge it into a workspace.');
       }
       if (!Array.isArray(parsed.requests) || !Array.isArray(parsed.environments)) {
         throw new Error('That file is not a workspace export.');
@@ -210,7 +216,7 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
         <div>
           <div className="section-label">Workspace data</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button variant="secondary" onClick={exportWorkspace} data-testid="button-export-workspace">
+            <Button variant="secondary" onClick={() => void exportWorkspace()} data-testid="button-export-workspace">
               <Download /> Export JSON
             </Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()} data-testid="button-import-workspace">
