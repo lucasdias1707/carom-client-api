@@ -5,6 +5,8 @@ import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
 import { UpdatesSection } from '@/components/dialogs/UpdatesSection';
 import { saveJson, saveMessage } from '@/lib/save';
+import { DEFAULT_PALETTE, PALETTES } from '@/lib/themes';
+import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
 import { createSeedState } from '@/lib/seed';
@@ -96,6 +98,42 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
             block
           />
         </div>
+
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Colours</Label>
+          <SelectField
+            value={settings.palette ?? DEFAULT_PALETTE}
+            onChange={(palette) => dispatch({ type: 'settings/update', patch: { palette } })}
+            options={PALETTES.map((palette) => ({ value: palette.id, label: `${palette.name} — ${palette.note}` }))}
+            ariaLabel="Colour palette"
+            testId="select-palette"
+            block
+          />
+          <div className="palette-swatches" data-testid="palette-swatches">
+            {PALETTES.map((palette) => {
+              const tokens = palette.dark ?? palette.light;
+              const active = (settings.palette ?? DEFAULT_PALETTE) === palette.id;
+              return (
+                <button
+                  key={palette.id}
+                  className={`palette-swatch ${active ? 'active' : ''}`}
+                  onClick={() => dispatch({ type: 'settings/update', patch: { palette: palette.id } })}
+                  aria-label={palette.name}
+                  aria-pressed={active}
+                  data-testid={`button-palette-${palette.id}`}
+                >
+                  {/* The default has no tokens of its own; it shows the ones
+                      currently in force, which is exactly what it applies. */}
+                  <span style={{ background: tokens?.['--bg-app'] ?? 'var(--bg-app)' }} />
+                  <span style={{ background: tokens?.['--bg-raised'] ?? 'var(--bg-raised)' }} />
+                  <span style={{ background: tokens?.['--accent'] ?? 'var(--accent)' }} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <FontThemeEditor />
 
         <div className="stack" style={{ gap: 6 }}>
           <Label className="section-label m-0">Pane layout</Label>

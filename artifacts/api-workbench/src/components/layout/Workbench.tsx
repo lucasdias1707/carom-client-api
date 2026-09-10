@@ -79,7 +79,7 @@ export function Workbench() {
   const setSidebarVisible = (visible: boolean) =>
     dispatch({ type: 'settings/update', patch: { sidebarCollapsed: !visible } });
 
-  useTheme(state.settings.theme);
+  useTheme(state.settings);
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId && !environment.isBase,

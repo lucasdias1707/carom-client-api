@@ -1223,6 +1223,24 @@
     cursor: pointer;
   }
 
+  /* The palette row in Settings: three bands of a palette, so what it does is
+     visible before it is chosen. */
+  .palette-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .palette-swatch {
+    display: flex;
+    width: 54px;
+    height: 24px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: none;
+  }
+  .palette-swatch > span { flex: 1; }
+  .palette-swatch > span:last-child { flex: 0 0 14px; }
+  .palette-swatch.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+
   .color-rows { display: grid; gap: 8px; }
   .color-row {
     display: grid;
