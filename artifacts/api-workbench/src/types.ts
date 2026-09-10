@@ -7,7 +7,7 @@
  */
 
 import type { Binding, CommandId } from '@/lib/shortcuts';
-import type { FontTheme } from '@/lib/themes';
+import type { FontTheme, Palette } from '@/lib/themes';
 
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
@@ -221,6 +221,8 @@ export type Settings = {
    * the stylesheet, which is why the default overrides nothing.
    */
   palette?: string;
+  /** Colour palettes someone made here. The built-in ones are not stored. */
+  palettes?: Palette[];
   /** Which font theme is in use, built-in or saved. */
   fontTheme?: string;
   /** Font themes someone made here. The built-in ones are not stored. */

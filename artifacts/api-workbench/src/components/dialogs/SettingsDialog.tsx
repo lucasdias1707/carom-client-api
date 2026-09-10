@@ -1,13 +1,13 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Download, Keyboard, Upload } from 'lucide-react';
 import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
 import { UpdatesSection } from '@/components/dialogs/UpdatesSection';
 import { saveJson, saveMessage } from '@/lib/save';
-import { DEFAULT_PALETTE, PALETTES } from '@/lib/themes';
 import { formatBinding, resolveBindings } from '@/lib/shortcuts';
 import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
+import { PaletteEditor } from '@/components/dialogs/PaletteEditor';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
 import { createSeedState } from '@/lib/seed';
@@ -17,6 +17,7 @@ import type { JsonTheme, PaneLayout, SendMode, ThemeName, WorkspaceState } from 
 import type { ProxyStatus } from '@/hooks/use-proxy-health';
 import tauriConfig from '../../../src-tauri/tauri.conf.json';
 import { SelectField } from '@/components/common/SelectField';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,9 @@ export function SettingsDialog({
   const { state, dispatch } = useWorkspace();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+  // Two tabs rather than one long scroll: everything about how the app looks
+  // was scattered between the top of the list and the bottom of it.
+  const [tab, setTab] = useState('general');
   const settings = state.settings;
 
   // Everything, settings included, so it restores rather than merges. On the
@@ -92,58 +96,17 @@ export function SettingsDialog({
 
   return (
     <Dialog title="Settings" onClose={onClose} testId="dialog-settings" footer={<Button onClick={onClose}>Done</Button>}>
-      <div className="stack" style={{ gap: 16 }}>
-        <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Theme</Label>
-          <SelectField
-            value={settings.theme}
-            onChange={(theme: ThemeName) => dispatch({ type: 'settings/update', patch: { theme } })}
-            options={[
-              { value: 'dark', label: 'Dark' },
-              { value: 'light', label: 'Light' },
-              { value: 'system', label: 'Match system' },
-            ]}
-            ariaLabel="Theme"
-            testId="select-theme"
-            block
-          />
-        </div>
+      <Tabs value={tab} onValueChange={setTab} className="stack" style={{ gap: 12 }}>
+        <TabsList className="w-full">
+          <TabsTrigger value="general" className="flex-1" data-testid="tab-settings-general">
+            General
+          </TabsTrigger>
+          <TabsTrigger value="theme" className="flex-1" data-testid="tab-settings-theme">
+            Theme
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Colours</Label>
-          <SelectField
-            value={settings.palette ?? DEFAULT_PALETTE}
-            onChange={(palette) => dispatch({ type: 'settings/update', patch: { palette } })}
-            options={PALETTES.map((palette) => ({ value: palette.id, label: `${palette.name} — ${palette.note}` }))}
-            ariaLabel="Colour palette"
-            testId="select-palette"
-            block
-          />
-          <div className="palette-swatches" data-testid="palette-swatches">
-            {PALETTES.map((palette) => {
-              const tokens = palette.dark ?? palette.light;
-              const active = (settings.palette ?? DEFAULT_PALETTE) === palette.id;
-              return (
-                <button
-                  key={palette.id}
-                  className={`palette-swatch ${active ? 'active' : ''}`}
-                  onClick={() => dispatch({ type: 'settings/update', patch: { palette: palette.id } })}
-                  aria-label={palette.name}
-                  aria-pressed={active}
-                  data-testid={`button-palette-${palette.id}`}
-                >
-                  {/* The default has no tokens of its own; it shows the ones
-                      currently in force, which is exactly what it applies. */}
-                  <span style={{ background: tokens?.['--bg-app'] ?? 'var(--bg-app)' }} />
-                  <span style={{ background: tokens?.['--bg-raised'] ?? 'var(--bg-raised)' }} />
-                  <span style={{ background: tokens?.['--accent'] ?? 'var(--accent)' }} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <FontThemeEditor />
+        <TabsContent value="general" className="stack" style={{ gap: 16 }}>
 
         {/*
           The shortcuts screen lives behind the palette, and the palette is
@@ -235,48 +198,6 @@ export function SettingsDialog({
           <Label htmlFor="checkbox-persist-responses" className="font-normal">Keep response bodies between reloads</Label>
         </div>
 
-        <div>
-          <div className="section-label">
-            JSON colours
-            <span className="spacer" />
-            <SelectField
-              value=""
-              onChange={(name) => {
-                const preset = JSON_THEME_PRESETS[name];
-                if (preset) dispatch({ type: 'settings/update', patch: { jsonTheme: { ...preset } } });
-              }}
-              options={Object.keys(JSON_THEME_PRESETS).map((name) => ({ value: name, label: name }))}
-              placeholder="Presets…"
-              ariaLabel="Colour preset"
-              testId="select-json-preset"
-            />
-          </div>
-          <div className="color-rows">
-            {JSON_COLOR_FIELDS.map(({ field, label, sample }) => (
-              <div className="color-row" key={field}>
-                <Label htmlFor={`json-color-${field}`} className="font-normal">{label}</Label>
-                <input
-                  id={`json-color-${field}`}
-                  type="color"
-                  value={settings.jsonTheme[field]}
-                  onChange={(event) =>
-                    dispatch({
-                      type: 'settings/update',
-                      patch: { jsonTheme: { ...settings.jsonTheme, [field]: event.target.value } },
-                    })
-                  }
-                  data-testid={`input-json-color-${field}`}
-                />
-                <span className="color-sample" style={{ color: settings.jsonTheme[field] }}>
-                  {sample}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="hint" style={{ marginTop: 8 }}>
-            Applies to the Pretty tab of the response viewer.
-          </p>
-        </div>
 
         {isDesktop() ? <UpdatesSection /> : null}
 
@@ -326,7 +247,73 @@ export function SettingsDialog({
           <span className="spacer" />
           <span>{isDesktop() ? 'desktop' : 'web'}</span>
         </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="theme" className="stack" style={{ gap: 16 }}>
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Theme</Label>
+          <SelectField
+            value={settings.theme}
+            onChange={(theme: ThemeName) => dispatch({ type: 'settings/update', patch: { theme } })}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'Match system' },
+            ]}
+            ariaLabel="Theme"
+            testId="select-theme"
+            block
+          />
+        </div>
+
+        <PaletteEditor />
+
+        <FontThemeEditor />
+
+        <div>
+          <div className="section-label">
+            JSON colours
+            <span className="spacer" />
+            <SelectField
+              value=""
+              onChange={(name) => {
+                const preset = JSON_THEME_PRESETS[name];
+                if (preset) dispatch({ type: 'settings/update', patch: { jsonTheme: { ...preset } } });
+              }}
+              options={Object.keys(JSON_THEME_PRESETS).map((name) => ({ value: name, label: name }))}
+              placeholder="Presets…"
+              ariaLabel="Colour preset"
+              testId="select-json-preset"
+            />
+          </div>
+          <div className="color-rows">
+            {JSON_COLOR_FIELDS.map(({ field, label, sample }) => (
+              <div className="color-row" key={field}>
+                <Label htmlFor={`json-color-${field}`} className="font-normal">{label}</Label>
+                <input
+                  id={`json-color-${field}`}
+                  type="color"
+                  value={settings.jsonTheme[field]}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'settings/update',
+                      patch: { jsonTheme: { ...settings.jsonTheme, [field]: event.target.value } },
+                    })
+                  }
+                  data-testid={`input-json-color-${field}`}
+                />
+                <span className="color-sample" style={{ color: settings.jsonTheme[field] }}>
+                  {sample}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="hint" style={{ marginTop: 8 }}>
+            Applies to the Pretty tab of the response viewer.
+          </p>
+        </div>
+        </TabsContent>
+      </Tabs>
     </Dialog>
   );
 }
