@@ -56,6 +56,31 @@ export type Auth = {
   apiKeyIn: 'header' | 'query';
 };
 
+/** Where a documented field travels. */
+export const DOC_FIELD_LOCATIONS = ['query', 'path', 'header', 'body'] as const;
+export type DocFieldIn = (typeof DOC_FIELD_LOCATIONS)[number];
+
+export const DOC_FIELD_TYPES = ['string', 'number', 'integer', 'boolean', 'array', 'object'] as const;
+export type DocFieldType = (typeof DOC_FIELD_TYPES)[number];
+
+/**
+ * One documented field of a request.
+ *
+ * The params and headers tables already say what is *sent*; this says what a
+ * field *means* — whether it is required, what type it holds, an example worth
+ * showing. That is the part an OpenAPI description needs and a key/value row
+ * cannot carry.
+ */
+export type DocField = {
+  id: string;
+  in: DocFieldIn;
+  name: string;
+  description: string;
+  required: boolean;
+  type: DocFieldType;
+  example: string;
+};
+
 export type GraphQLBody = {
   query: string;
   variables: string;
@@ -78,6 +103,11 @@ export type RequestRecord = {
   multipart: KeyValue[];
   graphql: GraphQLBody;
   auth: Auth;
+  /**
+   * Documented fields. Optional, and absent on every request written before
+   * the Docs tab could hold them — `hydrate` needs no migration for that.
+   */
+  docs?: { fields: DocField[] };
   /** Runs before the request is sent, outermost folder first. */
   preScript: string;
   /** Runs after the response arrives, innermost first. */

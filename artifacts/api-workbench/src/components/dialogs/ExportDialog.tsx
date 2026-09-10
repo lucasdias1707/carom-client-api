@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { exportFileName, exportSelection } from '@/lib/export';
+import { describedCount, toOpenApi } from '@/lib/openapi-export';
+import { SelectField } from '@/components/common/SelectField';
 import { saveJson, saveMessage } from '@/lib/save';
 import { allIds, buildTree, pruneTree } from '@/lib/tree';
 import { useWorkspace } from '@/state/workspace-store';
@@ -51,6 +53,7 @@ export function ExportDialog({
     () => new Set(initialSelection ?? allIds(buildTree(scoped))),
   );
   const [environmentIds, setEnvironmentIds] = useState<Set<string>>(new Set());
+  const [format, setFormat] = useState<'carom' | 'openapi'>('carom');
   const [saving, setSaving] = useState(false);
 
   const counts = useMemo(() => {
@@ -58,7 +61,15 @@ export function ExportDialog({
     return { folders: pruned.folders.length, requests: pruned.requests.length };
   }, [scoped, selected]);
 
-  const anything = counts.requests > 0 || counts.folders > 0 || environmentIds.size > 0;
+  const described = useMemo(
+    () => describedCount(pruneTree(scoped, selected).requests),
+    [scoped, selected],
+  );
+
+  const openApi = format === 'openapi';
+  // An OpenAPI description is made of operations, so requests are the whole of
+  // it: folders become tags and environments have nowhere to go.
+  const anything = openApi ? counts.requests > 0 : counts.requests > 0 || counts.folders > 0 || environmentIds.size > 0;
 
   /** One folder on its own names the file after it; anything wider is the workspace. */
   const name = useMemo(() => {
@@ -72,8 +83,11 @@ export function ExportDialog({
   const run = async () => {
     setSaving(true);
     try {
-      const payload = exportSelection(state, { name, selected, environmentIds });
-      const message = saveMessage(await saveJson(exportFileName(name), payload), name);
+      const payload = openApi
+        ? toOpenApi(state, { title: name, selected })
+        : exportSelection(state, { name, selected, environmentIds });
+      const filename = openApi ? exportFileName(`${name}-openapi`) : exportFileName(name);
+      const message = saveMessage(await saveJson(filename, payload), name);
       if (message) toast({ ...message, kind: 'success' });
       onClose();
     } catch (error) {
@@ -98,7 +112,11 @@ export function ExportDialog({
   return (
     <Dialog
       title="Export"
-      description={`From ${workspace?.name ?? 'this workspace'}. Import reads this file back.`}
+      description={
+        openApi
+          ? 'An OpenAPI 3.1 description of the requests you pick, from what the Docs tab knows.'
+          : `From ${workspace?.name ?? 'this workspace'}. Import reads this file back.`
+      }
       onClose={onClose}
       testId="dialog-export"
       footer={
@@ -113,6 +131,19 @@ export function ExportDialog({
       }
     >
       <div className="stack" style={{ gap: 10 }}>
+        <div className="section-label">Format</div>
+        <SelectField
+          value={format}
+          onChange={(next) => setFormat(next as 'carom' | 'openapi')}
+          options={[
+            { value: 'carom', label: 'Carom — reads back into this app' },
+            { value: 'openapi', label: 'OpenAPI 3.1 — a description of the API' },
+          ]}
+          ariaLabel="Export format"
+          testId="select-export-format"
+          block
+        />
+
         <div className="section-label">
           What to export
           <span className="spacer" />
@@ -126,7 +157,7 @@ export function ExportDialog({
 
         <TreePicker nodes={tree} selected={selected} onChange={setSelected} testPrefix="export" />
 
-        {environments.length > 0 ? (
+        {environments.length > 0 && !openApi ? (
           <>
             <div className="section-label">
               Environments
@@ -169,10 +200,21 @@ export function ExportDialog({
           </>
         ) : null}
 
+        {openApi ? (
+          <p className="hint" data-testid="text-openapi-note">
+            {described === 0
+              ? 'No fields are described yet, so bodies are described from the JSON you have and parameters are left out. The Docs tab of a request has a “Read from the request” button that fills them in.'
+              : `${described} documented field${described === 1 ? '' : 's'} across the ticked requests become parameters and body properties. Recorded responses become response examples.`}
+          </p>
+        ) : null}
+
         <p className="hint" data-testid="text-export-summary">
           {counts.requests} request{counts.requests === 1 ? '' : 's'} in {counts.folders} folder
           {counts.folders === 1 ? '' : 's'}
-          {environmentIds.size > 0 ? `, and ${environmentIds.size} environment${environmentIds.size === 1 ? '' : 's'}` : ''}.
+          {!openApi && environmentIds.size > 0
+            ? `, and ${environmentIds.size} environment${environmentIds.size === 1 ? '' : 's'}`
+            : ''}
+          .
           A folder you left unticked still comes along when something inside it is ticked — otherwise that request
           would have nowhere to sit.
         </p>

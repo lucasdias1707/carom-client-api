@@ -717,6 +717,27 @@
   .kv-file .hint { font-size: 11px; }
   .kv-row.disabled .kv-cell input { color: var(--text-faint); text-decoration: line-through; }
 
+  /* The Docs field table. Same cells as `.kv`, more of them: a field says
+     where it goes, what it holds and what it is for, which a key/value row
+     has no room for. It scrolls sideways rather than crushing the columns,
+     since the pane can be half a narrow window. */
+  /* The pane can be half a narrow window, and these columns have a floor. The
+     table scrolls sideways inside its own box rather than pushing the rest of
+     the tab out past the edge of the pane. */
+  .doc-fields-scroll { overflow-x: auto; padding-bottom: 2px; }
+  .doc-fields {
+    display: grid;
+    grid-template-columns:
+      92px minmax(110px, 1fr) 104px 44px
+      minmax(100px, 0.9fr) minmax(130px, 1.4fr) 40px;
+    min-width: 660px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .doc-row { display: contents; }
+  .doc-fields .kv-cell input { font-family: var(--font-sans); }
+
 
   .section-label {
     display: flex;
