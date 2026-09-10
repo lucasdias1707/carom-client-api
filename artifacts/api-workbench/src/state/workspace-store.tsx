@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { draftChanges, withDraft } from '@/lib/draft';
 import { emptyAuth } from '@/lib/factories';
 import { dropLegacyState, migrateLegacyState } from '@/lib/migrate';
 import { createSeedState } from '@/lib/seed';
@@ -18,6 +19,8 @@ type StoreValue = {
   activeFolder: Folder | null;
   /** The folders a request sits in, nearest first — what auth and scripts inherit through. */
   chainFor: (folderId: string | null) => Folder[];
+  /** What an open request has unsaved, in composer order. Empty means saved. */
+  unsavedIn: (requestId: string) => string[];
   /** Values only, for building the outgoing request. */
   variables: Record<string, string>;
   /** Values plus where each came from, for the UI. */
@@ -44,6 +47,7 @@ function hydrate(state: WorkspaceState): WorkspaceState {
     version: STATE_VERSION,
     responses: state.responses ?? [],
     openTabIds: state.openTabIds ?? [],
+    drafts: state.drafts ?? {},
     folders: (state.folders ?? []).map((folder) => ({
       ...folder,
       variables: folder.variables ?? [],
@@ -95,7 +99,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   const value = useMemo<StoreValue>(() => {
-    const activeRequest = state.requests.find((request) => request.id === state.activeRequestId) ?? null;
+    // The draft when there is one, so the composer, the tab's name and Send
+    // all mean the same thing: what is on screen.
+    const activeRequest = withDraft(
+      state.requests.find((request) => request.id === state.activeRequestId),
+      state.drafts,
+    );
     const environments = state.environments.filter(
       (environment) => environment.workspaceId === state.activeWorkspaceId,
     );
@@ -109,6 +118,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       activeRequest,
       activeFolder: state.folders.find((folder) => folder.id === state.activeFolderId) ?? null,
       chainFor,
+      unsavedIn: (requestId: string) => {
+        const draft = state.drafts[requestId];
+        const saved = state.requests.find((request) => request.id === requestId);
+        return draft && saved ? draftChanges(saved, draft) : [];
+      },
       variables: valuesOf(variableTable),
       variableTable,
       tableFor,

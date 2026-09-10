@@ -27,6 +27,8 @@ export type CommandId =
   | 'palette.commands'
   | 'send'
   | 'newRequest'
+  | 'saveRequest'
+  | 'searchTabs'
   | 'closeTab'
   | 'environments'
   | 'toggleSidebar'
@@ -52,6 +54,8 @@ export const COMMANDS: ShortcutCommand[] = [
   { id: 'palette.commands', label: 'Run a command', defaultBinding: { key: 'p', mod: true, shift: true } },
   { id: 'send', label: 'Send the active request', defaultBinding: { key: 'enter', mod: true } },
   { id: 'newRequest', label: 'New request', defaultBinding: { key: 'n', mod: true } },
+  { id: 'saveRequest', label: 'Save the active request', defaultBinding: { key: 's', mod: true } },
+  { id: 'searchTabs', label: 'Search the open tabs', defaultBinding: { key: 'e', mod: true, shift: true } },
   { id: 'closeTab', label: 'Close the active tab', defaultBinding: { key: 'w', mod: true } },
   { id: 'environments', label: 'Edit environments', defaultBinding: { key: 'e', mod: true } },
   { id: 'toggleSidebar', label: 'Show or hide the sidebar', defaultBinding: { key: 'b', mod: true } },

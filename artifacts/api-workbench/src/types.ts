@@ -266,6 +266,13 @@ export type WorkspaceState = {
   /** Active sub-environment id, or `null` for "base only". */
   activeEnvironmentId: string | null;
   openTabIds: string[];
+  /**
+   * Unsaved edits, by request id. The composer writes here and ⌘S commits, so
+   * what the sidebar, an export and a shared file say about a request stays
+   * what was last saved. Absent on every state written before drafts existed,
+   * which `hydrate` reads as "nothing unsaved".
+   */
+  drafts: Record<string, RequestRecord>;
   activeRequestId: string | null;
   /** Set when a folder's own pane is open; clears when a request is opened. */
   activeFolderId: string | null;

@@ -47,47 +47,64 @@ export function splitQuery(url: string): SplitUrl {
 /**
  * Bring the table in line with the URL's query string.
  *
- * Rows that came from the URL are replaced wholesale; rows typed into the
- * table are left exactly as they are. Replacing rather than appending is what
- * makes editing the URL work — changing `?page=2` to `?page=3` would otherwise
- * leave both rows, and send both.
+ * Three things can happen to a parameter written into the URL, in this order:
  *
- * A mirrored row that still matches is reused rather than recreated, so
- * unticking one survives the next keystroke in the URL.
+ * 1. A mirrored row already says exactly that — reuse it, so unticking one
+ *    survives the next keystroke in the URL.
+ * 2. A row someone typed carries the same key. The parameter is already in the
+ *    table, so the URL takes that row over and updates its value rather than
+ *    adding a second row with the same name — `prepareRequest` sends the table,
+ *    and two rows named `cnpj` went out as `?cnpj=1&cnpj=2`.
+ * 3. Nothing matches — mirror it as a new row.
+ *
+ * What comes back is the rows nobody claimed, in the order they were typed,
+ * followed by the query in the order the URL writes it. Mirrored rows the URL
+ * no longer mentions are simply gone, which is what makes editing the URL work:
+ * `?page=2` becoming `?page=3` must not leave both, and send both.
  */
 export function syncUrlParams(
   existing: KeyValue[],
   urlParams: Array<{ key: string; value: string }>,
 ): KeyValue[] {
-  const manual = existing.filter((item) => item.source !== 'url');
-  const previous = existing.filter((item) => item.source === 'url');
-  const reused = new Set<string>();
+  const claimed = new Set<string>();
+  const free = (item: KeyValue) => !claimed.has(item.id);
 
   const mirrored = urlParams.map((param) => {
-    const match = previous.find(
-      (item) => !reused.has(item.id) && item.key === param.key && item.value === param.value,
+    const same = existing.find(
+      (item) => item.source === 'url' && free(item) && item.key === param.key && item.value === param.value,
     );
-    if (match) {
-      reused.add(match.id);
-      return match;
+    if (same) {
+      claimed.add(same.id);
+      return same;
     }
+
+    const named = existing.find((item) => free(item) && item.key === param.key);
+    if (named) {
+      claimed.add(named.id);
+      // Taking a row over means marking it as the URL's: its value comes from
+      // there now, and the next pass has to recognise it as one of its own.
+      return { ...named, value: param.value, source: 'url' as const };
+    }
+
     return { ...row(param.key, param.value), source: 'url' as const };
   });
 
-  return [...manual, ...mirrored];
+  const kept = existing.filter((item) => item.source !== 'url' && free(item));
+  return [...kept, ...mirrored];
 }
 
 /**
  * True when the table already reflects the URL's query, so the mirror can skip
  * dispatching and leave the request untouched.
+ *
+ * Asking `syncUrlParams` rather than re-deriving the rule: the two cannot drift
+ * apart, and a rule that drifts here is an effect that dispatches on every tick
+ * for as long as the request is open.
  */
 export function paramsMatchUrl(
   existing: KeyValue[],
   urlParams: Array<{ key: string; value: string }>,
 ): boolean {
-  const mirrored = existing.filter((item) => item.source === 'url');
-  if (mirrored.length !== urlParams.length) return false;
-  return mirrored.every(
-    (item, index) => item.key === urlParams[index].key && item.value === urlParams[index].value,
-  );
+  const next = syncUrlParams(existing, urlParams);
+  return next.length === existing.length && next.every((item, index) => item === existing[index]);
 }

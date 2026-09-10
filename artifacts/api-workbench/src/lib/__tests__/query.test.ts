@@ -122,6 +122,40 @@ describe('syncUrlParams', () => {
     expect(synced.map((item) => item.value)).toEqual(['1', '2']);
   });
 
+  it('updates a row someone typed rather than adding a second with the same key', () => {
+    // Reported: a `cnpj` row in the table plus ?cnpj=… in the URL went out as
+    // ?cnpj=1&cnpj=2, because the table is what gets sent.
+    const manual = row('cnpj', '1');
+    const synced = syncUrlParams([manual], [{ key: 'cnpj', value: '2' }]);
+    expect(synced).toHaveLength(1);
+    expect(synced[0]).toMatchObject({ id: manual.id, key: 'cnpj', value: '2', source: 'url' });
+  });
+
+  it('settles after taking a typed row over, instead of syncing forever', () => {
+    const once = syncUrlParams([row('cnpj', '1')], [{ key: 'cnpj', value: '2' }]);
+    expect(paramsMatchUrl(once, [{ key: 'cnpj', value: '2' }])).toBe(true);
+    expect(syncUrlParams(once, [{ key: 'cnpj', value: '2' }])[0]).toBe(once[0]);
+  });
+
+  it('takes over one typed row per repeated key, and mirrors the rest', () => {
+    const synced = syncUrlParams(
+      [row('id', 'x')],
+      [
+        { key: 'id', value: '1' },
+        { key: 'id', value: '2' },
+      ],
+    );
+    expect(synced.map((item) => item.value)).toEqual(['1', '2']);
+    expect(new Set(synced.map((item) => item.id)).size).toBe(2);
+  });
+
+  it('keeps a taken-over row unticked, and moves it in with the mirrored ones', () => {
+    const off = { ...row('cnpj', '1'), enabled: false };
+    const synced = syncUrlParams([off, row('sort', 'asc')], [{ key: 'cnpj', value: '2' }]);
+    expect(synced.map((item) => item.key)).toEqual(['sort', 'cnpj']);
+    expect(synced[1].enabled).toBe(false);
+  });
+
   it('gives every new row its own id, so the table can edit them apart', () => {
     const synced = syncUrlParams(
       [],
@@ -192,6 +226,11 @@ describe('sending a request whose URL carries a query', () => {
     expect(send('https://api.example.com/x?page=2', [row('sort', 'asc'), fromUrl('page', '2')])).toBe(
       'https://api.example.com/x?sort=asc&page=2',
     );
+  });
+
+  it('sends a parameter the table and the URL both name exactly once', () => {
+    const synced = syncUrlParams([row('cnpj', '1')], splitQuery('http://x/y?cnpj=2').params);
+    expect(send('http://x/y?cnpj=2', synced)).toBe('http://x/y?cnpj=2');
   });
 
   it('sends both halves of a repeated key exactly once each', () => {

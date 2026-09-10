@@ -65,9 +65,9 @@ export function Dialog({ title, description, onClose, children, footer, wide, al
         }}
       >
         <DialogHeader className="flex shrink-0 flex-col space-y-0.5 border-b border-[var(--border)] px-3.5 py-2.5 pr-10 text-left sm:text-left">
-          <DialogTitle className="text-[14px] font-semibold text-[var(--text-strong)]">{title}</DialogTitle>
+          <DialogTitle className="text-[length:var(--fs-14)] font-semibold text-[var(--text-strong)]">{title}</DialogTitle>
           {description ? (
-            <DialogDescription className="text-[12.5px] text-[var(--text-faint)]">{description}</DialogDescription>
+            <DialogDescription className="text-[length:var(--fs-12-5)] text-[var(--text-faint)]">{description}</DialogDescription>
           ) : null}
           {/* Radix wants a description for the dialog it labels; when there is
               nothing worth saying, say nothing rather than repeat the title. */}

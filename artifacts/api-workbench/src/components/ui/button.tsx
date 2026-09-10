@@ -4,14 +4,19 @@ import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[15px] [&_svg]:shrink-0' +
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius)] text-[length:var(--fs-13)] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-[15px] [&_svg]:shrink-0' +
     ' hover-elevate active-elevate-2',
   {
     variants: {
       variant: {
         default:
-          // no hover, and add primary border
-          'bg-primary text-primary-foreground border border-primary-border',
+          // The accent has its own hover colour, and `--accent-hover` sat in
+          // every palette unused until this line: the neutral `hover-elevate`
+          // wash was laid over the accent instead, so changing the hover
+          // colour did nothing at all. The wash is turned off here so the two
+          // are not fighting over the same pixels.
+          'bg-primary text-primary-foreground border border-primary-border' +
+          ' hover:bg-[var(--accent-hover)] hover:border-[var(--accent-hover)] hover:[&::after]:bg-transparent!',
         destructive:
           'bg-destructive text-destructive-foreground shadow-sm border-destructive-border',
         outline:
@@ -30,8 +35,8 @@ const buttonVariants = cva(
         // Tuned for this app rather than shadcn's defaults: it is a dense
         // tool, and a 36px button next to a 28px row reads as a different
         // product. Changed here so no call site has to override a height.
-        default: 'min-h-8 px-3 py-1 text-[13px]',
-        sm: 'min-h-7 rounded-md px-2.5 text-[12.5px]',
+        default: 'min-h-8 px-3 py-1 text-[length:var(--fs-13)]',
+        sm: 'min-h-7 rounded-md px-2.5 text-[length:var(--fs-12-5)]',
         lg: 'min-h-9 rounded-md px-6',
         icon: 'h-7 w-7',
       },

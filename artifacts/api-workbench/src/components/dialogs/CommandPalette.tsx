@@ -22,10 +22,11 @@ export type Command = {
 
 /**
  * `all` is ⌘K. The rest are the IDE habit: one key straight to a request, one
- * straight to a workspace, one straight to the actions — each without typing
- * past a list of things that were not what you meant.
+ * straight to a workspace, one straight to the actions, one straight to a tab
+ * that is already open — each without typing past a list of things that were
+ * not what you meant.
  */
-export type PaletteMode = 'all' | 'requests' | 'workspaces' | 'commands';
+export type PaletteMode = 'all' | 'requests' | 'workspaces' | 'commands' | 'tabs';
 
 type CommandPaletteProps = {
   commands: Command[];
@@ -38,6 +39,7 @@ const PLACEHOLDERS: Record<PaletteMode, string> = {
   requests: 'Go to a request…',
   workspaces: 'Switch workspace…',
   commands: 'Run a command…',
+  tabs: 'Go to an open tab…',
 };
 
 /**
@@ -65,6 +67,33 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
           hint: [...folderPath(state, request.folderId), request.method].join(' · '),
           run: () => dispatch({ type: 'request/open', id: request.id }),
         })),
+    [dispatch, state],
+  );
+
+  /*
+    Only what is open, in the order the strip shows it. Searching tabs is a
+    different question from searching requests — "the one I was just in" rather
+    than "the one that exists somewhere" — which is why it is its own mode
+    rather than a filter over the other list.
+  */
+  const tabCommands = useMemo<Command[]>(
+    () =>
+      state.openTabIds.flatMap((id) => {
+        const request = state.requests.find((item) => item.id === id);
+        if (!request) return [];
+        return [
+          {
+            id: `tab-${request.id}`,
+            label: request.name,
+            hint: [
+              request.method,
+              ...(state.drafts[request.id] ? ['unsaved'] : []),
+              ...(request.id === state.activeRequestId ? ['current'] : []),
+            ].join(' · '),
+            run: () => dispatch({ type: 'request/open', id: request.id }),
+          },
+        ];
+      }),
     [dispatch, state],
   );
 
@@ -99,7 +128,7 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
       key={entry.id}
       value={`${entry.id} ${entry.label} ${entry.hint ?? ''}`}
       onSelect={() => run(entry)}
-      className="palette-item gap-2 text-[13px] data-[selected=true]:bg-[var(--bg-active)]"
+      className="palette-item gap-2 text-[length:var(--fs-13)] data-[selected=true]:bg-[var(--bg-active)]"
       data-testid={`palette-item-${entry.id}`}
     >
       {entry.icon}
@@ -126,7 +155,7 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
         <CommandRoot loop className="bg-transparent">
           <CommandInput
             placeholder={PLACEHOLDERS[mode]}
-            className="h-11 text-[15px]"
+            className="h-11 text-[length:var(--fs-15)]"
             data-testid="input-command-palette"
           />
           <CommandList className="max-h-[52vh]">
@@ -138,6 +167,7 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
             {mode === 'workspaces' ? (
               <CommandGroup heading="Workspaces">{workspaceCommands.map(row)}</CommandGroup>
             ) : null}
+            {mode === 'tabs' ? <CommandGroup heading="Open tabs">{tabCommands.map(row)}</CommandGroup> : null}
           </CommandList>
         </CommandRoot>
       </DialogContent>

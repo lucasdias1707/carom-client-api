@@ -19,6 +19,17 @@ type ConfirmDialogProps = {
   message: React.ReactNode;
   confirmLabel?: string;
   /**
+   * A third answer, between confirming and backing out: "Don't save" to the
+   * question "Save before closing?". Absent leaves the usual two buttons.
+   */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  /**
+   * `danger` paints the confirm button as a deletion. A question that loses
+   * nothing — closing a tab, say — asks in the ordinary colours.
+   */
+  tone?: 'danger' | 'default';
+  /**
    * When set, the exact text has to be typed before the destructive button
    * works. For the deletions where a misclick costs everything at once.
    */
@@ -44,6 +55,9 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = 'Delete',
+  secondaryLabel,
+  onSecondary,
+  tone = 'danger',
   requireText,
   onConfirm,
   onCancel,
@@ -63,19 +77,28 @@ export function ConfirmDialog({
         data-testid="dialog-confirm"
       >
         <AlertDialogHeader className="space-y-0 border-b border-[var(--border)] px-3.5 py-2.5 text-left sm:text-left">
-          <AlertDialogTitle className="text-[14px] font-semibold text-[var(--text-strong)]">{title}</AlertDialogTitle>
+          <AlertDialogTitle className="text-[length:var(--fs-14)] font-semibold text-[var(--text-strong)]">{title}</AlertDialogTitle>
         </AlertDialogHeader>
         <AlertDialogDescription
-          className="px-[14px] text-[12.5px] leading-relaxed text-[var(--text-dim)]"
+          className="px-[14px] text-[length:var(--fs-12-5)] leading-relaxed text-[var(--text-dim)]"
           data-testid="text-confirm-message"
         >
           {message}
         </AlertDialogDescription>
         {requireText === undefined ? null : (
           <div className="stack px-[14px]" style={{ gap: 6 }}>
+            {/*
+              The name is deliberately outside the label. `.section-label`
+              uppercases what it holds, so a workspace called "Personal" was
+              displayed as PERSONAL while the field still demanded "Personal" —
+              the dialog was asking for something it was not showing.
+            */}
             <Label htmlFor="confirm-name" className="section-label m-0">
-              Type <span className="mono text-[var(--text-strong)]">{requireText}</span> to confirm
+              Type this name to confirm
             </Label>
+            <code className="confirm-required mono" data-testid="text-confirm-required">
+              {requireText}
+            </code>
             <Input
               id="confirm-name"
               value={typed}
@@ -96,8 +119,17 @@ export function ConfirmDialog({
           >
             Cancel
           </AlertDialogCancel>
+          {secondaryLabel ? (
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'secondary' })}
+              onClick={onSecondary}
+              data-testid="button-secondary-confirm"
+            >
+              {secondaryLabel}
+            </AlertDialogAction>
+          ) : null}
           <AlertDialogAction
-            className={buttonVariants({ variant: 'destructive' })}
+            className={buttonVariants({ variant: tone === 'danger' ? 'destructive' : 'default' })}
             onClick={onConfirm}
             disabled={!armed}
             // Focus the confirm button only when it is the thing to press. With

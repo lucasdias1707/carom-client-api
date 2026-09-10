@@ -45,9 +45,10 @@ export function useTheme(
 
       root.style.setProperty('--font-sans', font.sans);
       root.style.setProperty('--font-mono', font.mono);
-      // A zoom rather than a font size: every measurement in this app is in
-      // pixels, so scaling only the type would leave 13px text in a 28px row.
-      root.style.setProperty('zoom', font.scale === 1 ? '' : String(font.scale));
+      // One number, multiplying the whole type ladder in `index.css`. This used
+      // to be `zoom`, which scaled the viewport too: `100dvh` then measured
+      // more than the window had, and the layout ran off the bottom of it.
+      root.style.setProperty('--font-scale', String(font.scale));
     };
 
     apply();

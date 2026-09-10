@@ -117,7 +117,7 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
           <div className="section-label">
             Variables
             <span className="spacer" />
-            <span className="hint" style={{ fontSize: 10 }}>
+            <span className="hint" style={{ fontSize: 'var(--fs-10)' }}>
               {copyable.filter((item) => item.conflict).length > 0
                 ? 'names already here start unticked'
                 : `${copyable.length} available`}

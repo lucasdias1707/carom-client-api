@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Copy, Shuffle, Trash2, Undo2 } from 'lucide-react';
 import { SelectField } from '@/components/common/SelectField';
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/ui/button';
@@ -7,37 +7,44 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   DEFAULT_PALETTE,
-  EDITABLE_TOKENS,
+  TOKEN_GROUPS,
+  accentHover,
   allPalettes,
   expandHex,
   duplicatePalette,
   isBuiltInPalette,
   paletteById,
-  softAccent,
+  readTokens,
+  withDerived,
   type Palette,
   type PaletteTokens,
 } from '@/lib/themes';
+import { randomPalette } from '@/lib/palette-random';
 import { useWorkspace } from '@/state/workspace-store';
 
 /**
- * Pick a palette, or make one.
+ * Pick a palette, generate one, or work one out by hand.
  *
- * Same shape as the font themes, for the same reason: a built-in cannot be
- * edited and does not need to be, because Duplicate makes a copy that can.
- *
- * The pickers edit the half that is on screen. A palette carries both, so the
- * copy starts with both filled in — otherwise switching to light would land on
- * a palette that has nothing to say about light.
+ * Two things were wrong with the version before this, and both made editing
+ * feel like it half worked. The translucent tokens — every hover, every
+ * selected row, every dialog backdrop — were copied once and never moved
+ * again, so changing a background left them behind; they are derived now. And
+ * a built-in could not be edited at all, so dragging a colour while using the
+ * palette everybody starts on did nothing whatsoever: the first edit now makes
+ * the copy for you and carries on into it.
  */
 export function PaletteEditor() {
   const { state, dispatch } = useWorkspace();
   const settings = state.settings;
   const palettes = allPalettes(settings);
   const current = paletteById(settings, settings.palette ?? DEFAULT_PALETTE);
-  const editable = !isBuiltInPalette(current.id);
-  const [editing, setEditing] = useState(false);
+  /** What "Back to the last one" goes back to, after a shuffle or a switch. */
+  const [undoable, setUndoable] = useState<string | undefined>(undefined);
 
-  /** Which half the pickers write to: whatever is being looked at right now. */
+  /**
+   * Which half is edited: always the one on screen. Editing colours you cannot
+   * see was the old behaviour, and it needed a paragraph of explanation.
+   */
   const mode: 'dark' | 'light' =
     (document.documentElement.dataset.theme as 'dark' | 'light' | undefined) ?? 'dark';
 
@@ -47,51 +54,89 @@ export function PaletteEditor() {
       patch: { palettes: next, ...(selected ? { palette: selected } : {}) },
     });
 
-  const patchToken = (token: keyof PaletteTokens, value: string) =>
+  const select = (id: string) => {
+    setUndoable(settings.palette ?? DEFAULT_PALETTE);
+    dispatch({ type: 'settings/update', patch: { palette: id } });
+  };
+
+  /**
+   * Apply one colour, to a palette that can hold it.
+   *
+   * On a built-in that means making the copy first — the alternative is a
+   * colour picker that moves and changes nothing, which is what people
+   * reasonably read as broken.
+   */
+  const patchToken = (token: keyof PaletteTokens, value: string) => {
+    const built = isBuiltInPalette(current.id);
+    const target = built ? duplicatePalette(current, mode) : current;
+    const owned = built ? [...(settings.palettes ?? []), target] : (settings.palettes ?? []);
+
     save(
-      (settings.palettes ?? []).map((palette) => {
-        if (palette.id !== current.id) return palette;
+      owned.map((palette) => {
+        if (palette.id !== target.id) return palette;
         const half = { ...(palette[mode] as PaletteTokens), [token]: value };
-        // The soft wash is the accent at 16%; letting it keep the old accent
-        // would leave every selected row tinted the colour you just replaced.
-        if (token === '--accent') half['--accent-soft'] = softAccent(value);
-        return { ...palette, [mode]: half };
+        // A new accent brings a new hover with it, so the pair never drifts
+        // into "the button changed but hovering it did not". Setting the hover
+        // by hand afterwards still wins; this only moves it when the accent
+        // moves out from under it.
+        if (token === '--accent') half['--accent-hover'] = accentHover(value, mode);
+        return { ...palette, [mode]: withDerived(half, mode) };
       }),
+      target.id,
     );
+  };
+
+  const rename = (name: string) =>
+    save((settings.palettes ?? []).map((palette) => (palette.id === current.id ? { ...palette, name } : palette)));
 
   const duplicate = () => {
     const copy = duplicatePalette(current, mode);
     save([...(settings.palettes ?? []), copy], copy.id);
-    setEditing(true);
+  };
+
+  const surprise = () => {
+    const generated = randomPalette();
+    setUndoable(settings.palette ?? DEFAULT_PALETTE);
+    save([...(settings.palettes ?? []), generated], generated.id);
+  };
+
+  const undo = () => {
+    if (!undoable) return;
+    dispatch({ type: 'settings/update', patch: { palette: undoable } });
+    setUndoable(undefined);
   };
 
   const remove = () => {
     save((settings.palettes ?? []).filter((palette) => palette.id !== current.id), DEFAULT_PALETTE);
-    setEditing(false);
+    setUndoable(undefined);
   };
 
-  const tokens = current[mode];
+  /*
+    The default palette carries no tokens of its own — that is what keeps it in
+    step with the stylesheet — so the pickers have to ask the browser what the
+    stylesheet currently says. Without this, the one palette everybody starts
+    on offered nothing to edit.
+  */
+  const tokens = useMemo(() => current[mode] ?? readTokens(mode), [current, mode]);
+  const owned = !isBuiltInPalette(current.id);
 
   return (
-    <div className="stack" style={{ gap: 6 }}>
+    <div className="stack" style={{ gap: 8 }}>
       <Label className="section-label m-0">Colours</Label>
       <div className="flex items-center gap-2">
         <SelectField
           value={current.id}
-          onChange={(palette) => {
-            dispatch({ type: 'settings/update', patch: { palette } });
-            setEditing(false);
-          }}
+          onChange={select}
           options={palettes.map((palette) => ({ value: palette.id, label: `${palette.name} — ${palette.note}` }))}
           ariaLabel="Colour palette"
           testId="select-palette"
           block
           className="flex-1"
         />
-        <IconButton label="Duplicate and edit" onClick={duplicate} testId="button-duplicate-palette">
+        <IconButton label="Duplicate this palette" onClick={duplicate} testId="button-duplicate-palette">
           <Copy />
         </IconButton>
-        {editable ? (
+        {owned ? (
           <IconButton label="Delete this palette" tone="danger" onClick={remove} testId="button-delete-palette">
             <Trash2 />
           </IconButton>
@@ -106,7 +151,7 @@ export function PaletteEditor() {
             <button
               key={palette.id}
               className={`palette-swatch ${active ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'settings/update', patch: { palette: palette.id } })}
+              onClick={() => select(palette.id)}
               aria-label={palette.name}
               aria-pressed={active}
               data-testid={`button-palette-${palette.id}`}
@@ -121,37 +166,70 @@ export function PaletteEditor() {
         })}
       </div>
 
-      {editable ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-self-start"
-          onClick={() => setEditing((open) => !open)}
-          data-testid="button-edit-palette"
-        >
-          {editing ? 'Done editing' : 'Edit colours'}
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={surprise} data-testid="button-random-palette">
+          <Shuffle size={12} /> Surprise me
         </Button>
-      ) : (
-        <p className="hint" data-testid="text-palette-builtin">
-          Built in, so it cannot be edited. Duplicate it to make one you can.
-        </p>
-      )}
+        {undoable ? (
+          <Button variant="ghost" size="sm" onClick={undo} data-testid="button-undo-palette">
+            <Undo2 size={12} /> Back to the last one
+          </Button>
+        ) : null}
+      </div>
 
-      {editable && editing && tokens ? (
-        <div className="stack" style={{ gap: 6 }} data-testid="palette-editor">
+      {/*
+        The states you cannot check by looking at the screen you are on: what a
+        row looks like under the pointer, what a selected one looks like, and
+        what the accent does when hovered. Those are exactly the tokens an edit
+        used to leave behind, so this is where you see that it no longer does.
+      */}
+      <div className="palette-sample" data-testid="palette-sample">
+        <div className="palette-sample-row">Ordinary row</div>
+        <div className="palette-sample-row hovered">Under the pointer</div>
+        <div className="palette-sample-row selected">Selected</div>
+        <div className="palette-sample-buttons">
+          <span className="palette-sample-button">Button</span>
+          <span className="palette-sample-button hovered">Hovered</span>
+          <span className="palette-sample-soft">Soft wash</span>
+        </div>
+        <div className="palette-sample-text">
+          <span style={{ color: 'var(--text-strong)' }}>Strong</span>
+          <span style={{ color: 'var(--text)' }}>Body</span>
+          <span style={{ color: 'var(--text-dim)' }}>Dim</span>
+          <span style={{ color: 'var(--text-faint)' }}>Faint</span>
+        </div>
+      </div>
+
+      {owned ? (
+        <>
           <Label className="section-label m-0" htmlFor="palette-name">Name</Label>
           <Input
             id="palette-name"
             value={current.name}
-            onChange={(event) =>
-              save((settings.palettes ?? []).map((p) => (p.id === current.id ? { ...p, name: event.target.value } : p)))
-            }
+            onChange={(event) => rename(event.target.value)}
             data-testid="input-palette-name"
           />
+        </>
+      ) : (
+        <p className="hint" data-testid="text-palette-builtin">
+          This one is built in. Change any colour below and it becomes a copy you own — the built-in stays as it was.
+        </p>
+      )}
 
-          <div className="section-label">Editing the {mode} half</div>
+      <div className="section-label" data-testid="text-palette-mode">
+        Editing the {mode} colours
+        <span className="spacer" />
+        <span>switch the theme above for the other half</span>
+      </div>
+
+      {TOKEN_GROUPS.map((group) => (
+        <div className="palette-group" key={group.title} data-testid={`palette-group-${group.title.toLowerCase()}`}>
+          <div className="palette-group-head">
+            <strong>{group.title}</strong>
+            <span>{group.note}</span>
+          </div>
           <div className="color-rows">
-            {EDITABLE_TOKENS.map(({ token, label }) => (
+            {group.tokens.map(({ token, label }) => (
               <div className="color-row" key={token}>
                 <Label htmlFor={`token${token}`} className="font-normal">{label}</Label>
                 <input
@@ -165,13 +243,14 @@ export function PaletteEditor() {
               </div>
             ))}
           </div>
-          <p className="hint">
-            Switch the theme above to dark or light to edit that half — the pickers write to whichever one is on
-            screen. The translucent tokens, the hover and the overlay, come from the palette this was copied from;
-            a colour picker has no transparency to give them.
-          </p>
         </div>
-      ) : null}
+      ))}
+
+      <p className="hint">
+        Hovers, selections and the dialog backdrop are worked out from these rather than picked: they are
+        see-through, and a colour picker has no transparency to give them. That is why they now follow a change of
+        background instead of staying behind.
+      </p>
     </div>
   );
 }

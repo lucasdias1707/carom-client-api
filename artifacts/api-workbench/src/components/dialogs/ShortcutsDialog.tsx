@@ -111,9 +111,9 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
               data-testid={`shortcut-row-${command.id}`}
             >
               <div className="min-w-0">
-                <div className="truncate text-[13px]">{command.label}</div>
+                <div className="truncate text-[length:var(--fs-13)]">{command.label}</div>
                 {clash ? (
-                  <div className="text-[11.5px] text-[var(--red)]">
+                  <div className="text-[length:var(--fs-11-5)] text-[var(--red)]">
                     Also {clash.map(labelFor).join(', ').toLowerCase()}
                   </div>
                 ) : null}
@@ -122,7 +122,7 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
               <Button
                 variant="secondary"
                 size="sm"
-                className="min-w-[92px] justify-center font-mono text-[12px]"
+                className="min-w-[92px] justify-center font-mono text-[length:var(--fs-12)]"
                 onClick={() => setRecording(command.id)}
                 aria-label={`Change the shortcut for ${command.label}`}
                 data-testid={`button-record-${command.id}`}
@@ -154,12 +154,12 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       </div>
 
       {hasConflict ? (
-        <p className="mt-3 text-[12.5px] text-[var(--red)]" data-testid="shortcuts-conflict">
+        <p className="mt-3 text-[length:var(--fs-12-5)] text-[var(--red)]" data-testid="shortcuts-conflict">
           Two commands answer to the same keys. Change one of them before saving.
         </p>
       ) : null}
 
-      <p className="mt-3 text-[12.5px] text-[var(--text-faint)]">
+      <p className="mt-3 text-[length:var(--fs-12-5)] text-[var(--text-faint)]">
         Enter sends the request while the URL field has focus, whatever is bound above.
       </p>
     </Dialog>

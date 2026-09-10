@@ -70,6 +70,10 @@ describe('bindingFromEvent', () => {
 });
 
 describe('bindingConflicts', () => {
+  it('finds nothing to complain about in the defaults we ship', () => {
+    expect(bindingConflicts(resolveBindings({}))).toEqual({});
+  });
+
   it('names both sides, so nobody has to hunt for the other one', () => {
     const bindings = resolveBindings({ keyBindings: { newRequest: { key: 'k', mod: true } } });
     expect(bindingConflicts(bindings)).toEqual({ palette: ['newRequest'], newRequest: ['palette'] });

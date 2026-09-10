@@ -3,7 +3,7 @@ import { Braces, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
 import { PromptDialog } from '@/components/common/PromptDialog';
-import { subtreeFolderIds } from '@/lib/export';
+import { subtreeSelection } from '@/lib/export';
 import { createFolder, createRequest } from '@/lib/factories';
 import { buildTree, countRequests, isDescendantFolder, type TreeNode } from '@/state/selectors';
 import { WorkspaceMenu } from '@/components/sidebar/WorkspaceMenu';
@@ -149,7 +149,7 @@ export function Sidebar({
   // it starts ticked on what was clicked, so the one-click case is one extra
   // click, and everything else — a second folder, an environment, where to put
   // it — is now reachable from the same place.
-  const saveFolder = (folder: Folder) => onExport(subtreeFolderIds(state, folder.id));
+  const saveFolder = (folder: Folder) => onExport(subtreeSelection(state, folder.id));
   const saveRequest = (request: RequestRecord) => onExport([request.id]);
 
   const folderMenu = (folder: Folder): MenuEntry[] => [
@@ -184,6 +184,22 @@ export function Sidebar({
       icon: <Trash2 size={13} />,
       danger: true,
       onSelect: () => setConfirming({ kind: 'request', request }),
+    },
+  ];
+
+  /**
+   * Right-clicking the tree itself, rather than a row in it.
+   *
+   * Every row stops its own context menu from bubbling, so what reaches here is
+   * the empty space — and the empty space means the root of the workspace.
+   */
+  const rootMenu = (): MenuEntry[] => [
+    { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: () => addRequest(null) },
+    {
+      kind: 'item',
+      label: 'New folder',
+      icon: <FolderPlus size={13} />,
+      onSelect: () => setPrompt({ kind: 'new-folder', parentId: null }),
     },
   ];
 
@@ -279,7 +295,7 @@ export function Sidebar({
             <TooltipContent side="right" className="max-w-[420px]">
               <div className="font-medium">{request.name}</div>
               {request.url ? (
-                <div className="mt-0.5 font-mono text-[11px] opacity-70 break-all">{request.url}</div>
+                <div className="mt-0.5 font-mono text-[length:var(--fs-11)] opacity-70 break-all">{request.url}</div>
               ) : null}
             </TooltipContent>
           </Tooltip>
@@ -409,6 +425,7 @@ export function Sidebar({
           event.preventDefault();
           handleDrop(null);
         }}
+        onContextMenu={(event) => openMenu(event, rootMenu())}
       >
         {tree.length === 0 ? (
           <div className="tree-empty">{isSearching ? `Nothing matches “${search}”.` : 'No requests yet.'}</div>
@@ -516,7 +533,7 @@ export function Sidebar({
           initialValue={prompt.request.name}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {
-            dispatch({ type: 'request/update', id: prompt.request.id, patch: { name } });
+            dispatch({ type: 'request/rename', id: prompt.request.id, name });
             setPrompt(null);
           }}
         />
