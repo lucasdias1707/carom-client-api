@@ -3,6 +3,9 @@ import { detectFormat, readImport } from '@/lib/import-formats';
 import { pathToTemplate, sampleFromSchema } from '@/lib/openapi';
 import { toTemplate } from '@/lib/insomnia';
 import { nameFor } from '@/lib/har';
+import { toOpenApi } from '@/lib/openapi-export';
+import { defaultSettings } from '@/lib/settings';
+import type { WorkspaceState } from '@/types';
 
 const openapi = {
   openapi: '3.0.3',
@@ -193,5 +196,88 @@ describe('HAR', () => {
 
   it('strips the headers the browser wrote for itself', () => {
     expect(imported.requests[0].headers.map((header) => header.key)).toEqual(['Accept']);
+  });
+});
+
+describe('OpenAPI into Docs', () => {
+  const described = {
+    openapi: '3.0.3',
+    info: { title: 'Orders' },
+    servers: [{ url: 'https://api.test' }],
+    paths: {
+      '/orders/{orderId}': {
+        parameters: [
+          { name: 'orderId', in: 'path', schema: { type: 'string' }, description: 'Which order' },
+        ],
+        put: {
+          summary: 'Replace',
+          parameters: [
+            { name: 'expand', in: 'query', required: true, description: 'Inline the items', schema: { type: 'string' } },
+            { name: 'X-Trace', in: 'header', schema: { type: 'string' } },
+            { name: 'legacy', in: 'cookie', schema: { type: 'string' } },
+          ],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['total'],
+                  properties: {
+                    total: { type: 'integer', description: 'In cents', example: 1200 },
+                    note: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const request = readImport(JSON.stringify(described), 'ws').imported.requests[0];
+  const fields = request.docs?.fields ?? [];
+  const byName = (name: string) => fields.find((field) => field.name === name);
+
+  it('keeps the description and the required flag a key/value row cannot hold', () => {
+    expect(byName('expand')).toMatchObject({ in: 'query', description: 'Inline the items', required: true });
+    expect(byName('orderId')).toMatchObject({ in: 'path', description: 'Which order', required: true });
+    expect(byName('X-Trace')).toMatchObject({ in: 'header', required: false });
+  });
+
+  it('describes the body from its schema, required list included', () => {
+    expect(byName('total')).toMatchObject({ in: 'body', type: 'integer', required: true, description: 'In cents' });
+    expect(byName('note')).toMatchObject({ in: 'body', type: 'string', required: false });
+  });
+
+  it('leaves out a location this app cannot send from the table', () => {
+    // A cookie parameter is not a header row here, so describing one would
+    // promise a field that nothing fills.
+    expect(byName('legacy')).toBeUndefined();
+  });
+
+  it('survives the trip back out to OpenAPI', () => {
+    const state = {
+      version: 2,
+      workspaces: [{ id: 'ws', name: 'W', createdAt: new Date().toISOString() }],
+      activeWorkspaceId: 'ws',
+      folders: [],
+      requests: [request],
+      environments: [],
+      activeEnvironmentId: null,
+      responses: [],
+      openTabIds: [],
+      activeRequestId: null,
+      activeFolderId: null,
+      settings: defaultSettings(),
+    } as unknown as WorkspaceState;
+    const doc = toOpenApi(state, { title: 'Orders', selected: new Set([request.id]) }) as any;
+    const operation = doc.paths['/orders/{orderId}'].put;
+    expect(operation.parameters.map((item: any) => [item.in, item.name, item.required])).toEqual([
+      ['path', 'orderId', true],
+      ['query', 'expand', true],
+      ['header', 'X-Trace', false],
+    ]);
+    expect(operation.requestBody.content['application/json'].schema.required).toEqual(['total']);
   });
 });

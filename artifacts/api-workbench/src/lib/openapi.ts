@@ -1,6 +1,7 @@
+import { docField, exampleOf } from '@/lib/docs';
 import { createFolder, createRequest, emptyAuth, row } from '@/lib/factories';
 import type { ParsedImport } from '@/lib/postman';
-import type { Auth, Folder, HttpMethod, KeyValue, RequestRecord } from '@/types';
+import type { Auth, DocField, DocFieldType, Folder, HttpMethod, KeyValue, RequestRecord } from '@/types';
 
 /**
  * Read an OpenAPI 3.x or Swagger 2.0 description into requests.
@@ -192,6 +193,73 @@ function paramsFor(doc: Doc, operation: Doc, shared: unknown[]) {
   return { params, headers };
 }
 
+const DOC_TYPES: DocFieldType[] = ['string', 'number', 'integer', 'boolean', 'array', 'object'];
+
+function docType(schema: Doc): DocFieldType {
+  const named = text(schema.type).toLowerCase() as DocFieldType;
+  if (DOC_TYPES.includes(named)) return named;
+  return schema.properties ? 'object' : 'string';
+}
+
+/**
+ * What the description says about each field, kept rather than thrown away.
+ *
+ * The importer already reads `description`, `required` and the type of every
+ * parameter to build the params and headers tables, and a key/value row can
+ * hold none of the three. Now that the Docs tab can, they land there: an
+ * imported operation arrives documented, and exporting it back to OpenAPI says
+ * what the original said instead of what could be guessed from a body.
+ */
+function docsFor(doc: Doc, operation: Doc, shared: unknown[]): DocField[] {
+  const fields: DocField[] = [];
+
+  for (const item of [...shared, ...asArray(operation.parameters)]) {
+    const parameter = resolve(doc, item);
+    const name = text(parameter.name);
+    const where = text(parameter.in);
+    // `body` is Swagger 2's way of passing a schema, not a field of its own.
+    if (!name || !['query', 'header', 'path'].includes(where)) continue;
+    const schema = resolve(doc, parameter.schema ?? parameter);
+    fields.push(
+      docField({
+        in: where as DocField['in'],
+        name,
+        description: text(parameter.description),
+        required: parameter.required === true || where === 'path',
+        type: docType(schema),
+        example: exampleOf(sampleFromSchema(doc, parameter.schema ?? parameter)),
+      }),
+    );
+  }
+
+  const content = asObject(asObject(operation.requestBody).content);
+  const jsonType = Object.keys(content).find((type) => /json/i.test(type));
+  const bodySchema = jsonType
+    ? resolve(doc, asObject(content[jsonType]).schema)
+    : resolve(
+        doc,
+        asArray(operation.parameters)
+          .map((item) => resolve(doc, item))
+          .find((item) => text(item.in) === 'body')?.schema,
+      );
+  const required = new Set(asArray(bodySchema.required).map(text));
+  for (const [name, child] of Object.entries(asObject(bodySchema.properties))) {
+    const property = resolve(doc, child);
+    fields.push(
+      docField({
+        in: 'body',
+        name,
+        description: text(property.description),
+        required: required.has(name),
+        type: docType(property),
+        example: exampleOf(sampleFromSchema(doc, child)),
+      }),
+    );
+  }
+
+  return fields;
+}
+
 export function importOpenApi(payload: unknown, workspaceId: string, startIndex = 0): ParsedImport {
   const doc = asObject(payload);
   const info = asObject(doc.info);
@@ -241,6 +309,7 @@ export function importOpenApi(payload: unknown, workspaceId: string, startIndex 
           params,
           headers,
           auth: authFrom(doc, security),
+          docs: { fields: docsFor(doc, operation, shared) },
           sortIndex: index++,
           ...bodyFor(doc, operation),
         }),
