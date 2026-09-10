@@ -22,6 +22,12 @@ pub fn run() {
         // The HTTP plugin performs requests in Rust rather than in the webview,
         // so the desktop build is not subject to CORS and can reach private
         // hosts directly. Scope is declared in capabilities/default.json.
+        //
+        // The `:*` in those patterns is load-bearing. That scope is matched
+        // with URLPattern, not with a glob, and a pattern that names no port
+        // means *no port* — so `http://**` allowed http://example.com and
+        // refused http://localhost:3000, which is to say every API anyone
+        // runs while developing. `http://*:*/*` is host, port and path.
         .plugin(tauri_plugin_http::init())
         // Exporting asks where to put the file and then writes it. Both are
         // scoped in capabilities/default.json to the one dialog-chosen path,
