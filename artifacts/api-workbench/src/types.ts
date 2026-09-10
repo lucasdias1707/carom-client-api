@@ -7,7 +7,7 @@
  */
 
 import type { Binding, CommandId } from '@/lib/shortcuts';
-import type { FontTheme, Palette } from '@/lib/themes';
+import type { DraftPalette, FontTheme, Palette } from '@/lib/themes';
 
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;
 export type HttpMethod = (typeof HTTP_METHODS)[number];
@@ -223,6 +223,12 @@ export type Settings = {
   palette?: string;
   /** Colour palettes someone made here. The built-in ones are not stored. */
   palettes?: Palette[];
+  /**
+   * A generated palette being looked at but not kept. One slot: shuffling
+   * again replaces it, Save moves it into `palettes` under a real id, and
+   * Discard drops it. Absent means there is nothing on trial.
+   */
+  draftPalette?: DraftPalette;
   /** Which font theme is in use, built-in or saved. */
   fontTheme?: string;
   /** Font themes someone made here. The built-in ones are not stored. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AA_CONTRAST, contrast, hslToHex, luminance, randomPalette } from '@/lib/palette-random';
-import { EDITABLE_TOKENS } from '@/lib/themes';
+import { DRAFT_PALETTE, EDITABLE_TOKENS } from '@/lib/themes';
 
 /** A deterministic stand-in for Math.random, so a failure can be reproduced. */
 function seeded(seed: number): () => number {
@@ -71,5 +71,13 @@ describe('randomPalette', () => {
 
   it('gives each draw its own id, so saving two does not overwrite one', () => {
     expect(new Set(draws.map((palette) => palette.id)).size).toBe(draws.length);
+  });
+
+  it('reuses the id it is given, which is what keeps shuffling in one place', () => {
+    // Ten rolls into the draft slot are ten repaints of one record. Without
+    // this, hunting for a palette you liked left every reject saved for good.
+    const rolls = [1, 2, 3].map((seed) => randomPalette(seeded(seed), DRAFT_PALETTE));
+    expect(new Set(rolls.map((palette) => palette.id))).toEqual(new Set([DRAFT_PALETTE]));
+    expect(new Set(rolls.map((palette) => palette.dark!['--accent'])).size).toBe(3);
   });
 });

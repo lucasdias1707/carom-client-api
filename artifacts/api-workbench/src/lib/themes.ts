@@ -242,12 +242,42 @@ export const PALETTES: Palette[] = [
   },
 ];
 
-/** Built-ins first, then whatever was saved here — same shape as the fonts. */
+/**
+ * The id the generated palette always carries while it is being judged.
+ *
+ * Fixed on purpose: shuffling again overwrites the same record rather than
+ * adding another. Sorting through ten of them used to leave ten palettes saved
+ * for good, nine of which you had already rejected.
+ */
+export const DRAFT_PALETTE = 'draft';
+
+/**
+ * A palette on trial: generated, applied to the whole app so you can look at
+ * it, and kept only if you press Save.
+ *
+ * `from` is the palette that was selected when the shuffling started, so
+ * Discard has somewhere to go back to.
+ */
+export type DraftPalette = Palette & { from?: string };
+
+/**
+ * Built-ins first, then whatever was saved here — same shape as the fonts.
+ *
+ * The draft is deliberately absent: this is the list of palettes you can
+ * *choose*, and a draft is the one being decided about rather than an option
+ * alongside the others.
+ */
 export function allPalettes(settings: Pick<Settings, 'palettes'>): Palette[] {
   return [...PALETTES, ...(settings.palettes ?? [])];
 }
 
-export function paletteById(settings: Pick<Settings, 'palettes'>, id: string | undefined): Palette {
+export function paletteById(
+  settings: Pick<Settings, 'palettes' | 'draftPalette'>,
+  id: string | undefined,
+): Palette {
+  // The draft resolves even though it is not in the list, which is what lets
+  // `useTheme` paint the whole app with something that was never saved.
+  if (id && settings.draftPalette?.id === id) return settings.draftPalette;
   return allPalettes(settings).find((palette) => palette.id === id) ?? PALETTES[0];
 }
 

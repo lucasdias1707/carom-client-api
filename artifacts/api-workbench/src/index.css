@@ -1328,6 +1328,37 @@
   .palette-swatch > span { flex: 1; }
   .palette-swatch > span:last-child { flex: 0 0 14px; }
   .palette-swatch.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* The generated one, while it is still being judged. Dashed so a glance at
+     the row says which of these you actually own. */
+  .palette-swatch.draft { border-style: dashed; border-color: var(--accent); }
+
+  /* The strip that holds a generated palette: name it, roll again, keep it or
+     drop it. It replaces the plain Surprise me button while a draft is up. */
+  .palette-draft {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px dashed var(--accent);
+    border-radius: var(--radius);
+    background: var(--accent-soft);
+  }
+  .palette-draft-actions { display: flex; align-items: center; gap: 6px; }
+  .palette-draft .hint { margin: 0; }
+
+  /* One line saying an unsaved palette is still around, when you have moved
+     off it. Losing generated work to a stray click is the thing this avoids. */
+  .palette-notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 4px 4px 10px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    font-size: var(--fs-12-5);
+    color: var(--text-dim);
+  }
+  .palette-notice .spacer { flex: 1; }
+  .palette-notice strong { color: var(--text-strong); font-weight: 600; }
 
   /* One group of tokens, with a line saying what they are for. */
   .palette-group {
