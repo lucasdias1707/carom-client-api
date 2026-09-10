@@ -2,6 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { row } from '@/lib/factories';
 import type { KeyValue } from '@/types';
 import { IconButton } from '@/components/common/IconButton';
+import { useToast } from '@/components/common/Toaster';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 
@@ -16,6 +17,13 @@ type KeyValueTableProps = {
 /**
  * Editable key/value grid with per-row enable toggles. An empty trailing row is
  * always rendered so adding an entry is just typing, like a spreadsheet.
+ *
+ * Removing a row raises an Undo toast rather than asking first. These are the
+ * app's most frequent deletions — a header, a query parameter — and a modal in
+ * front of every one of them would make the table painful to use; what was
+ * actually missing is that the row vanished with no way back. Undo is local
+ * here on purpose: `use-delete-with-undo` photographs the whole workspace,
+ * which is far too much machinery for one line of a table.
  */
 export function KeyValueTable({
   items,
@@ -24,7 +32,19 @@ export function KeyValueTable({
   valuePlaceholder = 'Value',
   testPrefix,
 }: KeyValueTableProps) {
+  const { toast } = useToast();
   const rows = [...items, row('', '', true)];
+
+  const remove = (index: number) => {
+    const removed = items[index];
+    const previous = items;
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+    toast({
+      title: `Removed ${removed.key.trim() || 'the empty row'}`,
+      kind: 'info',
+      action: { label: 'Undo', run: () => onChange(previous) },
+    });
+  };
 
   const update = (index: number, patch: Partial<KeyValue>) => {
     if (index === items.length) {
@@ -84,7 +104,7 @@ export function KeyValueTable({
                   label={`Remove row ${index + 1}`}
                   tone="danger"
                   className="h-[22px] w-[22px] [&_svg]:size-[13px]"
-                  onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+                  onClick={() => remove(index)}
                   testId={`button-remove-${testPrefix}-${index}`}
                 >
                   <Trash2 />

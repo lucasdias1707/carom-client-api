@@ -137,17 +137,18 @@
   --sidebar-ring: var(--accent);
 }
 
-/* `--accent` is already taken by the app's brand blue, and shadcn means
-   something else by it: the wash under a hovered menu row. Kept apart on
-   purpose, since renaming the brand one would touch every rule below. */
-:root,
-:root[data-theme='dark'],
-:root[data-theme='light'] {
-  --color-accent: var(--bg-active);
-  --color-accent-foreground: var(--text-strong);
-}
 
 @theme inline {
+  /* `--accent` is already taken by the app's brand blue, and shadcn means
+     something else by it: the wash under the menu row you are pointing at.
+     They are kept apart on purpose — renaming the brand one would touch every
+     rule below — but this pair has to live *inside* `@theme`, because that is
+     the only place Tailwind reads to decide a utility exists at all. Declared
+     in `:root` instead, `bg-accent` compiled to nothing and every menu opened
+     with no row highlighted. */
+  --color-accent: var(--bg-active);
+  --color-accent-foreground: var(--text-strong);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -337,12 +338,19 @@
     background: var(--bg-sidebar);
   }
 
+  /* The switcher takes the whole width and the actions drop to their own row,
+     the way an editor's project picker does — the workspace name is the thing
+     you read here, and it was competing with four icons for the same line. */
   .sidebar-head {
+    display: grid;
+    gap: 4px;
+    padding: 8px 8px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 9px 10px;
-    border-bottom: 1px solid var(--border);
+    gap: 2px;
   }
 
   .brand-mark {
@@ -370,6 +378,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    user-select: none;
     width: 100%;
     height: var(--row-h);
     padding: 0 6px 0 0;
@@ -497,6 +506,10 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    /* A tab is a `<div role="tab">`, so without this it takes the text caret
+       and its label can be selected while you drag past it. */
+    cursor: default;
+    user-select: none;
     max-width: 190px;
     min-width: 0;
     height: 26px;
@@ -1095,7 +1108,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
+    width: 100%;
     min-width: 0;
     padding: 3px 5px;
     border: 1px solid transparent;
@@ -1104,6 +1117,7 @@
     text-align: left;
   }
   .workspace-button:hover { background: var(--bg-hover); border-color: var(--border); }
+  .workspace-button[aria-expanded='true'] { background: var(--bg-active); border-color: var(--border); }
   .workspace-button .brand-text { display: grid; min-width: 0; flex: 1; }
 
   .env-button {
@@ -1131,6 +1145,13 @@
   /* ---- Drag and drop ---- */
 
   .tree-row[draggable='true'] { cursor: grab; }
+  /* Reveals where "Locate" landed. It fades on its own so it cannot be
+     mistaken for the selection, which is a different thing that persists. */
+  .tree-row.located { animation: locate-pulse 1.2s ease-out; }
+  @keyframes locate-pulse {
+    0%, 55% { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+    100% { background: transparent; box-shadow: none; }
+  }
   .tree-row.dragging { opacity: 0.4; }
   .tree-row.drop-into {
     background: var(--accent-soft);
@@ -1263,7 +1284,10 @@
     .sidebar-resizer { display: none; }
     .sidebar {
       position: fixed;
-      inset: 0 auto 0 0;
+      /* Below the top bar, not over it. There is a single sidebar toggle now
+         and it lives up there — a control you cannot reach at exactly the
+         width where you need it most is why this used to be two buttons. */
+      inset: 36px auto 0 0;
       z-index: 30;
       /* The same width the handle sets, so resizing means the same thing at
          every window size. */
@@ -1393,6 +1417,21 @@
     cursor: pointer;
   }
   .toast-action:hover { background: var(--bg-hover); }
+
+  .toast-close {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    margin: -2px -4px 0 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-faint);
+  }
+  .toast-close:hover { background: var(--bg-hover); color: var(--text-strong); }
 
   /* A {{variable}} inside the code editor's mirror. It keeps whatever colour the
      JSON lexer gave the text around it and adds a tint plus an underline, so a

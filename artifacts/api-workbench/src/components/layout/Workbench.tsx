@@ -6,6 +6,7 @@ import {
   Keyboard,
   Layers,
   PanelLeft,
+  PanelLeftClose,
   Rows2,
   Send,
   Settings,
@@ -46,6 +47,11 @@ export function Workbench() {
   const { status: proxyStatus } = useProxyHealth();
   const { sending, send, cancel, scriptLogs, scriptTests } = useSendRequest(proxyStatus);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  /**
+   * A request the sidebar should reveal. The nonce is what makes asking twice
+   * for the same request count twice.
+   */
+  const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null);
   // Kept in settings rather than component state: someone who narrows the
   // window and hides the tree means it, and should not have to say so again on
   // the next launch.
@@ -135,7 +141,7 @@ export function Workbench() {
       <Sidebar
         onImportCurl={() => setOverlay('curl')}
         onImportPostman={() => setOverlay('postman')}
-        onCollapse={() => setSidebarVisible(false)}
+        locate={locate}
       />
       {sidebarVisible ? (
         <SidebarResizer
@@ -146,15 +152,22 @@ export function Workbench() {
 
       <main className="main">
         <div className="topbar">
-          <IconButton label="Toggle sidebar"
+          {/*
+            One toggle, saying which way it goes. There used to be a second one
+            inside the sidebar, for the width where the sidebar covered this
+            bar; the overlay now starts below the bar instead, so this one is
+            always reachable.
+          */}
+          <IconButton
+            label={sidebarVisible ? 'Hide the sidebar' : 'Show the sidebar'}
             onClick={() => setSidebarVisible(!sidebarVisible)}
             hint={`${MOD_LABEL} B`}
             testId="button-toggle-sidebar"
           >
-            <PanelLeft />
+            {sidebarVisible ? <PanelLeftClose /> : <PanelLeft />}
           </IconButton>
 
-          <TabStrip />
+          <TabStrip onLocate={(id) => setLocate({ id, nonce: Date.now() })} />
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />

@@ -131,10 +131,11 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
               copyable.map((item) => {
                 const on = picked.has(item.key);
                 return (
-                  <label className="import-row" key={item.key} style={{ paddingLeft: 6 }}>
+                  <label className="import-row" key={item.key} htmlFor={`copy-${item.key}`} style={{ paddingLeft: 6 }}>
                     <Checkbox
+                      id={`copy-${item.key}`}
                       checked={on}
-                      onChange={() => toggle(item.key)}
+                      onCheckedChange={() => toggle(item.key)}
                       data-testid={`checkbox-copy-${item.key}`}
                     />
                     <span className="mono truncate" style={{ flex: '0 0 auto' }}>

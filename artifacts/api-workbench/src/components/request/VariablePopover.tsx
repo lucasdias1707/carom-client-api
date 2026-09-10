@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { SelectField } from '@/components/common/SelectField';
 
 type VariablePopoverProps = {
   name: string;
@@ -31,12 +32,18 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
   );
   const base = environments.find((environment) => environment.isBase);
   /**
-   * A new global goes into whichever environment is selected right now, and
-   * only falls back to Base when none is. Defining a staging URL while staging
-   * is active, and having it land in Base for every environment to inherit,
-   * is not what anyone means by that click.
+   * Where a new global lands.
+   *
+   * With an environment selected at the top, that one — defining a staging URL
+   * while staging is active and having it land in Base, for every environment
+   * to inherit, is not what that click means. With **none** selected there is
+   * no right answer to guess, and guessing Base silently is how a value meant
+   * for one environment ends up applying to all of them. So the target becomes
+   * a choice, and the button waits for it.
    */
-  const target = environments.find((environment) => environment.id === state.activeEnvironmentId) ?? base;
+  const active = environments.find((environment) => environment.id === state.activeEnvironmentId);
+  const [chosenId, setChosenId] = useState(active?.id ?? '');
+  const target = active ?? environments.find((environment) => environment.id === chosenId);
   const folder = state.folders.find((item) => item.id === activeRequest?.folderId);
 
   const save = () => {
@@ -172,6 +179,26 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
               data-testid="input-variable-value"
             />
           </div>
+          {/*
+            No environment picked at the top, so there is nothing to infer:
+            choose the one that gets the value before the button will write it.
+          */}
+          {active || environments.length === 0 ? null : (
+            <div className="var-popover-row">
+              <SelectField
+                value={chosenId}
+                onChange={setChosenId}
+                options={environments.map((environment) => ({
+                  value: environment.id,
+                  label: environment.isBase ? `${environment.name} (every environment)` : environment.name,
+                }))}
+                placeholder="Which environment?"
+                ariaLabel="Environment for this variable"
+                testId="select-variable-environment"
+                block
+              />
+            </div>
+          )}
           <div className="var-popover-row">
             <Button variant="secondary" size="sm"
               onClick={() => define('folder')}
@@ -184,7 +211,13 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
             <Button variant="secondary" size="sm"
               onClick={() => define('global')}
               disabled={!target}
-              title={target ? `Goes into the ${target.name} environment` : 'This workspace has no environment'}
+              title={
+                target
+                  ? `Goes into the ${target.name} environment`
+                  : environments.length === 0
+                    ? 'This workspace has no environment'
+                    : 'Pick the environment above first'
+              }
               data-testid="button-define-global"
             >
               <Plus /> Global {target ? `(${target.name})` : ''}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Copy, Download, History, Search, Trash2, Waypoints } from 'lucide-react';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -60,6 +61,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [wrap, setWrap] = useState(true);
+  const [clearing, setClearing] = useState(false);
 
   const responses = responsesFor(requestId);
   const response = responses.find((item) => item.id === selectedId) ?? responses[0] ?? null;
@@ -174,15 +176,35 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
           label="Clear responses"
           hint={responses.length > 1 ? `all ${responses.length}` : undefined}
           tone="danger"
-          onClick={() => {
-            dispatch({ type: 'response/clear', requestId });
-            setSelectedId(null);
-          }}
+          onClick={() => setClearing(true)}
           testId="button-clear-response"
         >
           <Trash2 />
         </IconButton>
       </div>
+
+      {/*
+        The one deletion in the app that used to fire straight from the click,
+        with no confirmation and no undo: the history is not stored anywhere
+        else, so a mis-aimed click threw away every response for this request.
+      */}
+      {clearing ? (
+        <ConfirmDialog
+          title="Clear the response history?"
+          message={
+            responses.length > 1
+              ? `All ${responses.length} saved responses for this request go away. This one cannot be undone.`
+              : 'The saved response for this request goes away. This one cannot be undone.'
+          }
+          confirmLabel="Clear"
+          onCancel={() => setClearing(false)}
+          onConfirm={() => {
+            dispatch({ type: 'response/clear', requestId });
+            setSelectedId(null);
+            setClearing(false);
+          }}
+        />
+      ) : null}
 
       {response.error ? (
         <div className="error-box" data-testid="status-network-error">

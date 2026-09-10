@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,12 +10,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type ConfirmDialogProps = {
   title: string;
   /** What is about to happen, in enough detail to decide. */
   message: React.ReactNode;
   confirmLabel?: string;
+  /**
+   * When set, the exact text has to be typed before the destructive button
+   * works. For the deletions where a misclick costs everything at once.
+   */
+  requireText?: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -32,7 +40,17 @@ type ConfirmDialogProps = {
  * Escape still backs out, and the delete can be undone from the toast — this
  * guards the misclick, not the decision.
  */
-export function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = 'Delete',
+  requireText,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
+  const [typed, setTyped] = useState('');
+  const armed = requireText === undefined || typed.trim() === requireText;
+
   return (
     <AlertDialog
       open
@@ -53,6 +71,23 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfi
         >
           {message}
         </AlertDialogDescription>
+        {requireText === undefined ? null : (
+          <div className="stack px-[14px]" style={{ gap: 6 }}>
+            <Label htmlFor="confirm-name" className="section-label m-0">
+              Type <span className="mono text-[var(--text-strong)]">{requireText}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-name"
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label={`Type ${requireText} to confirm`}
+              data-testid="input-confirm-name"
+              autoFocus
+            />
+          </div>
+        )}
         <AlertDialogFooter className="flex flex-row items-center justify-end gap-2 border-t border-[var(--border)] bg-[var(--bg-raised)] px-3.5 py-2.5 sm:space-x-0">
           <AlertDialogCancel
             className={buttonVariants({ variant: 'secondary' })}
@@ -64,7 +99,10 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfi
           <AlertDialogAction
             className={buttonVariants({ variant: 'destructive' })}
             onClick={onConfirm}
-            autoFocus
+            disabled={!armed}
+            // Focus the confirm button only when it is the thing to press. With
+            // a name to type, the field is.
+            autoFocus={requireText === undefined}
             data-testid="button-accept-confirm"
           >
             {confirmLabel}

@@ -146,7 +146,7 @@ export function ImportPostmanDialog({ onClose }: { onClose: () => void }) {
           <div className="import-row" style={{ paddingLeft: 4 + node.depth * 14 }}>
             <Checkbox
               checked={selected.has(node.id)}
-              onChange={() => toggle(node)}
+              onCheckedChange={() => toggle(node)}
               aria-label={node.name}
               data-testid={`checkbox-import-${node.id}`}
             />

@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { X } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
@@ -82,6 +83,20 @@ function showToast({
             {action.label}
           </button>
         ) : null}
+        {/*
+          An Undo toast stands for nine seconds, which is a long time to watch
+          something you have already decided about. Dismissing it is not the
+          same as taking the action, so it gets its own control rather than
+          leaving the swipe as the only way out.
+        */}
+        <button
+          className="toast-close"
+          onClick={() => sonnerToast.dismiss(id)}
+          aria-label="Dismiss"
+          data-testid="button-toast-close"
+        >
+          <X size={13} />
+        </button>
       </div>
     ),
     { duration: durationMs ?? (action ? ACTION_TOAST_MS : TOAST_MS) },
