@@ -241,8 +241,112 @@ export const PALETTES: Palette[] = [
   },
 ];
 
-export function paletteById(id: string | undefined): Palette {
-  return PALETTES.find((palette) => palette.id === id) ?? PALETTES[0];
+/** Built-ins first, then whatever was saved here — same shape as the fonts. */
+export function allPalettes(settings: Pick<Settings, 'palettes'>): Palette[] {
+  return [...PALETTES, ...(settings.palettes ?? [])];
+}
+
+export function paletteById(settings: Pick<Settings, 'palettes'>, id: string | undefined): Palette {
+  return allPalettes(settings).find((palette) => palette.id === id) ?? PALETTES[0];
+}
+
+export function isBuiltInPalette(id: string): boolean {
+  return PALETTES.some((palette) => palette.id === id);
+}
+
+/**
+ * The tokens a colour picker can edit.
+ *
+ * Four of the nineteen are deliberately missing: `--bg-hover`, `--bg-active`
+ * and `--bg-overlay` are translucent, and `<input type="color">` has no alpha
+ * to give them — a picker that silently drops the transparency would turn
+ * every hover into a solid block. They ride along from the palette that was
+ * duplicated. `--accent-soft` is missing for the same reason and then handed
+ * back: it is the accent at 16%, so it is derived whenever the accent changes.
+ */
+export const EDITABLE_TOKENS: Array<{ token: keyof PaletteTokens; label: string }> = [
+  { token: '--accent', label: 'Accent' },
+  { token: '--accent-hover', label: 'Accent, hovered' },
+  { token: '--accent-fg', label: 'Text on the accent' },
+  { token: '--bg-app', label: 'App background' },
+  { token: '--bg-sidebar', label: 'Sidebar' },
+  { token: '--bg-surface', label: 'Dialogs' },
+  { token: '--bg-raised', label: 'Raised panels' },
+  { token: '--bg-input', label: 'Inputs' },
+  { token: '--bg-code', label: 'Code blocks' },
+  { token: '--border', label: 'Borders' },
+  { token: '--border-strong', label: 'Borders, stronger' },
+  { token: '--text', label: 'Text' },
+  { token: '--text-strong', label: 'Text, strong' },
+  { token: '--text-dim', label: 'Text, dim' },
+  { token: '--text-faint', label: 'Text, faint' },
+];
+
+/** The accent at the transparency the app uses for its soft wash. */
+export function softAccent(accent: string): string {
+  return `color-mix(in srgb, ${accent} 16%, transparent)`;
+}
+
+/**
+ * `#fff` as `#ffffff`, and anything else left alone.
+ *
+ * The minifier shortens `#ffffff` in the stylesheet, and `getComputedStyle`
+ * hands back the declared text rather than a normalised colour — so reading
+ * the built-in light palette produced three-digit hexes, which
+ * `<input type="color">` refuses outright with a console warning and an empty
+ * swatch. Expanding them at the point of reading keeps stored palettes uniform.
+ */
+export function expandHex(value: string): string {
+  const short = value.trim().match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  return short ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}` : value.trim();
+}
+
+/**
+ * The tokens actually in force for a mode, read off the document.
+ *
+ * The default palette defines nothing of its own — that is what keeps it in
+ * step with the stylesheet — so duplicating it has to ask the browser what the
+ * stylesheet says. Reading the *other* mode means flipping the attribute,
+ * reading, and flipping back: `getComputedStyle` forces the recalculation
+ * synchronously and no frame is painted in between, so nothing flashes.
+ */
+export function readTokens(mode: 'dark' | 'light'): PaletteTokens {
+  const root = document.documentElement;
+  const before = root.dataset.theme;
+  root.dataset.theme = mode;
+  const style = getComputedStyle(root);
+  const tokens = {} as PaletteTokens;
+  for (const name of TOKEN_NAMES) tokens[name] = expandHex(style.getPropertyValue(name));
+  if (before === undefined) delete root.dataset.theme;
+  else root.dataset.theme = before;
+  return tokens;
+}
+
+const TOKEN_NAMES: Array<keyof PaletteTokens> = [
+  '--bg-app', '--bg-sidebar', '--bg-surface', '--bg-raised', '--bg-input',
+  '--bg-hover', '--bg-active', '--bg-overlay', '--bg-code',
+  '--border', '--border-strong',
+  '--text', '--text-strong', '--text-dim', '--text-faint',
+  '--accent', '--accent-hover', '--accent-fg', '--accent-soft',
+];
+
+/**
+ * A copy of a palette, with both halves filled in.
+ *
+ * A palette that only had the half you were looking at would break the moment
+ * you switched to light, so the half you are not editing is taken from the
+ * source — or read from the stylesheet when the source is the default, which
+ * carries no tokens of its own.
+ */
+export function duplicatePalette(palette: Palette, mode: 'dark' | 'light'): Palette {
+  const other = mode === 'dark' ? 'light' : 'dark';
+  return {
+    id: createId('pal'),
+    name: `${palette.name} copy`,
+    note: 'Yours',
+    [mode]: palette[mode] ?? readTokens(mode),
+    [other]: palette[other] ?? readTokens(other),
+  } as Palette;
 }
 
 /**

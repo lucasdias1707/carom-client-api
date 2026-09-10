@@ -124,14 +124,14 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
             </span>
           </div>
 
-          <div className="import-tree" data-testid="copy-variable-list">
+          <div className="pick-tree" data-testid="copy-variable-list">
             {copyable.length === 0 ? (
               <div className="tree-empty">That one has no variables to copy.</div>
             ) : (
               copyable.map((item) => {
                 const on = picked.has(item.key);
                 return (
-                  <label className="import-row" key={item.key} htmlFor={`copy-${item.key}`} style={{ paddingLeft: 6 }}>
+                  <label className="pick-row" key={item.key} htmlFor={`copy-${item.key}`} style={{ paddingLeft: 6 }}>
                     <Checkbox
                       id={`copy-${item.key}`}
                       checked={on}

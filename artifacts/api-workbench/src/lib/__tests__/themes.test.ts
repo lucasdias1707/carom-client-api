@@ -3,7 +3,12 @@ import {
   BUILT_IN_FONTS,
   DEFAULT_FONT,
   DEFAULT_PALETTE,
+  EDITABLE_TOKENS,
   PALETTES,
+  allPalettes,
+  expandHex,
+  isBuiltInPalette,
+  softAccent,
   duplicateFont,
   fontById,
   fontThemes,
@@ -30,8 +35,34 @@ describe('palettes', () => {
   });
 
   it('falls back to the default rather than to nothing', () => {
-    expect(paletteById('deleted-in-a-later-version').id).toBe(DEFAULT_PALETTE);
-    expect(paletteById(undefined).id).toBe(DEFAULT_PALETTE);
+    expect(paletteById({}, 'deleted-in-a-later-version').id).toBe(DEFAULT_PALETTE);
+    expect(paletteById({}, undefined).id).toBe(DEFAULT_PALETTE);
+  });
+
+  it('lists a saved palette after the built-ins, and finds it', () => {
+    const mine = { id: 'p1', name: 'Mine', note: 'Yours', dark: null, light: null };
+    expect(allPalettes({ palettes: [mine] }).at(-1)?.id).toBe('p1');
+    expect(paletteById({ palettes: [mine] }, 'p1').name).toBe('Mine');
+    expect(isBuiltInPalette('p1')).toBe(false);
+    expect(isBuiltInPalette(DEFAULT_PALETTE)).toBe(true);
+  });
+
+  it('derives the soft wash from the accent, so a selected row follows it', () => {
+    expect(softAccent('#ff0000')).toBe('color-mix(in srgb, #ff0000 16%, transparent)');
+  });
+
+  it('offers a picker only for the tokens a picker can express', () => {
+    // The translucent ones have alpha and `<input type="color">` has none;
+    // silently dropping it would turn every hover into a solid block.
+    const editable = EDITABLE_TOKENS.map((entry) => entry.token);
+    expect(editable).not.toContain('--bg-hover');
+    expect(editable).not.toContain('--bg-active');
+    expect(editable).not.toContain('--bg-overlay');
+    expect(editable).not.toContain('--accent-soft');
+    expect(editable).toContain('--accent');
+    for (const token of editable) {
+      expect(PALETTES[1].dark?.[token]).toMatch(/^#/);
+    }
   });
 });
 
@@ -64,5 +95,19 @@ describe('font themes', () => {
     expect(example.sans).not.toBe(base.sans);
     expect(example.mono).not.toBe(base.mono);
     expect(example.scale).not.toBe(base.scale);
+  });
+});
+
+describe('expandHex', () => {
+  it('expands the short form a colour input refuses', () => {
+    // The minifier turns `#ffffff` into `#fff` in the stylesheet, and reading
+    // a computed custom property hands back that text verbatim.
+    expect(expandHex('#fff')).toBe('#ffffff');
+    expect(expandHex(' #0a0 ')).toBe('#00aa00');
+  });
+
+  it('leaves anything it does not recognise alone', () => {
+    expect(expandHex('#1b1e24')).toBe('#1b1e24');
+    expect(expandHex('rgba(255, 255, 255, 0.09)')).toBe('rgba(255, 255, 255, 0.09)');
   });
 });

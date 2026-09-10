@@ -11,14 +11,17 @@ import type { Settings, ThemeName } from '@/types';
  * a palette needs no stylesheet of its own — and the default palette sets
  * nothing at all, which is what makes it the default rather than a copy.
  */
-export function useTheme(settings: Pick<Settings, 'theme' | 'palette' | 'fontTheme' | 'fontThemes'>): void {
+export function useTheme(
+  settings: Pick<Settings, 'theme' | 'palette' | 'palettes' | 'fontTheme' | 'fontThemes'>,
+): void {
   const { theme, palette: paletteId, fontTheme: fontId } = settings;
   const custom = settings.fontThemes;
+  const customPalettes = settings.palettes;
 
   useEffect(() => {
     const root = document.documentElement;
     const media = window.matchMedia('(prefers-color-scheme: light)');
-    const palette = paletteById(paletteId);
+    const palette = paletteById({ palettes: customPalettes }, paletteId);
     const font = fontById({ fontThemes: custom }, fontId);
 
     // Anything this hook set last time, so switching back to Carom does not
@@ -54,5 +57,5 @@ export function useTheme(settings: Pick<Settings, 'theme' | 'palette' | 'fontThe
       media.removeEventListener('change', apply);
       clear();
     };
-  }, [theme, paletteId, fontId, custom]);
+  }, [theme, paletteId, customPalettes, fontId, custom]);
 }

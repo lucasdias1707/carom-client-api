@@ -87,7 +87,8 @@ function showToast({
           An Undo toast stands for nine seconds, which is a long time to watch
           something you have already decided about. Dismissing it is not the
           same as taking the action, so it gets its own control rather than
-          leaving the swipe as the only way out.
+          leaving the swipe as the only way out. It sits on the corner, over
+          the border, so it costs the toast none of its width.
         */}
         <button
           className="toast-close"
@@ -95,7 +96,7 @@ function showToast({
           aria-label="Dismiss"
           data-testid="button-toast-close"
         >
-          <X size={13} />
+          <X size={11} />
         </button>
       </div>
     ),

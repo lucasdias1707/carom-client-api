@@ -1298,6 +1298,7 @@
 
 
   .toast {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -1471,18 +1472,25 @@
   }
   .toast-action:hover { background: var(--bg-hover); }
 
+  /* The close sits *on* the corner rather than in the row: it is not part of
+     what the toast says, and as a column it pushed the text and the Undo
+     button around by twenty pixels. Straddling the border keeps it reachable
+     without spending any of the toast's width on it. */
   .toast-close {
-    flex: 0 0 auto;
-    align-self: flex-start;
+    position: absolute;
+    top: -8px;
+    right: -8px;
     display: inline-grid;
     place-items: center;
-    width: 20px;
-    height: 20px;
-    margin: -2px -4px 0 0;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-faint);
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg-raised);
+    color: var(--text-dim);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   }
   .toast-close:hover { background: var(--bg-hover); color: var(--text-strong); }
 
