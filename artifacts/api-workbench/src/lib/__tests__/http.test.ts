@@ -6,6 +6,7 @@ import {
   failureHint,
   isDesktop,
   isLocalHost,
+  isScopeRefusal,
   prepareRequest,
   reasonOf,
   toErrorResponse,
@@ -249,5 +250,23 @@ describe('a failed send', () => {
     expect(isLocalHost('http://172.16.4.1/api')).toBe(true);
     expect(isLocalHost('https://api.github.com')).toBe(false);
     expect(isLocalHost('not a url')).toBe(false);
+  });
+});
+
+describe('a refusal by the app itself', () => {
+  const prepared = { method: 'GET' as const, url: 'http://localhost:3000/x', headers: [], body: { type: 'none' } as const };
+  const reason = 'url not allowed on the configured scope: http://localhost:3000/x';
+
+  it('is not reported as a network problem', () => {
+    // The scope refusal that made this necessary was answered with "nothing is
+    // listening on that port", which sent the reader to the wrong machine.
+    const failure = toErrorResponse(prepared, new SendFailure(reason, 'desktop'), 3);
+    expect(failure.error).toMatch(/before it was sent, not by the network/);
+    expect(failure.error).not.toMatch(/nothing is listening/);
+  });
+
+  it('is recognised wherever it came from', () => {
+    expect(isScopeRefusal(reason)).toBe(true);
+    expect(isScopeRefusal('Failed to fetch')).toBe(false);
   });
 });

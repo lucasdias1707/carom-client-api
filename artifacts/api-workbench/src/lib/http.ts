@@ -471,7 +471,22 @@ export function isLocalHost(url: string): boolean {
  * apart and should not pretend to. What it can do is name both, and say which
  * of the two ways out applies.
  */
-export function failureHint(url: string, via: SendResult['via']): string | null {
+/**
+ * A refusal by the app's own permission scope, before anything was sent.
+ *
+ * Worth telling apart from a network failure: it is not the endpoint, the port
+ * or the address, and the advice for those sends someone looking in exactly
+ * the wrong place — which is what happened when a missing port wildcard made
+ * the desktop scope refuse every `localhost:3000`.
+ */
+export function isScopeRefusal(reason: string): boolean {
+  return /not allowed on the configured scope/i.test(reason);
+}
+
+export function failureHint(url: string, via: SendResult['via'], reason = ''): string | null {
+  if (isScopeRefusal(reason)) {
+    return 'Refused by this app before it was sent, not by the network: the desktop build allows a scheme, host, port and path it was built with. Nothing about the endpoint would change this — please report the URL.';
+  }
   if (via === 'desktop') {
     return isLocalHost(url)
       ? 'Sent natively, so CORS is not involved: either nothing is listening on that port, or it is listening on the other loopback address — try 127.0.0.1 in place of localhost, or the reverse.'
@@ -490,7 +505,7 @@ export function toErrorResponse(prepared: PreparedRequest, error: unknown, durat
   // anything else (a script throwing, an empty URL) never left the app.
   const via: SendResult['via'] = error instanceof SendFailure ? error.via : 'browser';
   const reason = reasonOf(error);
-  const hint = error instanceof SendFailure ? failureHint(prepared.url, via) : null;
+  const hint = error instanceof SendFailure ? failureHint(prepared.url, via, reason) : null;
   const message = hint ? `${reason}\n\n${hint}` : reason;
   return {
     id: createId('res'),
