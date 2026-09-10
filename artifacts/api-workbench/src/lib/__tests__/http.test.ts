@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildUrl, chooseTransport, isDesktop, prepareRequest, toFetchBody } from '@/lib/http';
+import {
+  SendFailure,
+  buildUrl,
+  chooseTransport,
+  failureHint,
+  isDesktop,
+  isLocalHost,
+  prepareRequest,
+  reasonOf,
+  toErrorResponse,
+  toFetchBody,
+} from '@/lib/http';
 import { toCurl } from '@/lib/curl';
 import { createRequest, emptyAuth, row } from '@/lib/factories';
 import type { RequestRecord } from '@/types';
@@ -189,5 +200,54 @@ describe('multipart with files', () => {
 
   it('writes a file part the way curl writes one', () => {
     expect(toCurl(prepareRequest(withFile(), {}))).toContain('doc=@a.pdf');
+  });
+});
+
+describe('a failed send', () => {
+  const prepared = { method: 'GET' as const, url: 'http://localhost:3000/hotel/cnpj-exists', headers: [], body: { type: 'none' } as const };
+
+  it('keeps the reason when the reject is a string, which is how Rust sends it', () => {
+    // The desktop plugin rejects with a plain string; reading only
+    // `Error.message` threw the only useful sentence away.
+    expect(reasonOf('tcp connect error: Connection refused (os error 61)')).toMatch(/Connection refused/);
+    expect(reasonOf(new Error('Failed to fetch'))).toBe('Failed to fetch');
+    expect(reasonOf({ message: 'boom' })).toBe('boom');
+    expect(reasonOf(undefined)).toMatch(/could not be completed/);
+  });
+
+  it('records the transport it actually failed on', () => {
+    const failure = toErrorResponse(prepared, new SendFailure('nope', 'desktop'), 5);
+    expect(failure.via).toBe('desktop');
+    expect(failure.error).toMatch(/^nope/);
+  });
+
+  it('says browser for something that never left the app', () => {
+    // An empty URL or a script throwing is not a transport failure.
+    const failure = toErrorResponse(prepared, new Error('Enter a URL before sending.'), 0);
+    expect(failure.via).toBe('browser');
+    expect(failure.error).toBe('Enter a URL before sending.');
+  });
+
+  it('names both possibilities from a browser, because they look identical there', () => {
+    const failure = toErrorResponse(prepared, new SendFailure('Failed to fetch', 'browser'), 5);
+    expect(failure.error).toMatch(/CORS/);
+    expect(failure.error).toMatch(/companion server/);
+  });
+
+  it('rules CORS out when the request was sent natively, rather than blaming it', () => {
+    const hint = failureHint('http://localhost:3000/x', 'desktop');
+    expect(hint).toMatch(/CORS is not involved/);
+    // The loopback mismatch is the real suspect there, and it is nameable.
+    expect(hint).toMatch(/127\.0\.0\.1/);
+    expect(failureHint('https://api.github.com/x', 'desktop')).toBeNull();
+  });
+
+  it('knows a host that only exists on this machine or network', () => {
+    expect(isLocalHost('http://localhost:3000/x')).toBe(true);
+    expect(isLocalHost('http://127.0.0.1:8080')).toBe(true);
+    expect(isLocalHost('http://192.168.1.20/api')).toBe(true);
+    expect(isLocalHost('http://172.16.4.1/api')).toBe(true);
+    expect(isLocalHost('https://api.github.com')).toBe(false);
+    expect(isLocalHost('not a url')).toBe(false);
   });
 });
