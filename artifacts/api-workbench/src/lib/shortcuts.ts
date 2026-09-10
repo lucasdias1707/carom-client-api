@@ -24,6 +24,7 @@ export type CommandId =
   | 'palette'
   | 'palette.requests'
   | 'palette.workspaces'
+  | 'palette.commands'
   | 'send'
   | 'newRequest'
   | 'closeTab'
@@ -40,13 +41,15 @@ export type ShortcutCommand = {
 /**
  * `⌘Space` is missing on purpose. It is Spotlight on macOS — the system takes
  * it before any app sees the keydown — so binding it would produce a shortcut
- * that silently does nothing on the platform it was asked for. `⌘⇧P` is the
- * editor convention for the same idea and does reach the app.
+ * that silently does nothing on the platform it was asked for. `⌘⇧P`, the
+ * editor convention for the same idea, does reach the app and is what
+ * `palette.commands` is bound to.
  */
 export const COMMANDS: ShortcutCommand[] = [
   { id: 'palette', label: 'Search everything', defaultBinding: { key: 'k', mod: true } },
   { id: 'palette.requests', label: 'Go to a request', defaultBinding: { key: 'p', mod: true } },
   { id: 'palette.workspaces', label: 'Switch workspace', defaultBinding: { key: 'r', mod: true } },
+  { id: 'palette.commands', label: 'Run a command', defaultBinding: { key: 'p', mod: true, shift: true } },
   { id: 'send', label: 'Send the active request', defaultBinding: { key: 'enter', mod: true } },
   { id: 'newRequest', label: 'New request', defaultBinding: { key: 'n', mod: true } },
   { id: 'closeTab', label: 'Close the active tab', defaultBinding: { key: 'w', mod: true } },

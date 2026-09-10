@@ -21,11 +21,11 @@ export type Command = {
 };
 
 /**
- * `all` is ⌘K. The other two are the IDE habit: one key that goes straight to a
- * request, another straight to a workspace, without typing past a list of
- * actions that were not what you meant.
+ * `all` is ⌘K. The rest are the IDE habit: one key straight to a request, one
+ * straight to a workspace, one straight to the actions — each without typing
+ * past a list of things that were not what you meant.
  */
-export type PaletteMode = 'all' | 'requests' | 'workspaces';
+export type PaletteMode = 'all' | 'requests' | 'workspaces' | 'commands';
 
 type CommandPaletteProps = {
   commands: Command[];
@@ -37,6 +37,7 @@ const PLACEHOLDERS: Record<PaletteMode, string> = {
   all: 'Search requests and actions…',
   requests: 'Go to a request…',
   workspaces: 'Switch workspace…',
+  commands: 'Run a command…',
 };
 
 /**
@@ -130,7 +131,7 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
           />
           <CommandList className="max-h-[52vh]">
             <CommandEmpty className="tree-empty py-6">No matches.</CommandEmpty>
-            {mode === 'all' ? <CommandGroup>{commands.map(row)}</CommandGroup> : null}
+            {mode === 'all' || mode === 'commands' ? <CommandGroup>{commands.map(row)}</CommandGroup> : null}
             {mode === 'all' || mode === 'requests' ? (
               <CommandGroup heading="Requests">{requestCommands.map(row)}</CommandGroup>
             ) : null}

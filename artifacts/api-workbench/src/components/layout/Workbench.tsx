@@ -46,6 +46,7 @@ type Overlay =
   | 'palette'
   | 'palette.requests'
   | 'palette.workspaces'
+  | 'palette.commands'
   | 'environments'
   | 'settings'
   | 'curl'
@@ -121,6 +122,7 @@ export function Workbench() {
     bind('palette', () => setOverlay('palette')),
     bind('palette.requests', () => setOverlay('palette.requests')),
     bind('palette.workspaces', () => setOverlay('palette.workspaces')),
+    bind('palette.commands', () => setOverlay('palette.commands')),
     bind('send', sendActive),
     bind('newRequest', newRequest),
     bind('environments', () => setOverlay('environments')),
@@ -270,10 +272,18 @@ export function Workbench() {
         )}
       </main>
 
-      {overlay === 'palette' || overlay === 'palette.requests' || overlay === 'palette.workspaces' ? (
+      {overlay?.startsWith('palette') ? (
         <CommandPalette
           commands={commands}
-          mode={overlay === 'palette.requests' ? 'requests' : overlay === 'palette.workspaces' ? 'workspaces' : 'all'}
+          mode={
+            overlay === 'palette.requests'
+              ? 'requests'
+              : overlay === 'palette.workspaces'
+                ? 'workspaces'
+                : overlay === 'palette.commands'
+                  ? 'commands'
+                  : 'all'
+          }
           onClose={() => setOverlay(null)}
         />
       ) : null}
