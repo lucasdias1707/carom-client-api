@@ -1,11 +1,12 @@
 import { useRef } from 'react';
-import { Download, Upload } from 'lucide-react';
+import { Download, Keyboard, Upload } from 'lucide-react';
 import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
 import { UpdatesSection } from '@/components/dialogs/UpdatesSection';
 import { saveJson, saveMessage } from '@/lib/save';
 import { DEFAULT_PALETTE, PALETTES } from '@/lib/themes';
+import { formatBinding, resolveBindings } from '@/lib/shortcuts';
 import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
@@ -43,7 +44,16 @@ const JSON_COLOR_FIELDS: Array<{ field: keyof JsonTheme; label: string; sample: 
   { field: 'punctuation', label: 'Punctuation', sample: '{ } [ ] ,' },
 ];
 
-export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; proxyStatus: ProxyStatus }) {
+export function SettingsDialog({
+  onClose,
+  proxyStatus,
+  onOpenShortcuts,
+}: {
+  onClose: () => void;
+  proxyStatus: ProxyStatus;
+  /** Swaps this dialog for the shortcuts screen — they are one overlay, not two. */
+  onOpenShortcuts: () => void;
+}) {
   const { state, dispatch } = useWorkspace();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -134,6 +144,25 @@ export function SettingsDialog({ onClose, proxyStatus }: { onClose: () => void; 
         </div>
 
         <FontThemeEditor />
+
+        {/*
+          The shortcuts screen lives behind the palette, and the palette is
+          itself a shortcut — which is fine once you know it and useless when
+          you do not. Settings is where someone looks for a setting, so the
+          way in is here too.
+        */}
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">Keyboard</Label>
+          <Button
+            variant="secondary"
+            className="justify-self-start"
+            onClick={onOpenShortcuts}
+            data-testid="button-open-shortcuts"
+          >
+            <Keyboard /> Keyboard shortcuts
+            <span className="kbd ml-1">{formatBinding(resolveBindings(settings).palette)}</span>
+          </Button>
+        </div>
 
         <div className="stack" style={{ gap: 6 }}>
           <Label className="section-label m-0">Pane layout</Label>

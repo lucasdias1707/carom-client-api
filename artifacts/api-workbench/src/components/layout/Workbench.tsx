@@ -288,7 +288,13 @@ export function Workbench() {
         />
       ) : null}
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
-      {overlay === 'settings' ? <SettingsDialog onClose={() => setOverlay(null)} proxyStatus={proxyStatus} /> : null}
+      {overlay === 'settings' ? (
+        <SettingsDialog
+          onClose={() => setOverlay(null)}
+          proxyStatus={proxyStatus}
+          onOpenShortcuts={() => setOverlay('shortcuts')}
+        />
+      ) : null}
       {overlay === 'curl' ? <ImportCurlDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'import' ? <ImportDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'export' ? (
