@@ -113,7 +113,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
           <div className="section-label" style={{ margin: 0 }}>
             Colour
             <span className="spacer" />
-            <span className="hint" style={{ fontSize: 10 }}>
+            <span className="hint" style={{ fontSize: 'var(--fs-10)' }}>
               variables from this environment render in it
             </span>
           </div>

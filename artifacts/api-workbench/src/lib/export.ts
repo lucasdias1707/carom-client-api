@@ -65,6 +65,25 @@ export function subtreeFolderIds(state: WorkspaceState, folderId: string): strin
   return collected;
 }
 
+/**
+ * A folder, everything under it, and the requests inside all of them — the tick
+ * marks the export dialog opens with when a folder was the thing clicked.
+ *
+ * Seeding it with the folder ids alone was the bug behind "exporting a folder
+ * gives an empty folder": `pruneTree` keeps a request only when the request's
+ * own id is selected, so the file came out as a shell with nothing in it.
+ */
+export function subtreeSelection(state: WorkspaceState, folderId: string): string[] {
+  const folderIds = subtreeFolderIds(state, folderId);
+  const ids = new Set(folderIds);
+  return [
+    ...folderIds,
+    ...state.requests
+      .filter((request) => request.folderId !== null && ids.has(request.folderId))
+      .map((request) => request.id),
+  ];
+}
+
 function envelope(
   name: string,
   folders: Folder[],

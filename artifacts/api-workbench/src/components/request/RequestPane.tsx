@@ -15,6 +15,7 @@ import { UrlBar } from '@/components/request/UrlBar';
 import { useToast } from '@/components/common/Toaster';
 import { toCurl } from '@/lib/curl';
 import { prepareRequest } from '@/lib/http';
+import { formatBinding, resolveBindings } from '@/lib/shortcuts';
 import { paramsMatchUrl, splitQuery, syncUrlParams } from '@/lib/query';
 import { folderPath } from '@/state/selectors';
 import { useWorkspace } from '@/state/workspace-store';
@@ -43,11 +44,14 @@ type RequestPaneProps = {
 };
 
 export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneProps) {
-  const { state, dispatch, variables, variableTable, chainFor } = useWorkspace();
+  const { state, dispatch, variables, variableTable, chainFor, unsavedIn } = useWorkspace();
   const { toast } = useToast();
   const [tab, setTab] = useState<RequestTab>('params');
 
   const patch = (changes: Partial<RequestRecord>) => dispatch({ type: 'request/update', id: request.id, patch: changes });
+  /** The same, for a change nobody typed — see `request/update`'s `mirror`. */
+  const mirror = (changes: Partial<RequestRecord>) =>
+    dispatch({ type: 'request/update', id: request.id, patch: changes, mirror: true });
 
   // Mirror the URL's query string into the Params table, a beat after typing
   // stops. Doing it on every keystroke would add a row for `?p`, then replace
@@ -59,7 +63,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
     const timer = window.setTimeout(() => {
       const { params } = splitQuery(request.url);
       if (paramsMatchUrl(request.params, params)) return;
-      patch({ params: syncUrlParams(request.params, params) });
+      mirror({ params: syncUrlParams(request.params, params) });
     }, URL_PARAM_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
     // `patch` closes over the id, which is what the other dependencies pin.
@@ -93,6 +97,11 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
 
   const path = folderPath(state, request.folderId);
 
+  // What ⌘S would commit. The list is what the tooltip says, so "unsaved" is
+  // never just a dot you have to go hunting for the meaning of.
+  const unsaved = unsavedIn(request.id);
+  const saveHint = formatBinding(resolveBindings(state.settings).saveRequest);
+
   return (
     <section className="pane" aria-label="Request">
       <UrlBar
@@ -104,6 +113,10 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
         onUrlChange={(url) => patch({ url })}
         onSend={onSend}
         onCancel={onCancel}
+        unsaved={unsaved}
+        saveHint={saveHint}
+        onSave={() => dispatch({ type: 'request/save', id: request.id })}
+        onRevert={() => dispatch({ type: 'request/revert', id: request.id })}
       />
 
       <Tabs

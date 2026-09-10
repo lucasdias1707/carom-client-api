@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { luminance } from '@/lib/color';
 import {
   BUILT_IN_FONTS,
   DEFAULT_FONT,
   DEFAULT_PALETTE,
   EDITABLE_TOKENS,
   PALETTES,
+  accentHover,
   allPalettes,
+  derivedTokens,
   expandHex,
   isBuiltInPalette,
   softAccent,
@@ -14,6 +17,8 @@ import {
   fontThemes,
   isBuiltInFont,
   paletteById,
+  withDerived,
+  type PaletteTokens,
 } from '@/lib/themes';
 
 describe('palettes', () => {
@@ -63,6 +68,50 @@ describe('palettes', () => {
     for (const token of editable) {
       expect(PALETTES[1].dark?.[token]).toMatch(/^#/);
     }
+  });
+});
+
+describe('derived tokens', () => {
+  const solid = {
+    ...(PALETTES[1].dark as PaletteTokens),
+    '--bg-app': '#101010',
+    '--text': '#eeeeee',
+    '--accent': '#ff0000',
+  };
+
+  it('works the see-through tokens out of the solid ones', () => {
+    const derived = derivedTokens(solid, 'dark');
+    expect(derived['--bg-hover']).toContain('#eeeeee');
+    expect(derived['--bg-active']).toContain('#eeeeee');
+    expect(derived['--bg-overlay']).toContain('#101010');
+    expect(derived['--accent-soft']).toContain('#ff0000');
+  });
+
+  it('moves them when the colours they come from move', () => {
+    // The bug this exists for: they used to be copied once and then stay put,
+    // so a new background left every hover and every backdrop behind.
+    const before = withDerived(solid, 'dark');
+    const after = withDerived({ ...solid, '--text': '#00ff00', '--bg-app': '#202020' }, 'dark');
+    expect(after['--bg-hover']).not.toBe(before['--bg-hover']);
+    expect(after['--bg-overlay']).not.toBe(before['--bg-overlay']);
+  });
+
+  it('keeps the solid tokens exactly as they were', () => {
+    const result = withDerived(solid, 'dark');
+    expect(result['--accent']).toBe('#ff0000');
+    expect(result['--bg-app']).toBe('#101010');
+  });
+
+  it('gives the accent a hover a picker can still show', () => {
+    // A `color-mix()` here would be a colour the editor cannot display, which
+    // is how this token became unusable in the first place.
+    expect(accentHover('#5b83f5', 'dark')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(accentHover('#5b83f5', 'light')).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it('lightens in the dark and darkens in the light', () => {
+    expect(luminance(accentHover('#5b83f5', 'dark'))).toBeGreaterThan(luminance('#5b83f5'));
+    expect(luminance(accentHover('#5b83f5', 'light'))).toBeLessThan(luminance('#5b83f5'));
   });
 });
 

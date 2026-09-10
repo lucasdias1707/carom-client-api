@@ -9,10 +9,13 @@ import {
   PanelLeft,
   PanelLeftClose,
   Rows2,
+  Save,
+  Search,
   Send,
   Settings,
   Terminal,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CommandPalette, type Command } from '@/components/dialogs/CommandPalette';
 import { EnvironmentDialog } from '@/components/dialogs/EnvironmentDialog';
 import { ExportDialog } from '@/components/dialogs/ExportDialog';
@@ -35,6 +38,7 @@ import { useProxyHealth } from '@/hooks/use-proxy-health';
 import { useSendRequest } from '@/hooks/use-send-request';
 import { useTheme } from '@/hooks/use-theme';
 import { createRequest } from '@/lib/factories';
+import { draftChanges } from '@/lib/draft';
 import { clampSidebarWidth } from '@/lib/sidebar';
 import { useWorkspace } from '@/state/workspace-store';
 import { IconButton } from '@/components/common/IconButton';
@@ -47,6 +51,7 @@ type Overlay =
   | 'palette.requests'
   | 'palette.workspaces'
   | 'palette.commands'
+  | 'palette.tabs'
   | 'environments'
   | 'settings'
   | 'curl'
@@ -68,6 +73,8 @@ export function Workbench() {
   const [locate, setLocate] = useState<{ id: string; nonce: number } | null>(null);
   /** What the export dialog opens ticked; undefined means the whole workspace. */
   const [exporting, setExporting] = useState<string[] | undefined>(undefined);
+  /** Tabs waiting on an answer about their unsaved edits. */
+  const [closing, setClosing] = useState<string[] | null>(null);
   const openExport = (selection?: string[]) => {
     setExporting(selection);
     setOverlay('export');
@@ -96,6 +103,46 @@ export function Workbench() {
         sortIndex: state.requests.length,
       }),
     });
+
+  /*
+    Closing a tab is the one place unsaved work can disappear, so it is the one
+    place that asks. Everything that closes tabs — the X, middle click, the tab
+    menu and ⌘W — comes through here, so the question is asked once and in one
+    voice rather than at three call sites that can drift apart.
+  */
+  const unsavedAmong = (ids: string[]) =>
+    ids.filter((id) => {
+      const draft = state.drafts[id];
+      const saved = state.requests.find((request) => request.id === id);
+      return draft && saved && draftChanges(saved, draft).length > 0;
+    });
+
+  const closeTabs = (ids: string[]) => {
+    if (ids.length === 0) return;
+    if (unsavedAmong(ids).length > 0) {
+      setClosing(ids);
+      return;
+    }
+    for (const id of ids) dispatch({ type: 'request/close-tab', id });
+  };
+
+  const finishClosing = (save: boolean) => {
+    const ids = closing ?? [];
+    setClosing(null);
+    for (const id of ids) {
+      if (save) dispatch({ type: 'request/save', id });
+      dispatch({ type: 'request/close-tab', id });
+    }
+  };
+
+  const saveActive = () => {
+    if (!state.activeRequestId) return;
+    if (!state.drafts[state.activeRequestId]) {
+      toast({ title: 'Nothing to save', description: 'This request has no unsaved changes.', kind: 'info' });
+      return;
+    }
+    dispatch({ type: 'request/save', id: state.activeRequestId });
+  };
 
   const sendActive = () => {
     if (!activeRequest) {
@@ -128,14 +175,18 @@ export function Workbench() {
     bind('environments', () => setOverlay('environments')),
     bind('toggleSidebar', () => setSidebarVisible(!sidebarVisible)),
     bind('settings', () => setOverlay('settings')),
+    bind('saveRequest', saveActive),
+    bind('searchTabs', () => setOverlay('palette.tabs')),
     bind('closeTab', () => {
-      if (state.activeRequestId) dispatch({ type: 'request/close-tab', id: state.activeRequestId });
+      if (state.activeRequestId) closeTabs([state.activeRequestId]);
     }),
   ]);
 
   const commands: Command[] = [
     { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: formatBinding(bindings.newRequest), run: newRequest },
     { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: formatBinding(bindings.send), run: sendActive },
+    { id: 'save', label: 'Save the request', icon: <Save size={13} />, hint: formatBinding(bindings.saveRequest), run: saveActive },
+    { id: 'search-tabs', label: 'Search the open tabs', icon: <Search size={13} />, hint: formatBinding(bindings.searchTabs), run: () => setOverlay('palette.tabs') },
     { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
     { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
     { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
@@ -200,7 +251,14 @@ export function Workbench() {
             {sidebarVisible ? <PanelLeftClose /> : <PanelLeft />}
           </IconButton>
 
-          <TabStrip onLocate={(id) => setLocate({ id, nonce: Date.now() })} />
+          <TabStrip
+            onLocate={(id) => setLocate({ id, nonce: Date.now() })}
+            onClose={closeTabs}
+            onNew={newRequest}
+            onSearch={() => setOverlay('palette.tabs')}
+            newHint={formatBinding(bindings.newRequest)}
+            searchHint={formatBinding(bindings.searchTabs)}
+          />
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
@@ -282,7 +340,9 @@ export function Workbench() {
                 ? 'workspaces'
                 : overlay === 'palette.commands'
                   ? 'commands'
-                  : 'all'
+                  : overlay === 'palette.tabs'
+                    ? 'tabs'
+                    : 'all'
           }
           onClose={() => setOverlay(null)}
         />
@@ -301,6 +361,26 @@ export function Workbench() {
         <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
       ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
+      {closing ? (
+        <ConfirmDialog
+          title={closing.length === 1 ? 'Save before closing?' : 'Save before closing these tabs?'}
+          message={
+            <>
+              {unsavedAmong(closing)
+                .map((id) => state.requests.find((request) => request.id === id)?.name ?? 'A request')
+                .join(', ')}{' '}
+              {unsavedAmong(closing).length === 1 ? 'has' : 'have'} changes that were never saved. Closing without
+              saving throws them away.
+            </>
+          }
+          confirmLabel="Save and close"
+          secondaryLabel="Close without saving"
+          tone="default"
+          onConfirm={() => finishClosing(true)}
+          onSecondary={() => finishClosing(false)}
+          onCancel={() => setClosing(null)}
+        />
+      ) : null}
     </div>
   );
 }

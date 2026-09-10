@@ -44,7 +44,7 @@ export function ContextMenu({ x, y, entries, onClose }: ContextMenuProps) {
         align="start"
         side="bottom"
         sideOffset={0}
-        className="min-w-[184px] border-[var(--border-strong)] bg-[var(--bg-raised)] text-[13px] shadow-[var(--shadow-pop)]"
+        className="min-w-[184px] border-[var(--border-strong)] bg-[var(--bg-raised)] text-[length:var(--fs-13)] shadow-[var(--shadow-pop)]"
         data-testid="context-menu"
       >
         {entries.map((entry, index) =>
@@ -56,8 +56,8 @@ export function ContextMenu({ x, y, entries, onClose }: ContextMenuProps) {
               onSelect={entry.onSelect}
               className={
                 entry.danger
-                  ? 'gap-2 text-[13px] text-[var(--red)] focus:text-[var(--red)] [&_svg]:size-[14px]'
-                  : 'gap-2 text-[13px] [&_svg]:size-[14px]'
+                  ? 'gap-2 text-[length:var(--fs-13)] text-[var(--red)] focus:text-[var(--red)] [&_svg]:size-[14px]'
+                  : 'gap-2 text-[length:var(--fs-13)] [&_svg]:size-[14px]'
               }
             >
               {entry.icon}

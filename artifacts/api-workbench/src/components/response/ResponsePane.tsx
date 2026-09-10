@@ -355,12 +355,19 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
               <button
                 key={item.id}
                 className={`history-row ${item.id === response.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(item.id)}
+                // Selecting alone changed the response behind the tab you are
+                // looking at, so picking a row appeared to do nothing at all.
+                // Choosing one from the history means wanting to read it.
+                onClick={() => {
+                  setSelectedId(item.id);
+                  setTab('pretty');
+                }}
+                data-testid={`button-history-${item.id}`}
               >
                 <span className={`status-code ${item.error ? 'none' : statusFamily(item.status)}`} style={{ width: 34 }}>
                   {item.error ? 'ERR' : item.status}
                 </span>
-                <span className="mono truncate" style={{ flex: 1, fontSize: 11 }}>
+                <span className="mono truncate" style={{ flex: 1, fontSize: 'var(--fs-11)' }}>
                   {item.url}
                 </span>
                 <span className="status-meta">{formatDuration(item.durationMs)}</span>

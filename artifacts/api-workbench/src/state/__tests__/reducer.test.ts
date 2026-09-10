@@ -3,7 +3,7 @@ import { reducer } from '@/state/reducer';
 import { createSeedState } from '@/lib/seed';
 import { createEnvironment, createFolder, createRequest, createWorkspace, row } from '@/lib/factories';
 import { buildTree, countRequests, folderPath } from '@/state/selectors';
-import type { ResponseRecord, WorkspaceState } from '@/types';
+import type { RequestRecord, ResponseRecord, WorkspaceState } from '@/types';
 
 function seed(): WorkspaceState {
   return createSeedState();
@@ -80,13 +80,111 @@ describe('requests', () => {
     expect(next.responses.filter((item) => item.requestId === target.id)).toHaveLength(0);
   });
 
-  it('updating stamps updatedAt', () => {
+  it('updating stamps updatedAt on the draft', () => {
     const state = seed();
     const target = state.requests[0];
     const next = reducer(state, { type: 'request/update', id: target.id, patch: { name: 'Renamed' } });
-    const updated = next.requests.find((request) => request.id === target.id)!;
-    expect(updated.name).toBe('Renamed');
-    expect(updated.updatedAt >= target.updatedAt).toBe(true);
+    const draft = next.drafts[target.id];
+    expect(draft.name).toBe('Renamed');
+    expect(draft.updatedAt >= target.updatedAt).toBe(true);
+  });
+});
+
+describe('drafts', () => {
+  const edit = (state: WorkspaceState, id: string, patch: Partial<RequestRecord>) =>
+    reducer(state, { type: 'request/update', id, patch });
+
+  it('keeps an edit out of the saved request until it is saved', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const edited = edit(state, target.id, { url: 'https://elsewhere.test' });
+    expect(edited.requests.find((request) => request.id === target.id)!.url).toBe(target.url);
+    expect(edited.drafts[target.id].url).toBe('https://elsewhere.test');
+
+    const saved = reducer(edited, { type: 'request/save', id: target.id });
+    expect(saved.requests.find((request) => request.id === target.id)!.url).toBe('https://elsewhere.test');
+    expect(saved.drafts[target.id]).toBeUndefined();
+  });
+
+  it('stops being a draft once it is typed back to what was saved', () => {
+    const state = seed();
+    const target = state.requests[0];
+    let next = edit(state, target.id, { url: 'https://typo.test' });
+    expect(next.drafts[target.id]).toBeDefined();
+    next = edit(next, target.id, { url: target.url });
+    expect(next.drafts[target.id]).toBeUndefined();
+  });
+
+  it('reverting leaves the saved request exactly as it was', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const next = reducer(edit(state, target.id, { body: 'nonsense' }), { type: 'request/revert', id: target.id });
+    expect(next.drafts[target.id]).toBeUndefined();
+    expect(next.requests.find((request) => request.id === target.id)).toEqual(target);
+  });
+
+  it('drops the draft when the tab closes, and when the request goes', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const opened = reducer(state, { type: 'request/open', id: target.id });
+    const edited = edit(opened, target.id, { url: 'https://gone.test' });
+    expect(reducer(edited, { type: 'request/close-tab', id: target.id }).drafts[target.id]).toBeUndefined();
+    expect(reducer(edited, { type: 'request/delete', id: target.id }).drafts[target.id]).toBeUndefined();
+  });
+
+  it('closing the others keeps only the surviving tab\u2019s draft', () => {
+    let state = seed();
+    const [first, second] = state.requests;
+    state = reducer(state, { type: 'request/open', id: first.id });
+    state = reducer(state, { type: 'request/open', id: second.id });
+    state = edit(edit(state, first.id, { url: 'a' }), second.id, { url: 'b' });
+    const next = reducer(state, { type: 'request/close-other-tabs', id: second.id });
+    expect(next.drafts[first.id]).toBeUndefined();
+    expect(next.drafts[second.id]).toBeDefined();
+  });
+
+  it('mirroring the URL into params does not make a request look unsaved', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const mirrored = [row('page', '2')];
+    const next = reducer(state, { type: 'request/update', id: target.id, patch: { params: mirrored }, mirror: true });
+    expect(next.drafts[target.id]).toBeUndefined();
+    expect(next.requests.find((request) => request.id === target.id)!.params).toBe(mirrored);
+  });
+
+  it('mirroring into a request already being edited stays in the draft', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const edited = edit(state, target.id, { url: 'https://api.test/x?page=2' });
+    const next = reducer(edited, {
+      type: 'request/update',
+      id: target.id,
+      patch: { params: [row('page', '2')] },
+      mirror: true,
+    });
+    expect(next.drafts[target.id].params).toHaveLength(1);
+    expect(next.requests.find((request) => request.id === target.id)!.params).toEqual(target.params);
+  });
+
+  it('renaming from the tree saves at once, and renames the draft with it', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const edited = edit(state, target.id, { url: 'https://later.test' });
+    const next = reducer(edited, { type: 'request/rename', id: target.id, name: 'Fetch user' });
+    expect(next.requests.find((request) => request.id === target.id)!.name).toBe('Fetch user');
+    expect(next.drafts[target.id].name).toBe('Fetch user');
+    // Saving the draft afterwards must not put the old name back.
+    const saved = reducer(next, { type: 'request/save', id: target.id });
+    expect(saved.requests.find((request) => request.id === target.id)!.name).toBe('Fetch user');
+  });
+
+  it('duplicates what is on screen, and leaves the original\u2019s draft alone', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const edited = edit(state, target.id, { url: 'https://being-tried.test' });
+    const next = reducer(edited, { type: 'request/duplicate', id: target.id });
+    expect(next.requests.at(-1)!.url).toBe('https://being-tried.test');
+    expect(next.drafts[target.id]).toBeDefined();
   });
 });
 
@@ -245,10 +343,13 @@ describe('undoing a delete', () => {
     const survivor = state.requests[1];
 
     const deleted = reducer(state, { type: 'request/delete', id: doomed.id });
-    const edited = reducer(deleted, { type: 'request/update', id: survivor.id, patch: { name: 'Renamed mid-undo' } });
+    let edited = reducer(deleted, { type: 'request/rename', id: survivor.id, name: 'Renamed mid-undo' });
+    edited = reducer(edited, { type: 'request/update', id: survivor.id, patch: { url: 'https://typed-mid-undo.test' } });
     const undone = reducer(edited, { type: 'restore', previous: state });
 
     expect(undone.requests.find((item) => item.id === survivor.id)?.name).toBe('Renamed mid-undo');
+    // Unsaved typing survives the same way the saved rename does.
+    expect(undone.drafts[survivor.id].url).toBe('https://typed-mid-undo.test');
     expect(undone.requests.some((item) => item.id === doomed.id)).toBe(true);
   });
 

@@ -12,7 +12,21 @@ export type Action =
   | { type: 'request/close-tab'; id: string }
   | { type: 'request/close-other-tabs'; id: string }
   | { type: 'request/close-all-tabs' }
-  | { type: 'request/update'; id: string; patch: Partial<RequestRecord> }
+  /**
+   * Edits the draft. Committing it is `request/save`.
+   *
+   * `mirror` marks a patch the app worked out rather than one someone typed —
+   * today only the query string being copied into the Params table. It edits
+   * the draft when there is one and the saved request when there is not, so
+   * opening a request never makes it look unsaved on its own.
+   */
+  | { type: 'request/update'; id: string; patch: Partial<RequestRecord>; mirror?: boolean }
+  /** Commit the draft, or nothing if there is none. */
+  | { type: 'request/save'; id: string }
+  /** Throw the draft away and go back to what was saved. */
+  | { type: 'request/revert'; id: string }
+  /** Rename in the tree, which is not a composer edit and saves straight away. */
+  | { type: 'request/rename'; id: string; name: string }
   | { type: 'request/create'; request: RequestRecord }
   | { type: 'request/duplicate'; id: string }
   | { type: 'request/delete'; id: string }

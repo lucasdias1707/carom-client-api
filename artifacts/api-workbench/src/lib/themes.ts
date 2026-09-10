@@ -1,3 +1,4 @@
+import { expandHex, mixHex } from '@/lib/color';
 import { createId } from '@/lib/id';
 import type { Settings } from '@/types';
 
@@ -255,32 +256,69 @@ export function isBuiltInPalette(id: string): boolean {
 }
 
 /**
- * The tokens a colour picker can edit.
+ * The tokens a colour picker can edit, in the groups the editor shows.
  *
- * Four of the nineteen are deliberately missing: `--bg-hover`, `--bg-active`
- * and `--bg-overlay` are translucent, and `<input type="color">` has no alpha
- * to give them — a picker that silently drops the transparency would turn
- * every hover into a solid block. They ride along from the palette that was
- * duplicated. `--accent-soft` is missing for the same reason and then handed
- * back: it is the accent at 16%, so it is derived whenever the accent changes.
+ * Four of the nineteen are missing, and cannot be added: `--bg-hover`,
+ * `--bg-active`, `--bg-overlay` and `--accent-soft` are translucent, and
+ * `<input type="color">` has no alpha to give them. They are *derived* instead
+ * — see `withDerived` — which is the fix for the complaint that changing a
+ * palette only changed part of the screen: they used to be copied from
+ * whatever palette was duplicated and then never move again, so every hover,
+ * every selected row and every dialog backdrop kept the old colours while the
+ * rest of the app changed around them.
  */
-export const EDITABLE_TOKENS: Array<{ token: keyof PaletteTokens; label: string }> = [
-  { token: '--accent', label: 'Accent' },
-  { token: '--accent-hover', label: 'Accent, hovered' },
-  { token: '--accent-fg', label: 'Text on the accent' },
-  { token: '--bg-app', label: 'App background' },
-  { token: '--bg-sidebar', label: 'Sidebar' },
-  { token: '--bg-surface', label: 'Dialogs' },
-  { token: '--bg-raised', label: 'Raised panels' },
-  { token: '--bg-input', label: 'Inputs' },
-  { token: '--bg-code', label: 'Code blocks' },
-  { token: '--border', label: 'Borders' },
-  { token: '--border-strong', label: 'Borders, stronger' },
-  { token: '--text', label: 'Text' },
-  { token: '--text-strong', label: 'Text, strong' },
-  { token: '--text-dim', label: 'Text, dim' },
-  { token: '--text-faint', label: 'Text, faint' },
+export type TokenGroup = {
+  title: string;
+  /** Why these belong together, in one line. */
+  note: string;
+  tokens: Array<{ token: keyof PaletteTokens; label: string }>;
+};
+
+export const TOKEN_GROUPS: TokenGroup[] = [
+  {
+    title: 'Accent',
+    note: 'Buttons, the active tab, anything the app wants you to look at.',
+    tokens: [
+      { token: '--accent', label: 'Accent' },
+      { token: '--accent-hover', label: 'Hovered' },
+      { token: '--accent-fg', label: 'Text on it' },
+    ],
+  },
+  {
+    title: 'Backgrounds',
+    note: 'Back to front: the window, the tree, then what sits on top of them.',
+    tokens: [
+      { token: '--bg-app', label: 'App' },
+      { token: '--bg-sidebar', label: 'Sidebar' },
+      { token: '--bg-surface', label: 'Dialogs' },
+      { token: '--bg-raised', label: 'Raised' },
+      { token: '--bg-input', label: 'Inputs' },
+      { token: '--bg-code', label: 'Code' },
+    ],
+  },
+  {
+    title: 'Text',
+    note: 'Strong for headings, dim and faint for what should stay quiet.',
+    tokens: [
+      { token: '--text', label: 'Text' },
+      { token: '--text-strong', label: 'Strong' },
+      { token: '--text-dim', label: 'Dim' },
+      { token: '--text-faint', label: 'Faint' },
+    ],
+  },
+  {
+    title: 'Lines',
+    note: 'The borders that separate panes and rows.',
+    tokens: [
+      { token: '--border', label: 'Border' },
+      { token: '--border-strong', label: 'Stronger' },
+    ],
+  },
 ];
+
+export const EDITABLE_TOKENS: Array<{ token: keyof PaletteTokens; label: string }> = TOKEN_GROUPS.flatMap(
+  (group) => group.tokens,
+);
 
 /** The accent at the transparency the app uses for its soft wash. */
 export function softAccent(accent: string): string {
@@ -288,18 +326,47 @@ export function softAccent(accent: string): string {
 }
 
 /**
- * `#fff` as `#ffffff`, and anything else left alone.
- *
- * The minifier shortens `#ffffff` in the stylesheet, and `getComputedStyle`
- * hands back the declared text rather than a normalised colour — so reading
- * the built-in light palette produced three-digit hexes, which
- * `<input type="color">` refuses outright with a console warning and an empty
- * swatch. Expanding them at the point of reading keeps stored palettes uniform.
+ * A lighter accent in the dark, a darker one in the light — the direction that
+ * reads as "raised" against each background.
  */
-export function expandHex(value: string): string {
-  const short = value.trim().match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
-  return short ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}` : value.trim();
+export function accentHover(accent: string, mode: 'dark' | 'light'): string {
+  // A hex, not a `color-mix()`: this token is one a colour picker offers, and
+  // `<input type="color">` accepts hexes and nothing else. Deriving it into a
+  // notation the picker cannot show would have replaced one silent failure
+  // with another.
+  return mode === 'dark' ? mixHex(accent, '#ffffff', 0.16) : mixHex(accent, '#000000', 0.14);
 }
+
+/**
+ * The four translucent tokens, worked out from the solid ones.
+ *
+ * A hover wash is the text colour at a few per cent, because that is what
+ * "slightly lighter than the surface" means on a dark theme and "slightly
+ * darker" on a light one — the same rule, in both directions, without the
+ * palette having to say which it is. The dialog backdrop is the app background
+ * pushed towards black, so a dimmed workspace still looks like this workspace.
+ */
+export function derivedTokens(tokens: PaletteTokens, mode: 'dark' | 'light'): Partial<PaletteTokens> {
+  const ink = tokens['--text'];
+  const scrim =
+    mode === 'dark'
+      ? `color-mix(in srgb, ${tokens['--bg-app']} 42%, #000000)`
+      : `color-mix(in srgb, ${tokens['--bg-app']} 22%, #12161f)`;
+  return {
+    '--bg-hover': `color-mix(in srgb, ${ink} 7%, transparent)`,
+    '--bg-active': `color-mix(in srgb, ${ink} 12%, transparent)`,
+    '--bg-overlay': `color-mix(in srgb, ${scrim} ${mode === 'dark' ? 68 : 38}%, transparent)`,
+    '--accent-soft': softAccent(tokens['--accent']),
+  };
+}
+
+/** A palette half with its derived tokens brought back in line. */
+export function withDerived(tokens: PaletteTokens, mode: 'dark' | 'light'): PaletteTokens {
+  return { ...tokens, ...derivedTokens(tokens, mode) };
+}
+
+/** Re-exported so the places that read a palette need only one import. */
+export { expandHex } from '@/lib/color';
 
 /**
  * The tokens actually in force for a mode, read off the document.
@@ -344,19 +411,21 @@ export function duplicatePalette(palette: Palette, mode: 'dark' | 'light'): Pale
     id: createId('pal'),
     name: `${palette.name} copy`,
     note: 'Yours',
-    [mode]: palette[mode] ?? readTokens(mode),
-    [other]: palette[other] ?? readTokens(other),
+    // Derived on the way in as well as on every edit: a copy whose hover wash
+    // still belonged to the palette it was copied from was half of why editing
+    // colours felt like it only worked in places.
+    [mode]: withDerived(palette[mode] ?? readTokens(mode), mode),
+    [other]: withDerived(palette[other] ?? readTokens(other), other),
   } as Palette;
 }
 
 /**
  * A font theme: two families and a scale.
  *
- * The scale is applied as a zoom on the root element rather than as a font
- * size, and that is deliberate. Every measurement in this app is in pixels —
- * row heights, the sidebar, the gaps — so raising only the type would leave
- * 13px text in a 28px row. Someone who says the text is too small means the
- * interface is too small.
+ * The scale multiplies the type ladder — every `--fs-*` token in the
+ * stylesheet — and nothing else. Rows grow along with it, because a row that
+ * stayed at 28px would clip 17px text, but the sidebar, the gaps and the
+ * window do not: someone asking for bigger text is asking for bigger text.
  */
 export type FontTheme = {
   id: string;

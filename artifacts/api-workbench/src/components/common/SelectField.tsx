@@ -44,13 +44,13 @@ export function SelectField<T extends string>({
       <SelectTrigger
         aria-label={ariaLabel}
         data-testid={testId}
-        className={cn('h-7 gap-1.5 px-2 text-[13px]', block ? 'w-full' : 'w-auto', className)}
+        className={cn('h-7 gap-1.5 px-2 text-[length:var(--fs-13)]', block ? 'w-full' : 'w-auto', className)}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} className={cn('text-[13px]', option.className)}>
+          <SelectItem key={option.value} value={option.value} className={cn('text-[length:var(--fs-13)]', option.className)}>
             {option.label}
           </SelectItem>
         ))}

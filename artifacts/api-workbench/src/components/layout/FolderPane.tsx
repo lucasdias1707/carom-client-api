@@ -4,7 +4,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { AuthEditor } from '@/components/request/AuthEditor';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { ScriptEditor } from '@/components/request/ScriptEditor';
-import { subtreeFolderIds } from '@/lib/export';
+import { subtreeSelection } from '@/lib/export';
 import { createFolder, createRequest } from '@/lib/factories';
 import { LOCAL_VARIABLE_COLOR } from '@/lib/template';
 import { folderPath } from '@/state/selectors';
@@ -94,7 +94,7 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
           <FolderPlus />
         </IconButton>
         <IconButton label="Export folder"
-          onClick={() => onExport(subtreeFolderIds(state, folder.id))}
+          onClick={() => onExport(subtreeSelection(state, folder.id))}
           testId="button-folder-export"
         >
           <Download />

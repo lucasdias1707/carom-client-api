@@ -110,7 +110,7 @@ export function FontThemeEditor() {
           <Label className="section-label m-0" htmlFor="font-sans">Interface font</Label>
           <Input
             id="font-sans"
-            className="font-mono text-[12.5px]"
+            className="font-mono text-[length:var(--fs-12-5)]"
             value={current.sans}
             spellCheck={false}
             onChange={(event) => patchCurrent({ sans: event.target.value })}
@@ -120,7 +120,7 @@ export function FontThemeEditor() {
           <Label className="section-label m-0" htmlFor="font-mono">Code font</Label>
           <Input
             id="font-mono"
-            className="font-mono text-[12.5px]"
+            className="font-mono text-[length:var(--fs-12-5)]"
             value={current.mono}
             spellCheck={false}
             onChange={(event) => patchCurrent({ mono: event.target.value })}

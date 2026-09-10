@@ -1,10 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { prepareRequest, sendRequest, toErrorResponse, type PreparedRequest } from '@/lib/http';
 import { scriptChain } from '@/lib/inherit';
 import { applyVariableWrites, runScripts, type ScriptLogEntry, type ScriptTest } from '@/lib/scripts';
 import { row } from '@/lib/factories';
 import { folderChain } from '@/state/selectors';
 import { PROXY_BASE_URL, type ProxyStatus } from '@/hooks/use-proxy-health';
+import { useToast } from '@/components/common/Toaster';
+import { formatBytes, formatDuration } from '@/lib/format';
 import { useWorkspace } from '@/state/workspace-store';
 import type { Environment, RequestRecord, ResponseRecord } from '@/types';
 
@@ -21,11 +23,22 @@ export type SendState = {
 /** Drive one in-flight request at a time, storing the result in the workspace. */
 export function useSendRequest(proxyStatus: ProxyStatus): SendState {
   const { state, variables, dispatch } = useWorkspace();
+  const { toast } = useToast();
   const [sending, setSending] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [scriptLogs, setScriptLogs] = useState<ScriptLogEntry[]>([]);
   const [scriptTests, setScriptTests] = useState<ScriptTest[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
+  /*
+    Which tab is in front, read at the moment the response lands rather than at
+    the moment the request left. `send` closes over the state it was called
+    with, and a request worth switching away from is exactly the one that takes
+    long enough for that state to be stale.
+  */
+  const activeRef = useRef(state.activeRequestId);
+  useEffect(() => {
+    activeRef.current = state.activeRequestId;
+  }, [state.activeRequestId]);
 
   const cancel = useCallback(() => {
     controllerRef.current?.abort();
@@ -69,6 +82,24 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
       /** Set once the URL and headers are resolved, for the failure record. */
       let sent: PreparedRequest | null = null;
 
+      /*
+        Answer a request you have already walked away from. Sending one that
+        takes a while and moving to the next tab is normal; coming back to find
+        out whether it worked should not mean checking each tab in turn.
+      */
+      const announce = (response: ResponseRecord) => {
+        if (activeRef.current === request.id) return;
+        const outcome = response.error
+          ? response.error
+          : `${response.status} ${response.statusText} · ${formatDuration(response.durationMs)} · ${formatBytes(response.size)}`;
+        toast({
+          title: `${request.name} finished`,
+          description: outcome,
+          kind: response.error ? 'error' : response.status >= 400 ? 'error' : 'success',
+          action: { label: 'View', run: () => dispatch({ type: 'request/open', id: request.id }) },
+        });
+      };
+
       try {
         const view = {
           method: request.method,
@@ -108,6 +139,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         });
         const response: ResponseRecord = { ...result, requestId: request.id };
         dispatch({ type: 'response/add', response });
+        announce(response);
 
         const post = runScripts(scriptChain(request, chain, 'post'), {
           request: { ...view, url: prepared.url },
@@ -131,7 +163,9 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         // history row that cannot be read back later.
         const attempted = sent ?? { method: request.method, url: request.url, headers: [], body: { type: 'none' } as const };
         const failure = toErrorResponse(attempted, error, Math.round(performance.now() - started));
-        dispatch({ type: 'response/add', response: { ...failure, requestId: request.id } });
+        const response: ResponseRecord = { ...failure, requestId: request.id };
+        dispatch({ type: 'response/add', response });
+        announce(response);
         setLastError(failure.error ?? 'Request failed.');
       } finally {
         window.clearTimeout(timeout);
@@ -139,7 +173,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         setSending(false);
       }
     },
-    [dispatch, proxyStatus, state, variables],
+    [dispatch, proxyStatus, state, toast, variables],
   );
 
   return { sending, send, cancel, lastError, scriptLogs, scriptTests };

@@ -7,6 +7,7 @@ import {
   exportSelection,
   isSubtreeExport,
   subtreeFolderIds,
+  subtreeSelection,
 } from '@/lib/export';
 import { importSubtree } from '@/lib/carom';
 import { detectFormat, readImport } from '@/lib/import-formats';
@@ -54,6 +55,31 @@ function fixture() {
     state: stateWith([api, v2, pokemon, other], [atApi, atV2, deep, outside, atRoot], workspace.id),
   };
 }
+
+describe('subtreeSelection', () => {
+  it('ticks the requests too, or the export comes out an empty shell', () => {
+    const { state, api, v2, pokemon, requests } = fixture();
+    expect(subtreeSelection(state, api.id).sort()).toEqual(
+      [api.id, v2.id, pokemon.id, requests.atApi.id, requests.atV2.id, requests.deep.id].sort(),
+    );
+  });
+
+  it('is exactly what exportFolder would have written', () => {
+    const { state, api } = fixture();
+    const viaDialog = exportSelection(state, { name: 'API', selected: new Set(subtreeSelection(state, api.id)) });
+    const direct = exportFolder(state, api.id);
+    expect(viaDialog.requests.map((request) => request.name).sort()).toEqual(
+      direct?.requests.map((request) => request.name).sort(),
+    );
+  });
+
+  it('leaves out the folders next door', () => {
+    const { state, v2, requests } = fixture();
+    const picked = subtreeSelection(state, v2.id);
+    expect(picked).not.toContain(requests.atApi.id);
+    expect(picked).not.toContain(requests.outside.id);
+  });
+});
 
 describe('subtreeFolderIds', () => {
   it('collects the folder and every folder beneath it', () => {
