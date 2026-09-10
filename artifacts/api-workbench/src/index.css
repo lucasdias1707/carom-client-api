@@ -1062,17 +1062,13 @@
 
   .var-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 
+  /* Only the layout lives here now. The frame — position, border, radius,
+     background, shadow — belongs to Radix's `PopoverContent`, and having both
+     set it meant two sources for one look; the padding in particular was being
+     silently overridden by a `p-0` on the component. */
   .var-popover {
-    position: fixed;
-    z-index: 65;
-    width: min(360px, calc(100vw - 20px));
-    padding: 10px;
     display: grid;
     gap: 8px;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    background: var(--bg-surface);
-    box-shadow: var(--shadow-pop);
   }
   /* A grid item is `min-width: auto` by default, so one unbreakable string — a
      JWT is the usual culprit — widens its track and drags the whole popover's

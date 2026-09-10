@@ -108,7 +108,7 @@ export function VariablePopover({ name, variable, anchor, onClose }: VariablePop
       <PopoverContent
         align="start"
         sideOffset={6}
-        className="var-popover w-[300px] p-0"
+        className="var-popover w-[min(360px,calc(100vw-20px))] p-2.5"
         aria-label={`Edit ${name}`}
         data-testid="popover-variable"
       >
