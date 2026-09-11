@@ -677,4 +677,8 @@ export const es: Catalogue = {
   'dynamic.group.text': 'Palabras y colores',
   'dynamic.group.numbers': 'Números',
   'dynamic.group.dates': 'Fechas',
+
+  // ── Datos generados, por idioma ──────────────────────────────────────
+  'dynamic.localised': 'sigue el idioma',
+  'dynamic.localisedNote': 'Las marcadas con {mark} usan el idioma de la interfaz — nombres, ciudades y teléfonos en español mientras esto se lea así. Los identificadores, números y fechas no tienen idioma y no cambian.',
 };

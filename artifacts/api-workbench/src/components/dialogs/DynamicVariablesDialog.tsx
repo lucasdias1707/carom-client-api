@@ -23,7 +23,7 @@ const groupLabel = (group: DynamicGroup): MessageKey => `dynamic.group.${group}`
  * other end, every time.
  */
 export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
-  const { t } = useWorkspace();
+  const { t, tNodes, language } = useWorkspace();
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
   /*
@@ -35,9 +35,9 @@ export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
   const [seed, setSeed] = useState(0);
 
   const samples = useMemo(
-    () => new Map(DYNAMIC_VARIABLES.map((variable) => [variable.name, variable.generate()])),
+    () => new Map(DYNAMIC_VARIABLES.map((variable) => [variable.name, variable.generate(language)])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [seed],
+    [seed, language],
   );
 
   const needle = filter.trim().toLowerCase();
@@ -95,6 +95,11 @@ export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="hint" style={{ margin: 0 }}>{t('dynamic.copyHint')}</p>
+        <p className="hint" style={{ margin: 0 }} data-testid="text-dynamic-localised">
+          {tNodes('dynamic.localisedNote', {
+            mark: <span className="dynamic-mark">{t('dynamic.localised')}</span>,
+          })}
+        </p>
 
         {matches.length === 0 ? (
           <div className="tree-empty" data-testid="text-dynamic-empty">{t('dynamic.noMatches')}</div>
@@ -115,6 +120,17 @@ export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
                     >
                       <span className="dynamic-name mono">{`{{${variable.name}}}`}</span>
                       <span className="dynamic-sample mono truncate">{samples.get(variable.name)}</span>
+                      {/* Marked rather than explained per row: which ones move
+                          with the language is a property of the list, and
+                          sixty-seven sentences saying so would drown the
+                          examples that are the actual documentation. */}
+                      {variable.localised ? (
+                        <span className="dynamic-mark" title={t('dynamic.localised')}>
+                          {t('dynamic.localised')}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
                     </button>
                   ))}
                 </div>

@@ -1239,7 +1239,7 @@
   }
   .dynamic-row {
     display: grid;
-    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 10px;
     width: 100%;
@@ -1252,6 +1252,12 @@
     font-size: var(--fs-12-5);
   }
   .dynamic-row:hover { background: var(--bg-raised); }
+  .dynamic-mark {
+    justify-self: end;
+    white-space: nowrap;
+    font-size: var(--fs-10);
+    color: var(--text-faint);
+  }
   .dynamic-name { color: var(--purple); }
   .dynamic-sample { color: var(--text-dim); min-width: 0; }
 

@@ -4,6 +4,7 @@ import { applyScriptHeaders } from '@/lib/scripts';
 import { resolveAuth } from '@/lib/inherit';
 import { splitQuery } from '@/lib/query';
 import { interpolate } from '@/lib/template';
+import type { Language } from '@/lib/i18n';
 import type { Folder, HttpMethod, KeyValue, RequestRecord, ResponseRecord, SendMode } from '@/types';
 import { getFile, type FileMeta } from '@/lib/files';
 
@@ -31,10 +32,10 @@ export type PreparedRequest = {
 
 const METHODS_WITHOUT_BODY: HttpMethod[] = ['GET', 'HEAD'];
 
-function activeRows(rows: KeyValue[], variables: Record<string, string>) {
+function activeRows(rows: KeyValue[], variables: Record<string, string>, language: Language) {
   return rows
     .filter((rowItem) => rowItem.enabled && rowItem.key.trim())
-    .map((rowItem) => ({ key: interpolate(rowItem.key, variables).trim(), value: interpolate(rowItem.value, variables) }));
+    .map((rowItem) => ({ key: interpolate(rowItem.key, variables, language).trim(), value: interpolate(rowItem.value, variables, language) }));
 }
 
 function encodeBasic(username: string, password: string): string {
@@ -63,25 +64,30 @@ function defaultContentType(request: RequestRecord): string {
   }
 }
 
-function buildBody(request: RequestRecord, variables: Record<string, string>, hasExplicitContentType: boolean): PreparedBody {
+function buildBody(
+  request: RequestRecord,
+  variables: Record<string, string>,
+  hasExplicitContentType: boolean,
+  language: Language,
+): PreparedBody {
   if (request.bodyType === 'none' || METHODS_WITHOUT_BODY.includes(request.method)) return { type: 'none' };
-  if (request.bodyType === 'form') return { type: 'form', fields: activeRows(request.form, variables) };
+  if (request.bodyType === 'form') return { type: 'form', fields: activeRows(request.form, variables, language) };
   if (request.bodyType === 'multipart') {
     return {
       type: 'multipart',
       fields: request.multipart
         .filter((rowItem) => rowItem.enabled && rowItem.key.trim())
         .map<MultipartField>((rowItem) => {
-          const key = interpolate(rowItem.key, variables).trim();
+          const key = interpolate(rowItem.key, variables, language).trim();
           return rowItem.file
             ? { key, rowId: rowItem.id, file: rowItem.file }
-            : { key, value: interpolate(rowItem.value, variables) };
+            : { key, value: interpolate(rowItem.value, variables, language) };
         }),
     };
   }
   if (request.bodyType === 'graphql') {
     let parsedVariables: unknown = {};
-    const rawVariables = interpolate(request.graphql.variables, variables).trim();
+    const rawVariables = interpolate(request.graphql.variables, variables, language).trim();
     if (rawVariables) {
       try {
         parsedVariables = JSON.parse(rawVariables);
@@ -91,11 +97,11 @@ function buildBody(request: RequestRecord, variables: Record<string, string>, ha
     }
     return {
       type: 'text',
-      text: JSON.stringify({ query: interpolate(request.graphql.query, variables), variables: parsedVariables }),
+      text: JSON.stringify({ query: interpolate(request.graphql.query, variables, language), variables: parsedVariables }),
       contentType: 'application/json',
     };
   }
-  const text = interpolate(request.body, variables);
+  const text = interpolate(request.body, variables, language);
   if (!text.trim()) return { type: 'none' };
   return { type: 'text', text, contentType: hasExplicitContentType ? '' : defaultContentType(request) };
 }
@@ -109,6 +115,12 @@ export type PrepareOptions = {
   folders?: Folder[];
   /** Headers a pre-request script added, which win over the request's own. */
   extraHeaders?: Array<{ key: string; value: string }>;
+  /**
+   * Which word lists the `{{$random...}}` generators draw from. Defaults to
+   * English, which is what a caller that has no interface to ask — a test, or
+   * a curl export built from a stored request — should get.
+   */
+  language?: Language;
 };
 
 /**
@@ -121,26 +133,27 @@ export function prepareRequest(
   variables: Record<string, string>,
   options: PrepareOptions = {},
 ): PreparedRequest {
-  const headers = applyScriptHeaders(activeRows(request.headers, variables), options.extraHeaders ?? []);
-  const params = activeRows(request.params, variables);
+  const language = options.language ?? 'en';
+  const headers = applyScriptHeaders(activeRows(request.headers, variables, language), options.extraHeaders ?? []);
+  const params = activeRows(request.params, variables, language);
   // An inheriting request takes the nearest folder's choice; one that picked
   // its own keeps it, whatever the folder says.
   const auth = resolveAuth(request.auth, options.folders ?? []).auth;
 
   if (auth.type === 'bearer' && auth.token.trim()) {
-    headers.push({ key: 'Authorization', value: `Bearer ${interpolate(auth.token, variables).trim()}` });
+    headers.push({ key: 'Authorization', value: `Bearer ${interpolate(auth.token, variables, language).trim()}` });
   } else if (auth.type === 'basic' && (auth.username || auth.password)) {
-    const encoded = encodeBasic(interpolate(auth.username, variables), interpolate(auth.password, variables));
+    const encoded = encodeBasic(interpolate(auth.username, variables, language), interpolate(auth.password, variables, language));
     headers.push({ key: 'Authorization', value: `Basic ${encoded}` });
   } else if (auth.type === 'apikey' && auth.apiKeyName.trim()) {
-    const key = interpolate(auth.apiKeyName, variables).trim();
-    const value = interpolate(auth.apiKeyValue, variables);
+    const key = interpolate(auth.apiKeyName, variables, language).trim();
+    const value = interpolate(auth.apiKeyValue, variables, language);
     if (auth.apiKeyIn === 'header') headers.push({ key, value });
     else params.push({ key, value });
   }
 
   const hasExplicitContentType = headers.some((header) => header.key.toLowerCase() === 'content-type');
-  const body = buildBody(request, variables, hasExplicitContentType);
+  const body = buildBody(request, variables, hasExplicitContentType, language);
   if (body.type === 'text' && body.contentType && !hasExplicitContentType) {
     headers.push({ key: 'Content-Type', value: body.contentType });
   }
@@ -155,9 +168,9 @@ export function prepareRequest(
   // worse than sending it. The test is the key, not the whole pair — once the
   // table has a row for `page`, that row is the one that counts, whether it
   // was edited, unticked, or left alone.
-  const { base, params: fromUrl } = splitQuery(interpolate(request.url, variables));
+  const { base, params: fromUrl } = splitQuery(interpolate(request.url, variables, language));
   const tableKeys = new Set(
-    request.params.map((param) => interpolate(param.key, variables).trim()).filter(Boolean),
+    request.params.map((param) => interpolate(param.key, variables, language).trim()).filter(Boolean),
   );
   for (const param of fromUrl) {
     if (!tableKeys.has(param.key)) params.push(param);

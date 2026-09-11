@@ -673,6 +673,10 @@ export const en = {
   'dynamic.group.text': 'Words and colours',
   'dynamic.group.numbers': 'Numbers',
   'dynamic.group.dates': 'Dates',
+
+  // ── Generated data, per language ─────────────────────────────────────
+  'dynamic.localised': 'follows the language',
+  'dynamic.localisedNote': 'The ones marked {mark} draw on the language the interface is in — Brazilian names, cities and phone numbers while this reads Portuguese. Identifiers, numbers and dates have no language and never change.',
 };
 
 /** The shape every other language has to fill. */

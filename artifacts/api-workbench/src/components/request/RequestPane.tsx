@@ -53,7 +53,7 @@ type RequestPaneProps = {
 };
 
 export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneProps) {
-  const { state, dispatch, variables, variableTable, chainFor, unsavedIn, t, tNodes } = useWorkspace();
+  const { state, dispatch, variables, variableTable, chainFor, unsavedIn, t, tNodes, language } = useWorkspace();
   const { toast } = useToast();
   const [tab, setTab] = useState<RequestTab>('params');
 
@@ -123,7 +123,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
 
   const copyAsCurl = async () => {
     try {
-      await navigator.clipboard.writeText(toCurl(prepareRequest(request, variables, { folders: chain })));
+      await navigator.clipboard.writeText(toCurl(prepareRequest(request, variables, { folders: chain, language })));
       toast({ title: t('request.copiedCurl'), kind: 'success' });
     } catch (error) {
       toast({
@@ -198,7 +198,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
             label={t('request.copyUrl')}
             hint={t('request.copyUrlHint')}
             onClick={() => {
-              navigator.clipboard?.writeText(prepareRequest(request, variables, { folders: chain }).url);
+              navigator.clipboard?.writeText(prepareRequest(request, variables, { folders: chain, language }).url);
               toast({ title: t('request.urlCopied'), kind: 'success' });
             }}
             testId="button-copy-url"

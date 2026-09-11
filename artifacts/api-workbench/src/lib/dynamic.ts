@@ -1,3 +1,7 @@
+import { corpusFor } from '@/lib/faker';
+import { digits, integer, pick } from '@/lib/faker/corpus';
+import type { Language } from '@/lib/i18n';
+
 /**
  * Variables that make up a value every time they are used.
  *
@@ -13,10 +17,11 @@
  * left in the text rather than replaced, so a typo shows up as itself instead
  * of vanishing into an empty string.
  *
- * The data is deliberately plain English, again like Postman: a fixture that
- * changes language with the interface would make two runs of the same request
- * incomparable, and the language of the interface says nothing about the
- * language of the system under test.
+ * **The data follows the language the interface is in.** Working in Portuguese
+ * gets Brazilian names, cities and phone numbers; the identifiers, numbers and
+ * dates have no language and never change. The language is passed in rather
+ * than read from anywhere, so this file stays pure and a caller cannot forget
+ * to decide.
  */
 
 /** Which part of the list a variable belongs to, for the reference panel. */
@@ -35,72 +40,21 @@ export type DynamicVariable = {
   name: string;
   group: DynamicGroup;
   /** A fresh value. Called once per occurrence, never cached. */
-  generate: () => string;
+  generate: (language: Language) => string;
+  /**
+   * True when the value reads differently in another language. The reference
+   * panel says so; a uuid or a timestamp would be a lie to mark.
+   */
+  localised?: boolean;
 };
 
-const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
-
-const integer = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-const digits = (count: number) =>
-  Array.from({ length: count }, () => integer(0, 9)).join('');
-
 /** Random hex, for the several generators that are really just hex of a length. */
-const hex = (count: number) =>
-  Array.from({ length: count }, () => integer(0, 15).toString(16)).join('');
+const hex = (count: number) => Array.from({ length: count }, () => integer(0, 15).toString(16)).join('');
 
-const FIRST_NAMES = [
-  'Ada', 'Alejandro', 'Amara', 'Anders', 'Aoife', 'Beatriz', 'Camille', 'Caleb', 'Dara', 'Diego',
-  'Elena', 'Emeka', 'Farah', 'Felix', 'Grace', 'Hana', 'Hugo', 'Ines', 'Ivan', 'Jae',
-  'Julia', 'Kenji', 'Lars', 'Leila', 'Lucas', 'Maya', 'Mateo', 'Nadia', 'Noor', 'Olive',
-  'Omar', 'Priya', 'Quinn', 'Rafael', 'Rosa', 'Sana', 'Soren', 'Talia', 'Theo', 'Uma',
-  'Viktor', 'Wren', 'Xiomara', 'Yara', 'Yusuf', 'Zane', 'Zoe',
-] as const;
-
-const LAST_NAMES = [
-  'Abara', 'Almeida', 'Andersen', 'Bauer', 'Bennett', 'Castellanos', 'Chen', 'Dalgaard', 'Duarte',
-  'Fitzgerald', 'Gallagher', 'Ghosh', 'Haddad', 'Hoffmann', 'Ibrahim', 'Jansen', 'Kaur', 'Kowalski',
-  'Lindqvist', 'Marchetti', 'Mbeki', 'Nakamura', 'Novak', 'Okafor', 'Oliveira', 'Petrov', 'Pereira',
-  'Quiroga', 'Rasmussen', 'Reyes', 'Sandoval', 'Silva', 'Tanaka', 'Thorne', 'Vasquez', 'Winters',
-] as const;
-
-const NAME_PREFIXES = ['Mr', 'Mrs', 'Ms', 'Dr', 'Miss'] as const;
-const NAME_SUFFIXES = ['Jr.', 'Sr.', 'I', 'II', 'III', 'PhD', 'MD', 'DDS'] as const;
-
-const JOB_DESCRIPTORS = ['Lead', 'Senior', 'Principal', 'Regional', 'Global', 'Chief', 'Dynamic', 'Forward'] as const;
-const JOB_AREAS = ['Accounts', 'Brand', 'Data', 'Infrastructure', 'Integration', 'Marketing', 'Operations', 'Optimization', 'Research', 'Security'] as const;
-const JOB_TYPES = ['Agent', 'Analyst', 'Architect', 'Consultant', 'Designer', 'Developer', 'Engineer', 'Manager', 'Officer', 'Specialist'] as const;
-
-const DOMAIN_WORDS = ['acme', 'bluebird', 'cobalt', 'delta', 'eastwind', 'fernwood', 'goldleaf', 'harbour', 'ironvale', 'juniper', 'kestrel', 'lantern', 'meridian', 'northstar'] as const;
-const TLDS = ['com', 'net', 'org', 'io', 'dev', 'co'] as const;
-const FREE_MAIL = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'] as const;
-
-const CITIES = ['Auckland', 'Belgrade', 'Bristol', 'Curitiba', 'Dakar', 'Edinburgh', 'Faro', 'Gothenburg', 'Halifax', 'Innsbruck', 'Jaipur', 'Kyoto', 'Leiden', 'Medellín', 'Nantes', 'Osaka', 'Porto', 'Quito', 'Rotterdam', 'Salvador', 'Tallinn', 'Utrecht', 'Valencia', 'Wellington'] as const;
-const COUNTRIES = ['Argentina', 'Australia', 'Brazil', 'Canada', 'Denmark', 'Estonia', 'France', 'Germany', 'India', 'Ireland', 'Japan', 'Kenya', 'Mexico', 'Netherlands', 'Norway', 'Peru', 'Portugal', 'Spain', 'Sweden', 'Uruguay'] as const;
-const COUNTRY_CODES = ['AR', 'AU', 'BR', 'CA', 'DK', 'EE', 'FR', 'DE', 'IN', 'IE', 'JP', 'KE', 'MX', 'NL', 'NO', 'PE', 'PT', 'ES', 'SE', 'UY'] as const;
-const STREET_NAMES = ['Alder', 'Birch', 'Cedar', 'Dover', 'Elm', 'Fallow', 'Garnet', 'Hazel', 'Ivy', 'Juniper', 'Kingfisher', 'Larch', 'Maple', 'Nettle', 'Orchard', 'Poplar', 'Quarry', 'Rowan', 'Sycamore', 'Thistle'] as const;
-const STREET_TYPES = ['Avenue', 'Close', 'Court', 'Crescent', 'Drive', 'Lane', 'Road', 'Street', 'Way'] as const;
-
-const COMPANY_SUFFIXES = ['Inc', 'LLC', 'Ltd', 'Group', 'and Sons', 'Holdings'] as const;
-const PRODUCT_ADJECTIVES = ['Awesome', 'Ergonomic', 'Fantastic', 'Handcrafted', 'Incredible', 'Intelligent', 'Practical', 'Refined', 'Rustic', 'Sleek'] as const;
-const PRODUCT_MATERIALS = ['Bamboo', 'Concrete', 'Cotton', 'Frozen', 'Granite', 'Leather', 'Plastic', 'Rubber', 'Steel', 'Wooden'] as const;
-const PRODUCTS = ['Bench', 'Chair', 'Chips', 'Computer', 'Gloves', 'Hat', 'Keyboard', 'Lamp', 'Mouse', 'Pants', 'Salad', 'Shirt', 'Shoes', 'Table', 'Towels'] as const;
-const DEPARTMENTS = ['Automotive', 'Books', 'Clothing', 'Electronics', 'Garden', 'Grocery', 'Health', 'Home', 'Industrial', 'Jewelery', 'Kids', 'Movies', 'Music', 'Outdoors', 'Shoes', 'Sports', 'Tools', 'Toys'] as const;
-const CATCH_A = ['Adaptive', 'Balanced', 'Cloned', 'Distributed', 'Enterprise-wide', 'Fundamental', 'Integrated', 'Multi-tiered', 'Open-source', 'Universal'] as const;
-const CATCH_B = ['analysing', 'bandwidth-monitored', 'client-server', 'context-sensitive', 'encompassing', 'homogeneous', 'incremental', 'logistical', 'reciprocal', 'zero-tolerance'] as const;
-const CATCH_C = ['ability', 'algorithm', 'application', 'approach', 'architecture', 'capability', 'framework', 'infrastructure', 'methodology', 'workflow'] as const;
-
-const CURRENCIES = [
-  ['USD', 'US Dollar', '$'],
-  ['EUR', 'Euro', '€'],
-  ['BRL', 'Brazilian Real', 'R$'],
-  ['GBP', 'British Pound', '£'],
-  ['JPY', 'Japanese Yen', '¥'],
-  ['CAD', 'Canadian Dollar', '$'],
-  ['AUD', 'Australian Dollar', '$'],
-  ['MXN', 'Mexican Peso', '$'],
-] as const;
-
+/*
+  Lorem is not a language — it is the same nonsense Latin everywhere, and
+  translating it would defeat the point of using it. It stays shared.
+*/
 const LOREM = [
   'a', 'ab', 'accusamus', 'ad', 'adipisci', 'alias', 'aliquam', 'amet', 'animi', 'aperiam', 'architecto',
   'aut', 'autem', 'beatae', 'blanditiis', 'commodi', 'consectetur', 'consequatur', 'corporis', 'culpa',
@@ -119,7 +73,9 @@ const LOREM = [
   'vitae', 'voluptas', 'voluptate', 'voluptatem', 'voluptates', 'voluptatibus',
 ] as const;
 
-const COLOURS = ['azure', 'black', 'blue', 'cyan', 'gold', 'green', 'grey', 'indigo', 'ivory', 'lime', 'magenta', 'maroon', 'olive', 'orange', 'pink', 'plum', 'purple', 'red', 'salmon', 'silver', 'tan', 'teal', 'violet', 'white', 'yellow'] as const;
+const DOMAIN_WORDS = ['acme', 'bluebird', 'cobalt', 'delta', 'eastwind', 'fernwood', 'goldleaf', 'harbour', 'ironvale', 'juniper', 'kestrel', 'lantern', 'meridian', 'northstar'] as const;
+const TLDS = ['com', 'net', 'org', 'io', 'dev', 'co'] as const;
+const FREE_MAIL = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'] as const;
 const PROTOCOLS = ['http', 'https'] as const;
 const BROWSERS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -127,6 +83,15 @@ const BROWSERS = [
   'Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0',
 ] as const;
 
+/**
+ * A name as it can go in the local part of an email address.
+ *
+ * The accents come off here and only here. They are the point of the name
+ * lists — a system that chokes on "Natália" is what a fixture exists to find —
+ * but an address with a non-ASCII local part is rejected outright by plenty of
+ * the servers these requests are pointed at, so the address would be testing
+ * the wrong thing.
+ */
 const slug = (value: string) =>
   value
     .normalize('NFD')
@@ -149,14 +114,12 @@ const uuid = (): string => {
 
 const domainName = () => `${pick(DOMAIN_WORDS)}.${pick(TLDS)}`;
 
-const firstName = () => pick(FIRST_NAMES);
-const lastName = () => pick(LAST_NAMES);
+const firstName = (language: Language) => pick(corpusFor(language).firstNames);
+const lastName = (language: Language) => pick(corpusFor(language).lastNames);
 
 /** A date `days` away from now, at a random time, as an ISO string. */
 const dateAround = (days: number) =>
   new Date(Date.now() + days * 86_400_000 + integer(-43_200_000, 43_200_000)).toISOString();
-
-const CURRENCY = () => pick(CURRENCIES);
 
 const DEFINITIONS: DynamicVariable[] = [
   // ── Identifiers ───────────────────────────────────────────────────────
@@ -165,32 +128,49 @@ const DEFINITIONS: DynamicVariable[] = [
   { name: '$timestamp', group: 'identifiers', generate: () => String(Math.floor(Date.now() / 1000)) },
   { name: '$isoTimestamp', group: 'identifiers', generate: () => new Date().toISOString() },
   { name: '$randomBankAccount', group: 'identifiers', generate: () => digits(8) },
-  { name: '$randomBankAccountIban', group: 'identifiers', generate: () => `${pick(COUNTRY_CODES)}${digits(2)}${hex(16).toUpperCase()}` },
+  {
+    name: '$randomBankAccountIban',
+    group: 'identifiers',
+    localised: true,
+    generate: (language) => `${pick(corpusFor(language).countryCodes)}${digits(2)}${hex(16).toUpperCase()}`,
+  },
   { name: '$randomCreditCardMask', group: 'identifiers', generate: () => digits(4) },
 
   // ── People ────────────────────────────────────────────────────────────
-  { name: '$randomFirstName', group: 'person', generate: firstName },
-  { name: '$randomLastName', group: 'person', generate: lastName },
-  { name: '$randomFullName', group: 'person', generate: () => `${firstName()} ${lastName()}` },
-  { name: '$randomNamePrefix', group: 'person', generate: () => pick(NAME_PREFIXES) },
-  { name: '$randomNameSuffix', group: 'person', generate: () => pick(NAME_SUFFIXES) },
-  { name: '$randomJobTitle', group: 'person', generate: () => `${pick(JOB_DESCRIPTORS)} ${pick(JOB_AREAS)} ${pick(JOB_TYPES)}` },
-  { name: '$randomJobArea', group: 'person', generate: () => pick(JOB_AREAS) },
-  { name: '$randomJobType', group: 'person', generate: () => pick(JOB_TYPES) },
-  { name: '$randomPhoneNumber', group: 'person', generate: () => `${digits(3)}-${digits(3)}-${digits(4)}` },
+  { name: '$randomFirstName', group: 'person', localised: true, generate: firstName },
+  { name: '$randomLastName', group: 'person', localised: true, generate: lastName },
+  {
+    name: '$randomFullName',
+    group: 'person',
+    localised: true,
+    generate: (language) => `${firstName(language)} ${lastName(language)}`,
+  },
+  { name: '$randomNamePrefix', group: 'person', localised: true, generate: (language) => pick(corpusFor(language).namePrefixes) },
+  { name: '$randomNameSuffix', group: 'person', localised: true, generate: (language) => pick(corpusFor(language).nameSuffixes) },
+  { name: '$randomJobTitle', group: 'person', localised: true, generate: (language) => corpusFor(language).jobTitle() },
+  { name: '$randomJobArea', group: 'person', localised: true, generate: (language) => corpusFor(language).jobArea() },
+  { name: '$randomJobType', group: 'person', localised: true, generate: (language) => corpusFor(language).jobType() },
+  { name: '$randomPhoneNumber', group: 'person', localised: true, generate: (language) => corpusFor(language).phone() },
 
   // ── Internet ──────────────────────────────────────────────────────────
   {
     name: '$randomEmail',
     group: 'internet',
-    generate: () => `${slug(firstName())}.${slug(lastName())}@${pick(FREE_MAIL)}`,
+    localised: true,
+    generate: (language) => `${slug(firstName(language))}.${slug(lastName(language))}@${pick(FREE_MAIL)}`,
   },
   {
     name: '$randomExampleEmail',
     group: 'internet',
-    generate: () => `${slug(firstName())}.${slug(lastName())}@example.com`,
+    localised: true,
+    generate: (language) => `${slug(firstName(language))}.${slug(lastName(language))}@example.com`,
   },
-  { name: '$randomUserName', group: 'internet', generate: () => `${slug(firstName())}_${integer(10, 9999)}` },
+  {
+    name: '$randomUserName',
+    group: 'internet',
+    localised: true,
+    generate: (language) => `${slug(firstName(language))}_${integer(10, 9999)}`,
+  },
   { name: '$randomDomainName', group: 'internet', generate: domainName },
   { name: '$randomDomainWord', group: 'internet', generate: () => pick(DOMAIN_WORDS) },
   { name: '$randomUrl', group: 'internet', generate: () => `https://${domainName()}` },
@@ -209,39 +189,27 @@ const DEFINITIONS: DynamicVariable[] = [
   },
 
   // ── Places ────────────────────────────────────────────────────────────
-  { name: '$randomCity', group: 'location', generate: () => pick(CITIES) },
-  { name: '$randomCountry', group: 'location', generate: () => pick(COUNTRIES) },
-  { name: '$randomCountryCode', group: 'location', generate: () => pick(COUNTRY_CODES) },
-  { name: '$randomStreetName', group: 'location', generate: () => `${pick(STREET_NAMES)} ${pick(STREET_TYPES)}` },
-  {
-    name: '$randomStreetAddress',
-    group: 'location',
-    generate: () => `${integer(1, 9999)} ${pick(STREET_NAMES)} ${pick(STREET_TYPES)}`,
-  },
+  { name: '$randomCity', group: 'location', localised: true, generate: (language) => pick(corpusFor(language).cities) },
+  { name: '$randomCountry', group: 'location', localised: true, generate: (language) => pick(corpusFor(language).countries) },
+  { name: '$randomCountryCode', group: 'location', localised: true, generate: (language) => pick(corpusFor(language).countryCodes) },
+  { name: '$randomStreetName', group: 'location', localised: true, generate: (language) => corpusFor(language).streetName() },
+  { name: '$randomStreetAddress', group: 'location', localised: true, generate: (language) => corpusFor(language).streetAddress() },
   { name: '$randomLatitude', group: 'location', generate: () => (Math.random() * 180 - 90).toFixed(6) },
   { name: '$randomLongitude', group: 'location', generate: () => (Math.random() * 360 - 180).toFixed(6) },
 
   // ── Business ──────────────────────────────────────────────────────────
-  { name: '$randomCompanyName', group: 'business', generate: () => `${pick(LAST_NAMES)} ${pick(COMPANY_SUFFIXES)}` },
-  { name: '$randomCompanySuffix', group: 'business', generate: () => pick(COMPANY_SUFFIXES) },
-  {
-    name: '$randomCatchPhrase',
-    group: 'business',
-    generate: () => `${pick(CATCH_A)} ${pick(CATCH_B)} ${pick(CATCH_C)}`,
-  },
-  { name: '$randomDepartment', group: 'business', generate: () => pick(DEPARTMENTS) },
-  { name: '$randomProduct', group: 'business', generate: () => pick(PRODUCTS) },
-  {
-    name: '$randomProductName',
-    group: 'business',
-    generate: () => `${pick(PRODUCT_ADJECTIVES)} ${pick(PRODUCT_MATERIALS)} ${pick(PRODUCTS)}`,
-  },
-  { name: '$randomProductAdjective', group: 'business', generate: () => pick(PRODUCT_ADJECTIVES) },
-  { name: '$randomProductMaterial', group: 'business', generate: () => pick(PRODUCT_MATERIALS) },
+  { name: '$randomCompanyName', group: 'business', localised: true, generate: (language) => corpusFor(language).companyName() },
+  { name: '$randomCompanySuffix', group: 'business', localised: true, generate: (language) => corpusFor(language).companySuffix() },
+  { name: '$randomCatchPhrase', group: 'business', localised: true, generate: (language) => corpusFor(language).catchPhrase() },
+  { name: '$randomDepartment', group: 'business', localised: true, generate: (language) => pick(corpusFor(language).departments) },
+  { name: '$randomProduct', group: 'business', localised: true, generate: (language) => pick(corpusFor(language).products) },
+  { name: '$randomProductName', group: 'business', localised: true, generate: (language) => corpusFor(language).productName() },
+  { name: '$randomProductAdjective', group: 'business', localised: true, generate: (language) => corpusFor(language).productAdjective() },
+  { name: '$randomProductMaterial', group: 'business', localised: true, generate: (language) => corpusFor(language).productMaterial() },
   { name: '$randomPrice', group: 'business', generate: () => (integer(100, 99_900) / 100).toFixed(2) },
-  { name: '$randomCurrencyCode', group: 'business', generate: () => CURRENCY()[0] },
-  { name: '$randomCurrencyName', group: 'business', generate: () => CURRENCY()[1] },
-  { name: '$randomCurrencySymbol', group: 'business', generate: () => CURRENCY()[2] },
+  { name: '$randomCurrencyCode', group: 'business', localised: true, generate: (language) => pick(corpusFor(language).currencies)[0] },
+  { name: '$randomCurrencyName', group: 'business', localised: true, generate: (language) => pick(corpusFor(language).currencies)[1] },
+  { name: '$randomCurrencySymbol', group: 'business', localised: true, generate: (language) => pick(corpusFor(language).currencies)[2] },
 
   // ── Words ─────────────────────────────────────────────────────────────
   { name: '$randomWord', group: 'text', generate: () => pick(LOREM) },
@@ -255,9 +223,9 @@ const DEFINITIONS: DynamicVariable[] = [
     generate: () => Array.from({ length: integer(3, 5) }, sentence).join(' '),
   },
   { name: '$randomLoremSlug', group: 'text', generate: () => loremWords(3).replace(/ /g, '-') },
-  { name: '$randomColor', group: 'text', generate: () => pick(COLOURS) },
+  { name: '$randomColor', group: 'text', localised: true, generate: (language) => pick(corpusFor(language).colours) },
   { name: '$randomHexColor', group: 'text', generate: () => `#${hex(6)}` },
-  { name: '$randomAbbreviation', group: 'text', generate: () => pick(['TCP', 'HTTP', 'SDD', 'RAM', 'GB', 'CSS', 'SSL', 'AGP', 'SQL', 'XML']) },
+  { name: '$randomAbbreviation', group: 'text', generate: (language) => pick(corpusFor(language).abbreviations) },
 
   // ── Numbers ───────────────────────────────────────────────────────────
   { name: '$randomInt', group: 'numbers', generate: () => String(integer(0, 1000)) },
@@ -277,10 +245,10 @@ const DEFINITIONS: DynamicVariable[] = [
   { name: '$randomDatePast', group: 'dates', generate: () => dateAround(-integer(8, 365)) },
   { name: '$randomDateFuture', group: 'dates', generate: () => dateAround(integer(1, 365)) },
   /*
-    Not Postman's, and named so it cannot be mistaken for one of theirs. A body
-    that has to say "the day after check-in" is the single most common thing
-    missing from the Postman set, and writing it by hand means editing two
-    dates every time the fixture is reused.
+    Not Postman's, and named so they cannot be mistaken for one of theirs. A
+    body that has to say "the day after check-in" is the single most common
+    thing missing from the Postman set, and writing it by hand means editing
+    two dates every time the fixture is reused.
   */
   { name: '$today', group: 'dates', generate: () => new Date().toISOString().slice(0, 10) },
   { name: '$tomorrow', group: 'dates', generate: () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10) },
@@ -312,8 +280,8 @@ export function dynamicVariable(name: string): DynamicVariable | null {
 }
 
 /** A fresh value, or null when nothing here goes by that name. */
-export function generateDynamic(name: string): string | null {
-  return BY_NAME.get(name)?.generate() ?? null;
+export function generateDynamic(name: string, language: Language): string | null {
+  return BY_NAME.get(name)?.generate(language) ?? null;
 }
 
 /** The groups, in the order they are shown. */

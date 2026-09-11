@@ -674,4 +674,8 @@ export const ptBR: Catalogue = {
   'dynamic.group.text': 'Palavras e cores',
   'dynamic.group.numbers': 'Números',
   'dynamic.group.dates': 'Datas',
+
+  // ── Dados gerados, por idioma ────────────────────────────────────────
+  'dynamic.localised': 'segue o idioma',
+  'dynamic.localisedNote': 'As marcadas com {mark} usam o idioma da interface — nomes, cidades e telefones brasileiros enquanto isto estiver em português. Identificadores, números e datas não têm idioma e não mudam.',
 };

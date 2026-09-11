@@ -1,4 +1,5 @@
 import { dynamicVariable, generateDynamic, looksDynamic } from '@/lib/dynamic';
+import type { Language } from '@/lib/i18n';
 import type { Environment, Folder, KeyValue, ResolvedVariable, VariableOrigin, VariableTable } from '@/types';
 
 export const VARIABLE_PATTERN = /\{\{\s*([^}\s][^}]*?)\s*\}\}/g;
@@ -99,14 +100,23 @@ export function valuesOf(table: VariableTable): Record<string, string> {
  * that what someone wrote down beats what the app would have invented. It
  * takes a `$` in the name to reach one at all, so this only arises if someone
  * deliberately defines one.
+ *
+ * `language` decides which word lists the generators draw from — Brazilian
+ * names for an interface in Portuguese. It is required rather than defaulted
+ * so that every caller has to decide, which is what stopped a request built in
+ * one place from quietly disagreeing with one built in another.
  */
-export function interpolate(value: string, variables: Record<string, string>): string {
+export function interpolate(
+  value: string,
+  variables: Record<string, string>,
+  language: Language,
+): string {
   if (!value) return value;
   return value.replace(VARIABLE_PATTERN, (match, raw: string) => {
     const name = raw.trim();
     const defined = variables[name];
     if (defined !== undefined) return defined;
-    if (looksDynamic(name)) return generateDynamic(name) ?? match;
+    if (looksDynamic(name)) return generateDynamic(name, language) ?? match;
     return match;
   });
 }
@@ -153,10 +163,14 @@ export function missingVariables(value: string, variables: Record<string, string
   return [...missing];
 }
 
-export function interpolateRows(rows: KeyValue[], variables: Record<string, string>): KeyValue[] {
+export function interpolateRows(
+  rows: KeyValue[],
+  variables: Record<string, string>,
+  language: Language,
+): KeyValue[] {
   return rows.map((rowItem) => ({
     ...rowItem,
-    key: interpolate(rowItem.key, variables),
-    value: interpolate(rowItem.value, variables),
+    key: interpolate(rowItem.key, variables, language),
+    value: interpolate(rowItem.value, variables, language),
   }));
 }
