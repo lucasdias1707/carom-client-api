@@ -1,5 +1,6 @@
 import { createEnvironment, createFolder, createRequest, createWorkspace, emptyAuth, row } from '@/lib/factories';
 import type { WorkspaceState } from '@/types';
+import type { Translate } from '@/lib/i18n';
 import { STATE_VERSION } from '@/lib/storage';
 import { defaultSettings } from '@/lib/settings';
 
@@ -7,30 +8,38 @@ import { defaultSettings } from '@/lib/settings';
  * A small but realistic starter workspace so the app is useful on first open.
  * It points at httpbin, which is reachable from a browser, instead of a
  * fictional host that would only ever produce network errors.
+ *
+ * The names are translated once, here, and then they are ordinary data: a
+ * later change of language leaves them alone, the same way it leaves alone
+ * anything else you could rename. Only what someone has never seen would be
+ * safe to rewrite, and by the time this has run they have seen it.
+ *
+ * URLs, methods, headers and variable names stay as they are — those are not
+ * words, they are the request.
  */
-export function createSeedState(): WorkspaceState {
-  const workspace = createWorkspace('Personal');
-  const playground = createFolder(workspace.id, 'Playground', null, 0, '#5fb37a');
-  const inspect = createFolder(workspace.id, 'Inspect', playground.id, 0, '#5fb37a');
-  const writes = createFolder(workspace.id, 'Writes', playground.id, 1, '#e0913f');
-  const github = createFolder(workspace.id, 'GitHub API', null, 1, '#a97ad6');
+export function createSeedState(t: Translate): WorkspaceState {
+  const workspace = createWorkspace(t('seed.workspace'));
+  const playground = createFolder(workspace.id, t('seed.playground'), null, 0, '#5fb37a');
+  const inspect = createFolder(workspace.id, t('seed.inspect'), playground.id, 0, '#5fb37a');
+  const writes = createFolder(workspace.id, t('seed.writes'), playground.id, 1, '#e0913f');
+  const github = createFolder(workspace.id, t('seed.github'), null, 1, '#a97ad6');
 
   const requests = [
     createRequest({
       workspaceId: workspace.id,
       folderId: inspect.id,
-      name: 'Echo request',
+      name: t('seed.echo'),
       method: 'GET',
       url: '{{baseUrl}}/get',
       params: [row('team', 'northstar'), row('limit', '20')],
       headers: [row('Accept', 'application/json')],
-      description: 'Returns everything httpbin saw, which makes it a good way to check how the workbench builds a request.',
+      description: t('seed.echoDescription'),
       sortIndex: 0,
     }),
     createRequest({
       workspaceId: workspace.id,
       folderId: inspect.id,
-      name: 'Response headers',
+      name: t('seed.responseHeaders'),
       method: 'GET',
       url: '{{baseUrl}}/response-headers?fresh=true',
       headers: [row('Accept', 'application/json')],
@@ -39,7 +48,7 @@ export function createSeedState(): WorkspaceState {
     createRequest({
       workspaceId: workspace.id,
       folderId: inspect.id,
-      name: 'Status 404',
+      name: t('seed.status404'),
       method: 'GET',
       url: '{{baseUrl}}/status/404',
       sortIndex: 2,
@@ -47,7 +56,7 @@ export function createSeedState(): WorkspaceState {
     createRequest({
       workspaceId: workspace.id,
       folderId: writes.id,
-      name: 'Create project',
+      name: t('seed.createProject'),
       method: 'POST',
       url: '{{baseUrl}}/post',
       bodyType: 'json',
@@ -58,7 +67,7 @@ export function createSeedState(): WorkspaceState {
     createRequest({
       workspaceId: workspace.id,
       folderId: writes.id,
-      name: 'Submit form',
+      name: t('seed.submitForm'),
       method: 'POST',
       url: '{{baseUrl}}/post',
       bodyType: 'form',
@@ -68,7 +77,7 @@ export function createSeedState(): WorkspaceState {
     createRequest({
       workspaceId: workspace.id,
       folderId: writes.id,
-      name: 'Delete resource',
+      name: t('seed.deleteResource'),
       method: 'DELETE',
       url: '{{baseUrl}}/delete',
       auth: { ...emptyAuth(), type: 'bearer', token: '{{token}}' },
@@ -77,7 +86,7 @@ export function createSeedState(): WorkspaceState {
     createRequest({
       workspaceId: workspace.id,
       folderId: github.id,
-      name: 'Public repo',
+      name: t('seed.publicRepo'),
       method: 'GET',
       url: '{{baseUrl}}/repos/mountain-loop/yaak',
       headers: [row('Accept', 'application/vnd.github+json')],

@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { expandHex, mixHex } from '@/lib/color';
 import { createId } from '@/lib/id';
 import type { Settings } from '@/types';
@@ -40,9 +41,24 @@ export type PaletteTokens = {
 
 export type Palette = {
   id: string;
-  name: string;
-  /** A one-line description, and what the dropdown shows under the name. */
-  note: string;
+  /**
+   * Never translated. Carom, Midnight, Ember, Forest and Paper are proper
+   * names: a palette that renames itself per language is one you can no longer
+   * point a colleague at, and one you made carries the name you typed.
+   */
+name: string;
+  /**
+   * For a built-in whose name describes it rather than naming it. Absent on
+   * one you made, whose `name` is what you typed.
+   */
+  nameKey?: MessageKey;
+  /** What the dropdown shows under the name, for a palette you made. */
+  note?: string;
+  /**
+   * The same line for a built-in, which — unlike its name — is a description,
+   * and so describes itself in whatever language is on screen.
+   */
+  noteKey?: MessageKey;
   dark: PaletteTokens | null;
   light: PaletteTokens | null;
 };
@@ -51,11 +67,11 @@ export type Palette = {
 export const DEFAULT_PALETTE = 'carom';
 
 export const PALETTES: Palette[] = [
-  { id: DEFAULT_PALETTE, name: 'Carom', note: 'The blue one this app ships with', dark: null, light: null },
+  { id: DEFAULT_PALETTE, name: 'Carom', noteKey: 'palette.note.carom', dark: null, light: null },
   {
     id: 'midnight',
     name: 'Midnight',
-    note: 'Cooler, deeper, with an indigo accent',
+    noteKey: 'palette.note.midnight',
     dark: {
       '--bg-app': '#0f1117',
       '--bg-sidebar': '#12141c',
@@ -102,7 +118,7 @@ export const PALETTES: Palette[] = [
   {
     id: 'ember',
     name: 'Ember',
-    note: 'Warm greys, amber accent',
+    noteKey: 'palette.note.ember',
     dark: {
       '--bg-app': '#17150f',
       '--bg-sidebar': '#1a1811',
@@ -149,7 +165,7 @@ export const PALETTES: Palette[] = [
   {
     id: 'forest',
     name: 'Forest',
-    note: 'Green accent, quieter contrast',
+    noteKey: 'palette.note.forest',
     dark: {
       '--bg-app': '#101613',
       '--bg-sidebar': '#131a16',
@@ -196,7 +212,7 @@ export const PALETTES: Palette[] = [
   {
     id: 'paper',
     name: 'Paper',
-    note: 'Nearly monochrome, for reading',
+    noteKey: 'palette.note.paper',
     dark: {
       '--bg-app': '#151515',
       '--bg-sidebar': '#181818',
@@ -298,55 +314,61 @@ export function isBuiltInPalette(id: string): boolean {
  * rest of the app changed around them.
  */
 export type TokenGroup = {
-  title: string;
+  /** Stable, and what the test ids are built from, so a translation cannot move them. */
+  id: string;
+  title: MessageKey;
   /** Why these belong together, in one line. */
-  note: string;
-  tokens: Array<{ token: keyof PaletteTokens; label: string }>;
+  note: MessageKey;
+  tokens: Array<{ token: keyof PaletteTokens; label: MessageKey }>;
 };
 
 export const TOKEN_GROUPS: TokenGroup[] = [
   {
-    title: 'Accent',
-    note: 'Buttons, the active tab, anything the app wants you to look at.',
+    id: 'accent',
+    title: 'tokens.accent.title',
+    note: 'tokens.accent.note',
     tokens: [
-      { token: '--accent', label: 'Accent' },
-      { token: '--accent-hover', label: 'Hovered' },
-      { token: '--accent-fg', label: 'Text on it' },
+      { token: '--accent', label: 'tokens.accent' },
+      { token: '--accent-hover', label: 'tokens.accentHover' },
+      { token: '--accent-fg', label: 'tokens.accentFg' },
     ],
   },
   {
-    title: 'Backgrounds',
-    note: 'Back to front: the window, the tree, then what sits on top of them.',
+    id: 'backgrounds',
+    title: 'tokens.backgrounds.title',
+    note: 'tokens.backgrounds.note',
     tokens: [
-      { token: '--bg-app', label: 'App' },
-      { token: '--bg-sidebar', label: 'Sidebar' },
-      { token: '--bg-surface', label: 'Dialogs' },
-      { token: '--bg-raised', label: 'Raised' },
-      { token: '--bg-input', label: 'Inputs' },
-      { token: '--bg-code', label: 'Code' },
+      { token: '--bg-app', label: 'tokens.bgApp' },
+      { token: '--bg-sidebar', label: 'tokens.bgSidebar' },
+      { token: '--bg-surface', label: 'tokens.bgSurface' },
+      { token: '--bg-raised', label: 'tokens.bgRaised' },
+      { token: '--bg-input', label: 'tokens.bgInput' },
+      { token: '--bg-code', label: 'tokens.bgCode' },
     ],
   },
   {
-    title: 'Text',
-    note: 'Strong for headings, dim and faint for what should stay quiet.',
+    id: 'text',
+    title: 'tokens.text.title',
+    note: 'tokens.text.note',
     tokens: [
-      { token: '--text', label: 'Text' },
-      { token: '--text-strong', label: 'Strong' },
-      { token: '--text-dim', label: 'Dim' },
-      { token: '--text-faint', label: 'Faint' },
+      { token: '--text', label: 'tokens.text' },
+      { token: '--text-strong', label: 'tokens.textStrong' },
+      { token: '--text-dim', label: 'tokens.textDim' },
+      { token: '--text-faint', label: 'tokens.textFaint' },
     ],
   },
   {
-    title: 'Lines',
-    note: 'The borders that separate panes and rows.',
+    id: 'lines',
+    title: 'tokens.lines.title',
+    note: 'tokens.lines.note',
     tokens: [
-      { token: '--border', label: 'Border' },
-      { token: '--border-strong', label: 'Stronger' },
+      { token: '--border', label: 'tokens.border' },
+      { token: '--border-strong', label: 'tokens.borderStrong' },
     ],
   },
 ];
 
-export const EDITABLE_TOKENS: Array<{ token: keyof PaletteTokens; label: string }> = TOKEN_GROUPS.flatMap(
+export const EDITABLE_TOKENS: Array<{ token: keyof PaletteTokens; label: MessageKey }> = TOKEN_GROUPS.flatMap(
   (group) => group.tokens,
 );
 
@@ -454,12 +476,22 @@ const TOKEN_NAMES: Array<keyof PaletteTokens> = [
  * source — or read from the stylesheet when the source is the default, which
  * carries no tokens of its own.
  */
-export function duplicatePalette(palette: Palette, mode: 'dark' | 'light'): Palette {
+export function duplicatePalette(
+  palette: Palette,
+  mode: 'dark' | 'light',
+  /**
+   * The name and note the copy is created with, already in the reader's
+   * language. They are written into the palette rather than looked up later:
+   * from here on they are yours, and a later change of language should not
+   * rewrite something you can rename yourself.
+   */
+  labels: { name: string; note: string },
+): Palette {
   const other = mode === 'dark' ? 'light' : 'dark';
   return {
     id: createId('pal'),
-    name: `${palette.name} copy`,
-    note: 'Yours',
+    name: labels.name,
+    note: labels.note,
     // Derived on the way in as well as on every edit: a copy whose hover wash
     // still belonged to the palette it was copied from was half of why editing
     // colours felt like it only worked in places.
@@ -479,6 +511,11 @@ export function duplicatePalette(palette: Palette, mode: 'dark' | 'light'): Pale
 export type FontTheme = {
   id: string;
   name: string;
+  /**
+   * For a built-in whose name describes it rather than naming it. Absent on
+   * one you made, whose `name` is the words you typed.
+   */
+  nameKey?: MessageKey;
   sans: string;
   mono: string;
   /** 1 is what the app was drawn at. */
@@ -499,7 +536,10 @@ export const BUILT_IN_FONTS: FontTheme[] = [
     // The example to copy: it changes all three things a font theme can
     // change, so duplicating it shows what each field does.
     id: 'system-large',
+    // Unlike Carom, this name is a description rather than a proper noun, so
+    // it is the one built-in font theme that reads in the reader's language.
     name: 'System, larger',
+    nameKey: 'font.systemLarge',
     sans: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
     mono: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
     scale: 1.1,
@@ -520,8 +560,11 @@ export function isBuiltInFont(id: string): boolean {
 }
 
 /** A copy under a new id, which is how a new one is always made. */
-export function duplicateFont(theme: FontTheme): FontTheme {
-  return { ...theme, id: createId('font'), name: `${theme.name} copy` };
+export function duplicateFont(theme: FontTheme, name: string): FontTheme {
+  // `nameKey` is deliberately dropped: the copy is yours, and its name is the
+  // words it was created with rather than something that moves with the
+  // language later.
+  return { ...theme, id: createId('font'), name, nameKey: undefined };
 }
 
 export const FONT_SCALES = [0.9, 0.95, 1, 1.05, 1.1, 1.2, 1.3];

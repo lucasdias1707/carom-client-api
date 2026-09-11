@@ -1,3 +1,5 @@
+import { translatorFor } from '@/locales';
+import type { MessageKey } from '@/locales/en';
 import { describe, expect, it } from 'vitest';
 import {
   COMMANDS,
@@ -77,7 +79,8 @@ describe('bindingConflicts', () => {
   it('names both sides, so nobody has to hunt for the other one', () => {
     const bindings = resolveBindings({ keyBindings: { newRequest: { key: 'k', mod: true } } });
     expect(bindingConflicts(bindings)).toEqual({ palette: ['newRequest'], newRequest: ['palette'] });
-    expect(labelFor('palette')).toBe('Search everything');
+    // A key now, not a word: the list translates it at the moment of drawing.
+    expect(translatorFor('en')(labelFor('palette') as MessageKey)).toBe('Search everything');
   });
 
   it('treats a missing modifier flag and a false one as the same binding', () => {

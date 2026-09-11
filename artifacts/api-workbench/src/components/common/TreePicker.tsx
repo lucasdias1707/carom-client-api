@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useT } from '@/state/workspace-store';
 import { subtreeIds, type TreeNode } from '@/lib/tree';
 
 type TreePickerProps = {
@@ -20,6 +21,7 @@ type TreePickerProps = {
  * back, and a request can be left out of a folder that is otherwise coming.
  */
 export function TreePicker({ nodes, selected, onChange, testPrefix }: TreePickerProps) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const toggle = (node: TreeNode) => {
@@ -48,7 +50,7 @@ export function TreePicker({ nodes, selected, onChange, testPrefix }: TreePicker
               <button
                 className="pick-caret"
                 onClick={() => setCollapsed((current) => ({ ...current, [node.id]: open }))}
-                aria-label={open ? `Collapse ${node.name}` : `Expand ${node.name}`}
+                aria-label={t(open ? 'common.collapse' : 'common.expand', { name: node.name })}
               >
                 {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>

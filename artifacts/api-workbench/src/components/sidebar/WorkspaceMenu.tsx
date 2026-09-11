@@ -10,7 +10,7 @@ import { useWorkspace } from '@/state/workspace-store';
 
 /** Workspace identity in the sidebar header, doubling as the switcher. */
 export function WorkspaceMenu() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [prompt, setPrompt] = useState<'create' | 'rename' | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -27,14 +27,14 @@ export function WorkspaceMenu() {
       onSelect: () => dispatch({ type: 'workspace/activate', id: workspace.id }),
     })),
     { kind: 'separator' },
-    { kind: 'item', label: 'New workspace', icon: <Plus size={13} />, onSelect: () => setPrompt('create') },
-    { kind: 'item', label: 'Rename workspace', icon: <Pencil size={13} />, onSelect: () => setPrompt('rename') },
+    { kind: 'item', label: t('workspace.new'), icon: <Plus size={13} />, onSelect: () => setPrompt('create') },
+    { kind: 'item', label: t('workspace.rename'), icon: <Pencil size={13} />, onSelect: () => setPrompt('rename') },
   ];
 
   if (state.workspaces.length > 1) {
     entries.push({
       kind: 'item',
-      label: 'Delete workspace',
+      label: t('workspace.delete'),
       icon: <Trash2 size={13} />,
       danger: true,
       onSelect: () => setConfirming(true),
@@ -57,7 +57,7 @@ export function WorkspaceMenu() {
         <span className="brand-text">
           <span className="brand-name truncate">{active?.name ?? 'Workspace'}</span>
           <span className="brand-sub">
-            {requestCount} {requestCount === 1 ? 'request' : 'requests'}
+            {t('count.requests', { count: requestCount })}
           </span>
         </span>
         <ChevronDown size={13} style={{ color: 'var(--text-faint)' }} />
@@ -67,21 +67,21 @@ export function WorkspaceMenu() {
 
       {confirming ? (
         <ConfirmDialog
-          title="Delete this workspace?"
-          message={
-            <>
-              <strong>{active?.name}</strong> goes, and so does everything in it: {requestCount} request
-              {requestCount === 1 ? '' : 's'}, its folders and its environments. You can undo this from the
-              notification straight afterwards.
-            </>
-          }
-          confirmLabel="Delete workspace"
+          title={t('workspace.deleteTitle')}
+          message={tNodes('workspace.deleteMessage', {
+            name: <strong>{active?.name}</strong>,
+            requests: t('count.requests', { count: requestCount }),
+          })}
+          confirmLabel={t('workspace.delete')}
           requireText={active?.name}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             deleteWithUndo(
               { type: 'workspace/delete', id: state.activeWorkspaceId },
-              { title: `Deleted ${active?.name ?? 'workspace'}`, detail: 'Its folders, requests and environments went too.' },
+              {
+                title: t('workspace.deleted', { name: active?.name ?? t('workspace.deletedFallback') }),
+                detail: t('workspace.deletedDetail'),
+              },
             );
             setConfirming(false);
           }}
@@ -90,18 +90,18 @@ export function WorkspaceMenu() {
 
       {prompt === 'create' ? (
         <PromptDialog
-          title="New workspace"
-          description="A workspace has its own folders, requests and environments."
-          label="Workspace name"
+          title={t('workspace.new')}
+          description={t('workspace.newDescription')}
+          label={t('workspace.nameLabel')}
           initialValue="New workspace"
-          confirmLabel="Create workspace"
+          confirmLabel={t('workspace.create')}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {
             const workspace = createWorkspace(name);
             dispatch({
               type: 'workspace/create',
               workspace,
-              environment: createEnvironment(workspace.id, 'Base', true, []),
+              environment: createEnvironment(workspace.id, t('import.baseEnvironment'), true, []),
             });
             setPrompt(null);
           }}
@@ -110,8 +110,8 @@ export function WorkspaceMenu() {
 
       {prompt === 'rename' ? (
         <PromptDialog
-          title="Rename workspace"
-          label="Workspace name"
+          title={t('workspace.rename')}
+          label={t('workspace.nameLabel')}
           initialValue={active?.name ?? ''}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {

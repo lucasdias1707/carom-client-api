@@ -156,10 +156,14 @@ describe('font themes', () => {
   });
 
   it('copies under a new id, so editing the copy cannot touch the original', () => {
-    const copy = duplicateFont(BUILT_IN_FONTS[1]);
+    const copy = duplicateFont(BUILT_IN_FONTS[1], `${BUILT_IN_FONTS[1].name} copy`);
     expect(copy.id).not.toBe(BUILT_IN_FONTS[1].id);
     expect(copy.sans).toBe(BUILT_IN_FONTS[1].sans);
     expect(copy.name).toMatch(/copy$/);
+    // The built-in describes itself in the reader's language; the copy is
+    // yours, and carries the words it was made with instead.
+    expect(BUILT_IN_FONTS[1].nameKey).toBeDefined();
+    expect(copy.nameKey).toBeUndefined();
     expect(isBuiltInFont(copy.id)).toBe(false);
     expect(isBuiltInFont(DEFAULT_FONT)).toBe(true);
   });

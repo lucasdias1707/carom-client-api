@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { reducer } from '@/state/reducer';
 import { createSeedState } from '@/lib/seed';
+import { translatorFor } from '@/locales';
 import { createEnvironment, createFolder, createRequest, createWorkspace, row } from '@/lib/factories';
 import { buildTree, countRequests, folderPath } from '@/state/selectors';
 import type { RequestRecord, ResponseRecord, WorkspaceState } from '@/types';
 
 function seed(): WorkspaceState {
-  return createSeedState();
+  return createSeedState(translatorFor('en'));
 }
 
 function response(requestId: string, overrides: Partial<ResponseRecord> = {}): ResponseRecord {
@@ -171,7 +172,7 @@ describe('drafts', () => {
     const target = state.requests[0];
     const saved = reducer(edit(state, target.id, { url: 'https://api.test/v2' }), { type: 'request/save', id: target.id });
     expect(saved.versions).toHaveLength(1);
-    expect(saved.versions[0]).toMatchObject({ requestId: target.id, changed: ['URL'] });
+    expect(saved.versions[0]).toMatchObject({ requestId: target.id, changed: ['url'] });
     // Nothing to commit means nothing to record.
     expect(reducer(saved, { type: 'request/save', id: target.id }).versions).toHaveLength(1);
   });

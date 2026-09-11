@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { useMemo, type ReactNode } from 'react';
 import { Box, CornerDownLeft } from 'lucide-react';
 import {
@@ -34,12 +35,12 @@ type CommandPaletteProps = {
   onClose: () => void;
 };
 
-const PLACEHOLDERS: Record<PaletteMode, string> = {
-  all: 'Search requests and actions…',
-  requests: 'Go to a request…',
-  workspaces: 'Switch workspace…',
-  commands: 'Run a command…',
-  tabs: 'Go to an open tab…',
+const PLACEHOLDERS: Record<PaletteMode, MessageKey> = {
+  all: 'palette.searchAll',
+  requests: 'palette.searchRequests',
+  workspaces: 'palette.searchWorkspaces',
+  commands: 'palette.searchCommands',
+  tabs: 'palette.searchTabs',
 };
 
 /**
@@ -55,7 +56,7 @@ const PLACEHOLDERS: Record<PaletteMode, string> = {
  * keeps them apart, the label is what gets matched.
  */
 export function CommandPalette({ commands, mode = 'all', onClose }: CommandPaletteProps) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
 
   const requestCommands = useMemo<Command[]>(
     () =>
@@ -154,7 +155,7 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
         <DialogDescription className="sr-only">Search requests and actions</DialogDescription>
         <CommandRoot loop className="bg-transparent">
           <CommandInput
-            placeholder={PLACEHOLDERS[mode]}
+            placeholder={t(PLACEHOLDERS[mode])}
             className="h-11 text-[length:var(--fs-15)]"
             data-testid="input-command-palette"
           />

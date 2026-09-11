@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Download, Keyboard, Upload } from 'lucide-react';
+import { Dices, Download, Keyboard, Languages, Upload } from 'lucide-react';
 import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
@@ -10,11 +10,20 @@ import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
 import { PaletteEditor } from '@/components/dialogs/PaletteEditor';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
+import {
+  FOLLOW_SYSTEM,
+  LANGUAGES,
+  LANGUAGE_NAMES,
+  resolveLanguage,
+  systemLanguage,
+  type Language,
+} from '@/lib/i18n';
 import { createSeedState } from '@/lib/seed';
 import { JSON_THEME_PRESETS } from '@/lib/settings';
 import { useWorkspace } from '@/state/workspace-store';
 import type { JsonTheme, PaneLayout, SendMode, ThemeName, WorkspaceState } from '@/types';
 import type { ProxyStatus } from '@/hooks/use-proxy-health';
+import type { MessageKey } from '@/locales/en';
 import tauriConfig from '../../../src-tauri/tauri.conf.json';
 import { SelectField } from '@/components/common/SelectField';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,10 +32,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const PROXY_COPY: Record<ProxyStatus, string> = {
-  checking: 'Checking whether the companion server is running…',
-  available: 'The companion server is running, so requests can bypass browser CORS like a desktop client.',
-  unavailable: 'The companion server is not reachable, so requests are sent straight from the browser and are subject to CORS.',
+const PROXY_COPY: Record<ProxyStatus, MessageKey> = {
+  checking: 'settings.proxy.checking',
+  available: 'settings.proxy.available',
+  unavailable: 'settings.proxy.unavailable',
 };
 
 /**
@@ -36,13 +45,13 @@ const PROXY_COPY: Record<ProxyStatus, string> = {
  */
 const APP_VERSION = tauriConfig.version;
 
-const JSON_COLOR_FIELDS: Array<{ field: keyof JsonTheme; label: string; sample: string }> = [
-  { field: 'key', label: 'Keys', sample: '"name"' },
-  { field: 'string', label: 'Strings', sample: '"ditto"' },
-  { field: 'number', label: 'Numbers', sample: '132' },
-  { field: 'boolean', label: 'Booleans', sample: 'true' },
-  { field: 'null', label: 'Null', sample: 'null' },
-  { field: 'punctuation', label: 'Punctuation', sample: '{ } [ ] ,' },
+const JSON_COLOR_FIELDS: Array<{ field: keyof JsonTheme; label: MessageKey; sample: string }> = [
+  { field: 'key', label: 'settings.json.keys', sample: '"name"' },
+  { field: 'string', label: 'settings.json.strings', sample: '"ditto"' },
+  { field: 'number', label: 'settings.json.numbers', sample: '132' },
+  { field: 'boolean', label: 'settings.json.booleans', sample: 'true' },
+  { field: 'null', label: 'settings.json.null', sample: 'null' },
+  { field: 'punctuation', label: 'settings.json.punctuation', sample: '{ } [ ] ,' },
 ];
 
 export function SettingsDialog({
@@ -55,7 +64,7 @@ export function SettingsDialog({
   /** Swaps this dialog for the shortcuts screen — they are one overlay, not two. */
   onOpenShortcuts: () => void;
 }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   // Two tabs rather than one long scroll: everything about how the app looks
@@ -66,7 +75,11 @@ export function SettingsDialog({
   // Everything, settings included, so it restores rather than merges. On the
   // desktop this asks where to put it; in a browser it lands in Downloads.
   const exportWorkspace = async () => {
-    const message = saveMessage(await saveJson('workspace.json', { ...state, responses: [] }), 'the workspace');
+    const message = saveMessage(
+      await saveJson('workspace.json', { ...state, responses: [] }, t('save.anyFile')),
+      t('save.workspaceExported'),
+      t('save.downloaded'),
+    );
     if (message) toast({ ...message, kind: 'success' });
   };
 
@@ -77,17 +90,21 @@ export function SettingsDialog({
         // A slice is merged into a workspace rather than replacing one, which
         // is the Import dialog's job — so this points there instead of doing
         // something destructive with a file that means the opposite.
-        throw new Error('That is a folder or request export. Use Import in the sidebar to merge it into a workspace.');
+        throw new Error(t('settings.data.isSubtree'));
       }
       if (!Array.isArray(parsed.requests) || !Array.isArray(parsed.environments)) {
-        throw new Error('That file is not a workspace export.');
+        throw new Error(t('settings.data.notWorkspace'));
       }
       dispatch({ type: 'state/replace', state: { ...parsed, responses: parsed.responses ?? [] } });
-      toast({ title: 'Workspace imported', description: `${parsed.requests.length} requests loaded.`, kind: 'success' });
+      toast({
+        title: t('settings.data.imported'),
+        description: t('settings.data.importedCount', { count: parsed.requests.length }),
+        kind: 'success',
+      });
       onClose();
     } catch (error) {
       toast({
-        title: 'Import failed',
+        title: t('settings.data.importFailed'),
         description: error instanceof Error ? error.message : undefined,
         kind: 'error',
       });
@@ -95,18 +112,92 @@ export function SettingsDialog({
   };
 
   return (
-    <Dialog title="Settings" onClose={onClose} testId="dialog-settings" footer={<Button onClick={onClose}>Done</Button>}>
+    <Dialog
+      title={t('settings.title')}
+      onClose={onClose}
+      testId="dialog-settings"
+      footer={<Button onClick={onClose}>{t('common.done')}</Button>}
+    >
       <Tabs value={tab} onValueChange={setTab} className="stack" style={{ gap: 12 }}>
         <TabsList className="w-full">
           <TabsTrigger value="general" className="flex-1" data-testid="tab-settings-general">
-            General
+            {t('settings.tab.general')}
           </TabsTrigger>
           <TabsTrigger value="theme" className="flex-1" data-testid="tab-settings-theme">
-            Theme
+            {t('settings.tab.theme')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="stack" style={{ gap: 16 }}>
+
+        {/*
+          First in General because it decides how everything below it reads.
+          The default is not stored: `language` stays absent until someone
+          chooses, so the app follows the machine, and the option that does
+          that names the language it currently resolves to rather than leaving
+          "Match system" to be taken on faith.
+        */}
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">
+            <Languages size={12} /> {t('settings.language.label')}
+          </Label>
+          <SelectField
+            value={settings.language ?? FOLLOW_SYSTEM}
+            onChange={(choice: Language | typeof FOLLOW_SYSTEM) =>
+              dispatch({
+                type: 'settings/update',
+                patch: { language: choice === FOLLOW_SYSTEM ? undefined : choice },
+              })
+            }
+            options={[
+              {
+                value: FOLLOW_SYSTEM,
+                label: t('settings.language.system', { name: LANGUAGE_NAMES[systemLanguage()] }),
+              },
+              ...LANGUAGES.map((language) => ({ value: language, label: LANGUAGE_NAMES[language] })),
+            ]}
+            ariaLabel={t('settings.language.label')}
+            testId="select-language"
+            block
+          />
+          <span className="hint">{t('settings.language.hint')}</span>
+        </div>
+
+        {/*
+          Directly under the interface language, because the two are read
+          together and the default is "the same as that one". Pinning it is for
+          the case the default cannot serve: an API that validates names or
+          addresses against a language other than the one you work in.
+        */}
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">
+            <Dices size={12} /> {t('settings.dataLanguage.label')}
+          </Label>
+          <SelectField
+            value={settings.dataLanguage ?? FOLLOW_SYSTEM}
+            onChange={(choice: Language | typeof FOLLOW_SYSTEM) =>
+              dispatch({
+                type: 'settings/update',
+                patch: { dataLanguage: choice === FOLLOW_SYSTEM ? undefined : choice },
+              })
+            }
+            options={[
+              {
+                value: FOLLOW_SYSTEM,
+                label: t('settings.dataLanguage.follow', {
+                  name: LANGUAGE_NAMES[resolveLanguage(settings.language)],
+                }),
+              },
+              ...LANGUAGES.map((language) => ({ value: language, label: LANGUAGE_NAMES[language] })),
+            ]}
+            ariaLabel={t('settings.dataLanguage.label')}
+            testId="select-data-language"
+            block
+          />
+          <span className="hint">
+            {tNodes('settings.dataLanguage.hint', { example: <code>{'{{$randomFirstName}}'}</code> })}
+          </span>
+        </div>
 
         {/*
           The shortcuts screen lives behind the palette, and the palette is
@@ -115,56 +206,54 @@ export function SettingsDialog({
           way in is here too.
         */}
         <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Keyboard</Label>
+          <Label className="section-label m-0">{t('settings.keyboard.label')}</Label>
           <Button
             variant="secondary"
             className="justify-self-start"
             onClick={onOpenShortcuts}
             data-testid="button-open-shortcuts"
           >
-            <Keyboard /> Keyboard shortcuts
+            <Keyboard /> {t('settings.keyboard.open')}
             <span className="kbd ml-1">{formatBinding(resolveBindings(settings).palette)}</span>
           </Button>
         </div>
 
         <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Pane layout</Label>
+          <Label className="section-label m-0">{t('settings.layout.label')}</Label>
           <SelectField
             value={settings.layout}
             onChange={(layout: PaneLayout) => dispatch({ type: 'settings/update', patch: { layout } })}
             options={[
-              { value: 'horizontal', label: 'Side by side' },
-              { value: 'vertical', label: 'Stacked' },
+              { value: 'horizontal', label: t('settings.layout.horizontal') },
+              { value: 'vertical', label: t('settings.layout.vertical') },
             ]}
-            ariaLabel="Pane layout"
+            ariaLabel={t('settings.layout.label')}
             testId="select-layout"
             block
           />
         </div>
 
         <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Send requests through</Label>
+          <Label className="section-label m-0">{t('settings.sendMode.label')}</Label>
           <SelectField
             value={settings.sendMode}
             onChange={(sendMode: SendMode) => dispatch({ type: 'settings/update', patch: { sendMode } })}
             options={[
-              { value: 'auto', label: isDesktop() ? 'Auto — native (recommended)' : 'Auto — server when available' },
-              { value: 'proxy', label: 'Companion server only' },
-              { value: 'browser', label: 'Browser only' },
+              { value: 'auto', label: t(isDesktop() ? 'settings.sendMode.autoNative' : 'settings.sendMode.autoServer') },
+              { value: 'proxy', label: t('settings.sendMode.proxy') },
+              { value: 'browser', label: t('settings.sendMode.browser') },
             ]}
-            ariaLabel="Send requests through"
+            ariaLabel={t('settings.sendMode.label')}
             testId="select-send-mode"
             block
           />
           <span className="hint">
-            {isDesktop()
-              ? 'Running as a desktop app: requests are made natively, so CORS does not apply and private hosts are reachable. The companion server is not needed here.'
-              : PROXY_COPY[proxyStatus]}
+            {t(isDesktop() ? 'settings.sendMode.desktop' : PROXY_COPY[proxyStatus])}
           </span>
         </div>
 
         <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0" htmlFor="settings-timeout">Timeout (seconds)</Label>
+          <Label className="section-label m-0" htmlFor="settings-timeout">{t('settings.timeout.label')}</Label>
           <Input
             id="settings-timeout"
             type="number"
@@ -185,7 +274,7 @@ export function SettingsDialog({
             onCheckedChange={(checked) => dispatch({ type: 'settings/update', patch: { followRedirects: checked === true } })}
             data-testid="checkbox-follow-redirects"
           />
-          <Label htmlFor="checkbox-follow-redirects" className="font-normal">Follow redirects</Label>
+          <Label htmlFor="checkbox-follow-redirects" className="font-normal">{t('settings.followRedirects')}</Label>
         </div>
 
         <div className="flex items-center gap-2">
@@ -195,30 +284,30 @@ export function SettingsDialog({
             onCheckedChange={(checked) => dispatch({ type: 'settings/update', patch: { persistResponses: checked === true } })}
             data-testid="checkbox-persist-responses"
           />
-          <Label htmlFor="checkbox-persist-responses" className="font-normal">Keep response bodies between reloads</Label>
+          <Label htmlFor="checkbox-persist-responses" className="font-normal">{t('settings.persistResponses')}</Label>
         </div>
 
 
         {isDesktop() ? <UpdatesSection /> : null}
 
         <div>
-          <div className="section-label">Workspace data</div>
+          <div className="section-label">{t('settings.data.label')}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Button variant="secondary" onClick={() => void exportWorkspace()} data-testid="button-export-workspace">
-              <Download /> Export JSON
+              <Download /> {t('settings.data.export')}
             </Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()} data-testid="button-import-workspace">
-              <Upload /> Import JSON
+              <Upload /> {t('settings.data.import')}
             </Button>
             <Button variant="destructive"
               onClick={() => {
-                dispatch({ type: 'state/replace', state: createSeedState() });
-                toast({ title: 'Workspace reset', kind: 'info' });
+                dispatch({ type: 'state/replace', state: createSeedState(t) });
+                toast({ title: t('settings.data.resetDone'), kind: 'info' });
                 onClose();
               }}
               data-testid="button-reset-workspace"
             >
-              Reset to sample workspace
+              {t('settings.data.reset')}
             </Button>
           </div>
           <input
@@ -233,8 +322,7 @@ export function SettingsDialog({
             }}
           />
           <p className="hint" style={{ marginTop: 8 }}>
-            Everything is stored in this browser only. Export before clearing site data, and keep real secrets in an
-            environment you do not share.
+            {t('settings.data.hint')}
           </p>
         </div>
 
@@ -245,22 +333,22 @@ export function SettingsDialog({
           <strong>Carom</strong>
           <span className="mono">{APP_VERSION}</span>
           <span className="spacer" />
-          <span>{isDesktop() ? 'desktop' : 'web'}</span>
+          <span>{t(isDesktop() ? 'settings.about.desktop' : 'settings.about.web')}</span>
         </div>
         </TabsContent>
 
         <TabsContent value="theme" className="stack" style={{ gap: 16 }}>
         <div className="stack" style={{ gap: 6 }}>
-          <Label className="section-label m-0">Theme</Label>
+          <Label className="section-label m-0">{t('settings.theme.label')}</Label>
           <SelectField
             value={settings.theme}
             onChange={(theme: ThemeName) => dispatch({ type: 'settings/update', patch: { theme } })}
             options={[
-              { value: 'dark', label: 'Dark' },
-              { value: 'light', label: 'Light' },
-              { value: 'system', label: 'Match system' },
+              { value: 'dark', label: t('settings.theme.dark') },
+              { value: 'light', label: t('settings.theme.light') },
+              { value: 'system', label: t('settings.theme.system') },
             ]}
-            ariaLabel="Theme"
+            ariaLabel={t('settings.theme.label')}
             testId="select-theme"
             block
           />
@@ -272,7 +360,7 @@ export function SettingsDialog({
 
         <div>
           <div className="section-label">
-            JSON colours
+            {t('settings.json.label')}
             <span className="spacer" />
             <SelectField
               value=""
@@ -281,15 +369,15 @@ export function SettingsDialog({
                 if (preset) dispatch({ type: 'settings/update', patch: { jsonTheme: { ...preset } } });
               }}
               options={Object.keys(JSON_THEME_PRESETS).map((name) => ({ value: name, label: name }))}
-              placeholder="Presets…"
-              ariaLabel="Colour preset"
+              placeholder={t('settings.json.presets')}
+              ariaLabel={t('settings.json.presetAria')}
               testId="select-json-preset"
             />
           </div>
           <div className="color-rows">
             {JSON_COLOR_FIELDS.map(({ field, label, sample }) => (
               <div className="color-row" key={field}>
-                <Label htmlFor={`json-color-${field}`} className="font-normal">{label}</Label>
+                <Label htmlFor={`json-color-${field}`} className="font-normal">{t(label)}</Label>
                 <input
                   id={`json-color-${field}`}
                   type="color"
@@ -309,7 +397,7 @@ export function SettingsDialog({
             ))}
           </div>
           <p className="hint" style={{ marginTop: 8 }}>
-            Applies to the Pretty tab of the response viewer.
+            {t('settings.json.hint')}
           </p>
         </div>
         </TabsContent>

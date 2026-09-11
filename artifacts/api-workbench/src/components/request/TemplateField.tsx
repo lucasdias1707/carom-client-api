@@ -109,12 +109,19 @@ export function TemplateField({
           const style: CSSProperties = resolved
             ? { '--var-color': resolved.scope === 'folder' ? LOCAL_VARIABLE_COLOR : resolved.color } as CSSProperties
             : {};
+          /*
+            Three states, not two. A generator is neither a value someone wrote
+            down nor a name nobody defined, and drawing it as either would be
+            wrong in a way that costs time: as ordinary, it looks like it has a
+            fixed value; as missing, it looks broken while working perfectly.
+          */
+          const kind = resolved ? '' : token.dynamic ? 'dynamic' : 'missing';
           return (
             <button
               key={index}
               type="button"
               tabIndex={-1}
-              className={`var-chip ${resolved ? '' : 'missing'}`}
+              className={`var-chip ${kind}`}
               style={style}
               onMouseDown={(event) => {
                 // The chip must not take focus or swallow the click: this is a

@@ -40,7 +40,7 @@ export function Sidebar({
    */
   locate?: { id: string; nonce: number } | null;
 }) {
-  const { state, dispatch, chainFor } = useWorkspace();
+  const { state, dispatch, chainFor, t, tNodes } = useWorkspace();
   const [located, setLocated] = useState<string | null>(null);
   const deleteWithUndo = useDeleteWithUndo();
   const [search, setSearch] = useState('');
@@ -97,7 +97,7 @@ export function Sidebar({
       request: createRequest({
         workspaceId: state.activeWorkspaceId,
         folderId,
-        name: 'New request',
+        name: t('sidebar.newRequest'),
         sortIndex: state.requests.length,
       }),
     });
@@ -153,20 +153,20 @@ export function Sidebar({
   const saveRequest = (request: RequestRecord) => onExport([request.id]);
 
   const folderMenu = (folder: Folder): MenuEntry[] => [
-    { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: () => addRequest(folder.id) },
-    { kind: 'item', label: 'New folder', icon: <FolderPlus size={13} />, onSelect: () => setPrompt({ kind: 'new-folder', parentId: folder.id }) },
+    { kind: 'item', label: t('sidebar.newRequest'), icon: <FilePlus2 size={13} />, onSelect: () => addRequest(folder.id) },
+    { kind: 'item', label: t('sidebar.newFolder'), icon: <FolderPlus size={13} />, onSelect: () => setPrompt({ kind: 'new-folder', parentId: folder.id }) },
     { kind: 'separator' },
-    { kind: 'item', label: 'Folder settings', icon: <Braces size={13} />, onSelect: () => dispatch({ type: 'folder/open', id: folder.id }) },
-    { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-folder', folder }) },
+    { kind: 'item', label: t('sidebar.folderSettings'), icon: <Braces size={13} />, onSelect: () => dispatch({ type: 'folder/open', id: folder.id }) },
+    { kind: 'item', label: t('common.rename'), icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-folder', folder }) },
     {
       kind: 'item',
-      label: 'Export folder…',
+      label: t('sidebar.exportFolder'),
       icon: <Download size={13} />,
       onSelect: () => saveFolder(folder),
     },
     {
       kind: 'item',
-      label: 'Delete folder',
+      label: t('sidebar.deleteFolder'),
       icon: <Trash2 size={13} />,
       danger: true,
       onSelect: () => setConfirming({ kind: 'folder', folder }),
@@ -174,13 +174,13 @@ export function Sidebar({
   ];
 
   const requestMenu = (request: RequestRecord): MenuEntry[] => [
-    { kind: 'item', label: 'Rename', icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-request', request }) },
-    { kind: 'item', label: 'Duplicate', icon: <Copy size={13} />, onSelect: () => dispatch({ type: 'request/duplicate', id: request.id }) },
-    { kind: 'item', label: 'Export request…', icon: <Download size={13} />, onSelect: () => saveRequest(request) },
+    { kind: 'item', label: t('common.rename'), icon: <Pencil size={13} />, onSelect: () => setPrompt({ kind: 'rename-request', request }) },
+    { kind: 'item', label: t('common.duplicate'), icon: <Copy size={13} />, onSelect: () => dispatch({ type: 'request/duplicate', id: request.id }) },
+    { kind: 'item', label: t('sidebar.exportRequest'), icon: <Download size={13} />, onSelect: () => saveRequest(request) },
     { kind: 'separator' },
     {
       kind: 'item',
-      label: 'Delete request',
+      label: t('sidebar.deleteRequest'),
       icon: <Trash2 size={13} />,
       danger: true,
       onSelect: () => setConfirming({ kind: 'request', request }),
@@ -194,10 +194,10 @@ export function Sidebar({
    * the empty space — and the empty space means the root of the workspace.
    */
   const rootMenu = (): MenuEntry[] => [
-    { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: () => addRequest(null) },
+    { kind: 'item', label: t('sidebar.newRequest'), icon: <FilePlus2 size={13} />, onSelect: () => addRequest(null) },
     {
       kind: 'item',
-      label: 'New folder',
+      label: t('sidebar.newFolder'),
       icon: <FolderPlus size={13} />,
       onSelect: () => setPrompt({ kind: 'new-folder', parentId: null }),
     },
@@ -378,7 +378,7 @@ export function Sidebar({
         */}
         <div className="sidebar-actions">
           <IconButton
-            label={anyExpanded ? 'Collapse all folders' : 'Expand all folders'}
+            label={t(anyExpanded ? 'sidebar.collapseAll' : 'sidebar.expandAll')}
             onClick={toggleAll}
             disabled={workspaceFolders.length === 0}
             testId="button-toggle-all-folders"
@@ -387,13 +387,13 @@ export function Sidebar({
           </IconButton>
           <span className="flex-1" />
           <IconButton
-            label="New folder"
+            label={t('sidebar.newFolder')}
             onClick={() => setPrompt({ kind: 'new-folder', parentId: null })}
             testId="button-new-folder"
           >
             <FolderPlus />
           </IconButton>
-          <IconButton label="New request" onClick={() => addRequest(null)} testId="button-new-request">
+          <IconButton label={t('sidebar.newRequest')} onClick={() => addRequest(null)} testId="button-new-request">
             <FilePlus2 />
           </IconButton>
         </div>
@@ -406,8 +406,8 @@ export function Sidebar({
           className="h-7 pl-[26px] pr-2 placeholder:text-[var(--text-faint)]"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Filter requests"
-          aria-label="Filter requests"
+          placeholder={t('sidebar.filter')}
+          aria-label={t('sidebar.filter')}
           data-testid="input-search-requests"
         />
       </div>
@@ -441,7 +441,7 @@ export function Sidebar({
         keep their words.
       */}
       <div className="sidebar-foot">
-        <IconButton label="Import from curl" onClick={onImportCurl} testId="button-import-curl">
+        <IconButton label={t('sidebar.importCurl')} onClick={onImportCurl} testId="button-import-curl">
           <Terminal />
         </IconButton>
         <Button variant="ghost" size="sm" onClick={onImport} data-testid="button-import">
@@ -456,18 +456,15 @@ export function Sidebar({
 
       {confirming?.kind === 'request' ? (
         <ConfirmDialog
-          title="Delete this request?"
-          message={
-            <>
-              <strong>{confirming.request.name}</strong> and its response history will be removed. You can undo this
-              from the notification straight afterwards.
-            </>
-          }
+          title={t('sidebar.deleteRequestTitle')}
+          message={tNodes('sidebar.deleteRequestMessage', {
+            name: <strong>{confirming.request.name}</strong>,
+          })}
           onCancel={() => setConfirming(null)}
           onConfirm={() => {
             deleteWithUndo(
               { type: 'request/delete', id: confirming.request.id },
-              { title: `Deleted ${confirming.request.name}` },
+              { title: t('sidebar.deleted', { name: confirming.request.name }) },
             );
             setConfirming(null);
           }}
@@ -476,20 +473,19 @@ export function Sidebar({
 
       {confirming?.kind === 'folder' ? (
         <ConfirmDialog
-          title="Delete this folder?"
-          message={
-            <>
-              <strong>{confirming.folder.name}</strong> takes everything inside it with it:{' '}
-              {requestsUnder(confirming.folder.id)} request
-              {requestsUnder(confirming.folder.id) === 1 ? '' : 's'} and any folders nested below. You can undo this
-              from the notification straight afterwards.
-            </>
-          }
+          title={t('sidebar.deleteFolderTitle')}
+          message={tNodes('sidebar.deleteFolderMessage', {
+            name: <strong>{confirming.folder.name}</strong>,
+            count: requestsUnder(confirming.folder.id),
+          })}
           onCancel={() => setConfirming(null)}
           onConfirm={() => {
             deleteWithUndo(
               { type: 'folder/delete', id: confirming.folder.id },
-              { title: `Deleted ${confirming.folder.name}`, detail: 'Everything inside it went too.' },
+              {
+                title: t('sidebar.deleted', { name: confirming.folder.name }),
+                detail: t('sidebar.deletedFolderDetail'),
+              },
             );
             setConfirming(null);
           }}
@@ -498,10 +494,10 @@ export function Sidebar({
 
       {prompt?.kind === 'new-folder' ? (
         <PromptDialog
-          title="New folder"
-          label="Folder name"
-          initialValue="New folder"
-          confirmLabel="Create folder"
+          title={t('sidebar.newFolder')}
+          label={t('sidebar.newFolderName')}
+          initialValue={t('sidebar.newFolder')}
+          confirmLabel={t('sidebar.newFolderCreate')}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {
             dispatch({
@@ -515,8 +511,8 @@ export function Sidebar({
 
       {prompt?.kind === 'rename-folder' ? (
         <PromptDialog
-          title="Rename folder"
-          label="Folder name"
+          title={t('sidebar.renameFolder')}
+          label={t('sidebar.newFolderName')}
           initialValue={prompt.folder.name}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {
@@ -528,8 +524,8 @@ export function Sidebar({
 
       {prompt?.kind === 'rename-request' ? (
         <PromptDialog
-          title="Rename request"
-          label="Request name"
+          title={t('sidebar.renameRequest')}
+          label={t('sidebar.requestName')}
           initialValue={prompt.request.name}
           onCancel={() => setPrompt(null)}
           onConfirm={(name) => {

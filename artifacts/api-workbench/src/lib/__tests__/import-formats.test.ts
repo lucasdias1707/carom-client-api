@@ -1,3 +1,4 @@
+import { translatorFor } from '@/locales';
 import { describe, expect, it } from 'vitest';
 import { detectFormat, readImport } from '@/lib/import-formats';
 import { pathToTemplate, sampleFromSchema } from '@/lib/openapi';
@@ -85,6 +86,9 @@ const har = {
     ],
   },
 };
+
+/** The exported document writes two lines of its own; these read them in English. */
+const t = translatorFor('en');
 
 describe('detectFormat', () => {
   it('tells the four apart by the marker each writer puts there', () => {
@@ -271,7 +275,7 @@ describe('OpenAPI into Docs', () => {
       activeFolderId: null,
       settings: defaultSettings(),
     } as unknown as WorkspaceState;
-    const doc = toOpenApi(state, { title: 'Orders', selected: new Set([request.id]) }) as any;
+    const doc = toOpenApi(state, { title: 'Orders', selected: new Set([request.id]) }, t) as any;
     const operation = doc.paths['/orders/{orderId}'].put;
     expect(operation.parameters.map((item: any) => [item.in, item.name, item.required])).toEqual([
       ['path', 'orderId', true],

@@ -11,7 +11,7 @@ import type { Action } from '@/state/actions';
  * value someone typed while the toast was still up.
  */
 export function useDeleteWithUndo() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const { toast } = useToast();
 
   return useCallback(
@@ -22,9 +22,9 @@ export function useDeleteWithUndo() {
         title: description.title,
         description: description.detail,
         kind: 'info',
-        action: { label: 'Undo', run: () => dispatch({ type: 'restore', previous }) },
+        action: { label: t('table.undo'), run: () => dispatch({ type: 'restore', previous }) },
       });
     },
-    [state, dispatch, toast],
+    [state, dispatch, t, toast],
   );
 }

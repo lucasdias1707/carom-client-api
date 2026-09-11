@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
  * link instead of a button, because those files belong to the package manager.
  */
 export function UpdatesSection() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const settings = state.settings;
   // The check itself runs app-wide, so opening this dialog shows whatever was
   // already found rather than starting again.
@@ -24,14 +24,14 @@ export function UpdatesSection() {
   return (
     <div>
       <div className="section-label">
-        Updates
+        {t('updates.title')}
         <span className="spacer" />
         <Button variant="secondary" size="sm"
           onClick={updates.check}
           disabled={updates.phase === 'checking' || updates.phase === 'downloading'}
           data-testid="button-check-updates"
         >
-          <RefreshCw /> {updates.phase === 'checking' ? 'Checking…' : 'Check now'}
+          <RefreshCw /> {t(updates.phase === 'checking' ? 'updates.checking' : 'updates.checkNow')}
         </Button>
       </div>
 
@@ -43,11 +43,11 @@ export function UpdatesSection() {
           }
           data-testid="checkbox-auto-check-updates"
         />
-        Check for new versions when the app starts
+        {t('updates.autoCheck')}
       </label>
 
       <div style={{ marginTop: 10 }} data-testid="text-update-status">
-        {updates.phase === 'current' ? <p className="hint">You are on the latest version.</p> : null}
+        {updates.phase === 'current' ? <p className="hint">{t('updates.current')}</p> : null}
 
         {updates.error ? (
           <p className="hint" style={{ color: 'var(--red)' }}>
@@ -58,8 +58,10 @@ export function UpdatesSection() {
         {updates.update && updates.phase !== 'ready' ? (
           <div className="stack" style={{ gap: 8 }}>
             <div>
-              <strong>Version {updates.update.version}</strong>{' '}
-              <span className="hint">is available — you have {updates.update.currentVersion}.</span>
+              <strong>{t('updates.availableVersion', { version: updates.update.version })}</strong>{' '}
+              <span className="hint">
+                {t('updates.availableNote', { current: updates.update.currentVersion })}
+              </span>
             </div>
 
             {updates.update.notes ? (
@@ -73,7 +75,7 @@ export function UpdatesSection() {
                   disabled={updates.phase === 'downloading'}
                   data-testid="button-download-update"
                 >
-                  <Download /> Download and install
+                  <Download /> {t('updates.download')}
                 </Button>
                 {updates.phase === 'downloading' ? (
                   <span className="hint mono">
@@ -90,12 +92,10 @@ export function UpdatesSection() {
                   rel="noreferrer"
                   data-testid="link-release-page"
                 >
-                  <Download /> Open the release page
+                  <Download /> {t('updates.openRelease')}
                 </a>
                 <p className="hint">
-                  This copy was installed from a <code>.deb</code> or <code>.rpm</code>, so the files belong to
-                  your package manager and the app must not overwrite them. Download the new package and install
-                  it the way you installed this one.
+                  {tNodes('updates.packageManager', { deb: <code>.deb</code>, rpm: <code>.rpm</code> })}
                 </p>
               </>
             )}
@@ -105,10 +105,10 @@ export function UpdatesSection() {
         {updates.phase === 'ready' ? (
           <div className="stack" style={{ gap: 8 }}>
             <p className="hint">
-              Version {updates.update?.version} is installed. It takes effect when the app restarts.
+              {t('updates.installed', { version: updates.update?.version ?? '' })}
             </p>
             <Button onClick={() => void restartApp()} data-testid="button-restart-app">
-              <RotateCw /> Restart now
+              <RotateCw /> {t('updates.restart')}
             </Button>
           </div>
         ) : null}

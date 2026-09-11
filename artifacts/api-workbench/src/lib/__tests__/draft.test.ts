@@ -24,20 +24,20 @@ describe('draftChanges', () => {
       headers: [row('Accept', 'application/json')],
       method: 'POST' as const,
     };
-    expect(draftChanges(saved, draft)).toEqual(['Method', 'URL', 'Headers']);
+    expect(draftChanges(saved, draft)).toEqual(['method', 'url', 'headers']);
   });
 
   it('counts every kind of body as the body', () => {
     const saved = base();
-    expect(draftChanges(saved, { ...saved, bodyType: 'json' })).toEqual(['Body']);
-    expect(draftChanges(saved, { ...saved, graphql: { query: '{ me }', variables: '' } })).toEqual(['Body']);
-    expect(draftChanges(saved, { ...saved, form: [row('a', 'b')] })).toEqual(['Body']);
+    expect(draftChanges(saved, { ...saved, bodyType: 'json' })).toEqual(['body']);
+    expect(draftChanges(saved, { ...saved, graphql: { query: '{ me }', variables: '' } })).toEqual(['body']);
+    expect(draftChanges(saved, { ...saved, form: [row('a', 'b')] })).toEqual(['body']);
   });
 
   it('notices a row that was only unticked', () => {
     const saved = { ...base(), params: [row('page', '2')] };
     const draft = { ...saved, params: [{ ...saved.params[0], enabled: false }] };
-    expect(draftChanges(saved, draft)).toEqual(['Params']);
+    expect(draftChanges(saved, draft)).toEqual(['params']);
   });
 });
 

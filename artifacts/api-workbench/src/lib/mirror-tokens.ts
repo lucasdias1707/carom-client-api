@@ -1,5 +1,6 @@
 import { lexJson, type JsonTokenKind } from '@/lib/json-lexer';
 import { VARIABLE_PATTERN } from '@/lib/template';
+import { dynamicVariable } from '@/lib/dynamic';
 import { lexXml, type XmlTokenKind } from '@/lib/xml';
 import type { VariableTable } from '@/types';
 
@@ -25,34 +26,102 @@ export type MirrorKind = JsonTokenKind | XmlTokenKind;
 export type MirrorToken = {
   kind: MirrorKind;
   text: string;
-  /** Set on a `{{...}}` span. `defined` is false when it resolves to nothing. */
-  variable?: { name: string; defined: boolean };
+  /**
+   * Set on a `{{...}}` span. `defined` is false when it resolves to nothing,
+   * and `dynamic` marks the third case: a generator, which has no value now
+   * and will have one when the request goes out.
+   */
+  variable?: { name: string; defined: boolean; dynamic: boolean };
 };
 
 /** What the editor can colour. `plain` is one uncoloured run. */
 export type MirrorLanguage = 'json' | 'xml' | 'plain';
 
-/** Split one token's text on its variables, keeping the token's own kind. */
-function splitToken(token: { kind: MirrorKind; text: string }, table: VariableTable): MirrorToken[] {
-  // `matchAll` needs a fresh lastIndex, and the pattern is a shared global.
-  const matches = [...token.text.matchAll(VARIABLE_PATTERN)];
-  if (matches.length === 0) return [token];
+/** Where each `{{...}}` sits in the whole string, and what it is. */
+type VariableSpan = { start: number; end: number; name: string };
 
-  const parts: MirrorToken[] = [];
-  let cursor = 0;
-  for (const match of matches) {
-    const index = match.index ?? 0;
-    if (index > cursor) parts.push({ kind: token.kind, text: token.text.slice(cursor, index) });
-    const name = match[1].trim();
-    parts.push({
-      kind: token.kind,
-      text: match[0],
-      variable: { name, defined: table[name] !== undefined },
+function variableSpans(value: string): VariableSpan[] {
+  return [...value.matchAll(VARIABLE_PATTERN)].map((match) => ({
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+    name: match[1].trim(),
+  }));
+}
+
+/**
+ * Lay the variable spans over the lexed tokens.
+ *
+ * Done against the whole string rather than inside each token, because a
+ * variable does not respect token boundaries. `{"n": {{count}}}` lexes its
+ * braces as separate pieces of punctuation with the name loose between them,
+ * so a per-token search found nothing to highlight — and an unquoted variable
+ * is exactly how a number or a boolean is written into a JSON body. It went
+ * out looking like plain text while working perfectly.
+ *
+ * Inside a string the variable does fall within one token, and that case has
+ * to keep working, which is why this splits spans over the lexer's output
+ * rather than lexing around them: the lexer still sees the string whole and
+ * still knows it is a string.
+ *
+ * The pieces of one span are emitted as a single token, taking the kind of the
+ * piece it started in, so a variable is one chip however many tokens it
+ * straddles.
+ */
+function applySpans(
+  tokens: Array<{ kind: MirrorKind; text: string }>,
+  value: string,
+  table: VariableTable,
+): MirrorToken[] {
+  const spans = variableSpans(value);
+  if (spans.length === 0) return tokens;
+
+  const out: MirrorToken[] = [];
+  let offset = 0;
+  /** The span being assembled, when a token ended in the middle of one. */
+  let open: { kind: MirrorKind; span: VariableSpan; text: string } | null = null;
+
+  const closeOpen = () => {
+    if (!open) return;
+    const { name } = open.span;
+    out.push({
+      kind: open.kind,
+      text: open.text,
+      variable: {
+        name,
+        defined: table[name] !== undefined,
+        dynamic: table[name] === undefined && dynamicVariable(name) !== null,
+      },
     });
-    cursor = index + match[0].length;
+    open = null;
+  };
+
+  for (const token of tokens) {
+    const start = offset;
+    const end = offset + token.text.length;
+    offset = end;
+
+    let cursor = start;
+    for (const span of spans) {
+      if (span.end <= cursor || span.start >= end) continue;
+      const from = Math.max(span.start, cursor);
+      const to = Math.min(span.end, end);
+      if (from > cursor) {
+        closeOpen();
+        out.push({ kind: token.kind, text: value.slice(cursor, from) });
+      }
+      if (open && open.span !== span) closeOpen();
+      if (!open) open = { kind: token.kind, span, text: '' };
+      open.text += value.slice(from, to);
+      if (to === span.end) closeOpen();
+      cursor = to;
+    }
+    if (cursor < end) {
+      closeOpen();
+      out.push({ kind: token.kind, text: value.slice(cursor, end) });
+    }
   }
-  if (cursor < token.text.length) parts.push({ kind: token.kind, text: token.text.slice(cursor) });
-  return parts;
+  closeOpen();
+  return out;
 }
 
 /**
@@ -77,5 +146,5 @@ export function mirrorTokens(
     language === 'json' ? lexJson(value)
     : language === 'xml' ? lexXml(value)
     : [{ kind: 'plain', text: value }];
-  return table === null ? base : base.flatMap((token) => splitToken(token, table));
+  return table === null ? base : applySpans(base, value, table);
 }

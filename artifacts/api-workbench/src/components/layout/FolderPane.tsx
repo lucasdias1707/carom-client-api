@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { useState } from 'react';
 import { Download, FilePlus2, FolderPlus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -17,11 +18,11 @@ import { Input } from '@/components/ui/input';
 
 type FolderTab = 'variables' | 'auth' | 'scripts' | 'docs';
 
-const TABS: Array<{ id: FolderTab; label: string }> = [
-  { id: 'variables', label: 'Variables' },
-  { id: 'auth', label: 'Auth' },
-  { id: 'scripts', label: 'Scripts' },
-  { id: 'docs', label: 'Docs' },
+const TABS: Array<{ id: FolderTab; label: MessageKey }> = [
+  { id: 'variables', label: 'folder.tab.variables' },
+  { id: 'auth', label: 'request.tab.auth' },
+  { id: 'scripts', label: 'request.tab.scripts' },
+  { id: 'docs', label: 'request.tab.docs' },
 ];
 
 /**
@@ -32,7 +33,7 @@ const TABS: Array<{ id: FolderTab; label: string }> = [
  * That is the whole reason a folder is a unit and not just a label.
  */
 export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (selection?: string[]) => void }) {
-  const { state, dispatch, chainFor, tableFor } = useWorkspace();
+  const { state, dispatch, chainFor, tableFor, t, tNodes } = useWorkspace();
   const [tab, setTab] = useState<FolderTab>('variables');
   const [confirming, setConfirming] = useState(false);
   const deleteWithUndo = useDeleteWithUndo();
@@ -64,42 +65,42 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
       request: createRequest({
         workspaceId: folder.workspaceId,
         folderId: folder.id,
-        name: 'New request',
+        name: t('sidebar.newRequest'),
         sortIndex: state.requests.length,
       }),
     });
 
   return (
-    <section className="pane" aria-label="Folder" data-testid="folder-pane">
+    <section className="pane" aria-label={t('pane.folder')} data-testid="folder-pane">
       <div className="folder-head">
         <Input
           className="folder-title"
           value={folder.name}
           onChange={(event) => patch({ name: event.target.value })}
-          aria-label="Folder name"
+          aria-label={t('folder.name')}
           data-testid="input-folder-name"
         />
-        <IconButton label="New request in this folder" onClick={addRequest} testId="button-folder-new-request">
+        <IconButton label={t('folder.newRequest')} onClick={addRequest} testId="button-folder-new-request">
           <FilePlus2 />
         </IconButton>
-        <IconButton label="New folder inside"
+        <IconButton label={t('folder.newFolder')}
           onClick={() =>
             dispatch({
               type: 'folder/create',
-              folder: createFolder(folder.workspaceId, 'New folder', folder.id, state.folders.length),
+              folder: createFolder(folder.workspaceId, t('folder.newFolderName'), folder.id, state.folders.length),
             })
           }
           testId="button-folder-new-folder"
         >
           <FolderPlus />
         </IconButton>
-        <IconButton label="Export folder"
+        <IconButton label={t('folder.export')}
           onClick={() => onExport(subtreeSelection(state, folder.id))}
           testId="button-folder-export"
         >
           <Download />
         </IconButton>
-        <IconButton label="Delete folder" tone="danger"
+        <IconButton label={t('folder.delete')} tone="danger"
           onClick={() => setConfirming(true)}
           testId="button-folder-delete"
         >
@@ -115,7 +116,7 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
             onClick={() => setTab(item.id)}
             data-testid={`tab-folder-${item.id}`}
           >
-            {item.label}
+            {t(item.label)}
             {item.id === 'variables' && folder.variables.length > 0 ? (
               <span className="badge">{folder.variables.length}</span>
             ) : null}
@@ -123,7 +124,7 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
               <span className="badge">{folder.auth.type}</span>
             ) : null}
             {item.id === 'scripts' && (folder.preScript.trim() || folder.postScript.trim()) ? (
-              <span className="badge">on</span>
+              <span className="badge">{t('request.scriptsOn')}</span>
             ) : null}
           </button>
         ))}
@@ -134,18 +135,16 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
           <div className="pane-pad stack">
             <div className="section-label">
               <span className="var-dot" style={{ background: LOCAL_VARIABLE_COLOR }} />
-              Local variables
+              {t('folder.localVariables')}
             </div>
             <KeyValueTable
               items={folder.variables}
               onChange={(variables) => dispatch({ type: 'folder/variables', id: folder.id, variables })}
-              keyPlaceholder="Variable"
+              keyPlaceholder={t('folder.variablePlaceholder')}
               testPrefix="folder-var"
             />
             <p className="hint">
-              These apply to every request in this folder and in the folders under it, and they win over the
-              environment. A nearer folder wins over an outer one. They always render blue, so a local override is
-              visible at a glance.
+              {t('folder.variablesHint')}
             </p>
           </div>
         ) : null}
@@ -172,20 +171,22 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
 
         {tab === 'docs' ? (
           <div className="pane-pad stack">
-            <div className="section-label">Where it sits</div>
+            <div className="section-label">{t('folder.whereItSits')}</div>
             <p className="hint">
-              {path.length > 0 ? `Inside ${path.join(' / ')}. ` : 'At the root of this workspace. '}
-              {childCount} request{childCount === 1 ? '' : 's'} directly inside, {nestedCount} counting the folders
-              below it.
+              {path.length > 0 ? t('folder.insidePath', { path: path.join(' / ') }) : t('folder.atRoot')}{' '}
+              {t('folder.counts', {
+                direct: t('count.requests', { count: childCount }),
+                nested: t('count.requests', { count: nestedCount }),
+              })}
             </p>
-            <div className="section-label">Colour</div>
+            <div className="section-label">{t('folder.colour')}</div>
             <input
               type="color"
               className=""
               style={{ width: 72, padding: 3 }}
               value={folder.color}
               onChange={(event) => patch({ color: event.target.value })}
-              aria-label="Folder colour"
+              aria-label={t('folder.colourAria')}
               data-testid="input-folder-color"
             />
           </div>
@@ -193,19 +194,19 @@ export function FolderPane({ folder, onExport }: { folder: Folder; onExport: (se
       </div>
       {confirming ? (
         <ConfirmDialog
-          title="Delete this folder?"
-          message={
-            <>
-              <strong>{folder.name}</strong> takes everything inside it with it: {nestedCount} request
-              {nestedCount === 1 ? '' : 's'} and any folders nested below. You can undo this from the notification
-              straight afterwards.
-            </>
-          }
+          title={t('sidebar.deleteFolderTitle')}
+          message={tNodes('sidebar.deleteFolderMessage', {
+            name: <strong>{folder.name}</strong>,
+            count: nestedCount,
+          })}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             deleteWithUndo(
               { type: 'folder/delete', id: folder.id },
-              { title: `Deleted ${folder.name}`, detail: 'Everything inside it went too.' },
+              {
+                title: t('sidebar.deleted', { name: folder.name }),
+                detail: t('sidebar.deletedFolderDetail'),
+              },
             );
             setConfirming(false);
           }}

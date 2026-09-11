@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Check, Plus } from 'lucide-react';
+import { Check, Dices, Plus } from 'lucide-react';
 import { LOCAL_VARIABLE_COLOR } from '@/lib/template';
+import { dynamicVariable, generateDynamic, looksDynamic } from '@/lib/dynamic';
 import { row } from '@/lib/factories';
 import { useWorkspace } from '@/state/workspace-store';
 import type { ResolvedVariable } from '@/types';
@@ -32,8 +33,17 @@ type VariablePopoverProps = {
  * somewhere else. Clicking into the value field is what hands focus over.
  */
 export function VariablePopover({ name, variable, anchor, onPointerEnter, onPointerLeave, onClose }: VariablePopoverProps) {
-  const { state, dispatch, activeRequest } = useWorkspace();
+  const { state, dispatch, activeRequest, t, tNodes, dataLanguage } = useWorkspace();
   const [value, setValue] = useState(variable?.value ?? '');
+
+  /*
+    A generator is shown, not edited: there is nothing to define, and the only
+    useful thing to say about it is what it produces. The sample is held in
+    state rather than generated on render, because a value that changed every
+    time React repainted would be impossible to read.
+  */
+  const generator = variable ? null : dynamicVariable(name);
+  const [sample, setSample] = useState(() => (generator ? generator.generate(dataLanguage) : ''));
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId,
@@ -117,7 +127,7 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
         align="start"
         sideOffset={6}
         className="var-popover w-[min(360px,calc(100vw-20px))] p-2.5"
-        aria-label={`Edit ${name}`}
+        aria-label={t('variable.editAria', { name })}
         onOpenAutoFocus={(event) => event.preventDefault()}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
@@ -131,19 +141,47 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
         <span className="spacer" />
         {variable ? (
           <Badge variant="outline" className="chip" style={{ color: accent }}>
-            {variable.scope === 'folder' ? 'local' : 'global'}
+            {t(variable.scope === 'folder' ? 'variable.local' : 'variable.global')}
+          </Badge>
+        ) : generator ? (
+          <Badge variant="outline" className="chip" style={{ color: 'var(--purple)' }}>
+            {t('dynamic.badge')}
           </Badge>
         ) : (
           <Badge variant="outline" className="chip" style={{ color: 'var(--red)' }}>
-            undefined
+            {t('variable.undefined')}
           </Badge>
         )}
       </div>
 
-      {variable ? (
+      {generator ? (
+        <>
+          <div className="var-popover-origin">{t('dynamic.explain')}</div>
+          <div className="var-popover-row">
+            <span className="hint">{t('dynamic.sample')}</span>
+            <span className="mono truncate" style={{ flex: 1, minWidth: 0 }} data-testid="text-dynamic-sample">
+              {sample}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSample(generateDynamic(name, dataLanguage) ?? '')}
+              data-testid="button-dynamic-another"
+            >
+              <Dices size={12} /> {t('dynamic.another')}
+            </Button>
+          </div>
+        </>
+      ) : !variable && looksDynamic(name) ? (
+        <div className="var-popover-origin" data-testid="text-dynamic-unknown">
+          {t('dynamic.unknown', { name })}
+        </div>
+      ) : variable ? (
         <>
           <div className="var-popover-origin">
-            from {variable.scope === 'folder' ? 'folder' : 'environment'} <strong>{variable.sourceName}</strong>
+            {tNodes(variable.scope === 'folder' ? 'variable.fromFolder' : 'variable.fromEnvironment', {
+              name: <strong>{variable.sourceName}</strong>,
+            })}
           </div>
           <div className="var-popover-row">
             <Input
@@ -153,23 +191,23 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
               onKeyDown={(event) => {
                 if (event.key === 'Enter') save();
               }}
-              aria-label={`Value of ${name}`}
+              aria-label={t('variable.valueAria', { name })}
               data-testid="input-variable-value"
             />
             <Button onClick={save} data-testid="button-save-variable">
-              <Check /> Save
+              <Check /> {t('common.save')}
             </Button>
           </div>
           {variable.shadowed.length > 0 ? (
             <div className="var-popover-shadowed">
-              overrides{' '}
+              {t('variable.overrides')}{' '}
               {variable.shadowed.map((origin, index) => (
                 <span key={`${origin.sourceId}-${index}`}>
                   {index > 0 ? ', ' : ''}
                   <span style={{ color: origin.scope === 'folder' ? LOCAL_VARIABLE_COLOR : origin.color }}>
                     {origin.sourceName}
                   </span>
-                  <span className="mono"> = {origin.value || '(empty)'}</span>
+                  <span className="mono"> = {origin.value || t('variable.emptyValue')}</span>
                 </span>
               ))}
             </div>
@@ -177,14 +215,14 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
         </>
       ) : (
         <>
-          <div className="var-popover-origin">Not defined yet. Give it a value and pick where it lives.</div>
+          <div className="var-popover-origin">{t('variable.notDefined')}</div>
           <div className="var-popover-row">
             <Input
               className="font-mono"
               value={value}
-              placeholder="Value"
+              placeholder={t('variable.valuePlaceholder')}
               onChange={(event) => setValue(event.target.value)}
-              aria-label={`Value of ${name}`}
+              aria-label={t('variable.valueAria', { name })}
               data-testid="input-variable-value"
             />
           </div>
@@ -199,10 +237,12 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
                 onChange={setChosenId}
                 options={environments.map((environment) => ({
                   value: environment.id,
-                  label: environment.isBase ? `${environment.name} (every environment)` : environment.name,
+                  label: environment.isBase
+                    ? t('variable.everyEnvironment', { name: environment.name })
+                    : environment.name,
                 }))}
-                placeholder="Which environment?"
-                ariaLabel="Environment for this variable"
+                placeholder={t('variable.whichEnvironment')}
+                ariaLabel={t('variable.environmentAria')}
                 testId="select-variable-environment"
                 block
               />
@@ -212,24 +252,24 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
             <Button variant="secondary" size="sm"
               onClick={() => define('folder')}
               disabled={!folder}
-              title={folder ? `Local to ${folder.name}` : 'This request is not in a folder'}
+              title={folder ? t('variable.localTo', { name: folder.name }) : t('variable.notInFolder')}
               data-testid="button-define-local"
             >
-              <Plus /> Local {folder ? `(${folder.name})` : ''}
+              <Plus />{' '}
+              {folder ? t('variable.localButtonNamed', { name: folder.name }) : t('variable.localButton')}
             </Button>
             <Button variant="secondary" size="sm"
               onClick={() => define('global')}
               disabled={!target}
               title={
-                target
-                  ? `Goes into the ${target.name} environment`
-                  : environments.length === 0
-                    ? 'This workspace has no environment'
-                    : 'Pick the environment above first'
+                target ? t('variable.goesInto', { name: target.name })
+                : environments.length === 0 ? t('variable.noEnvironments')
+                : t('variable.pickEnvironment')
               }
               data-testid="button-define-global"
             >
-              <Plus /> Global {target ? `(${target.name})` : ''}
+              <Plus />{' '}
+              {target ? t('variable.globalButtonNamed', { name: target.name }) : t('variable.globalButton')}
             </Button>
           </div>
         </>

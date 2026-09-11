@@ -24,7 +24,7 @@ type CopyVariablesDialogProps = {
  * worth deciding about rather than defaulting through.
  */
 export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVariablesDialogProps) {
-  const { state } = useWorkspace();
+  const { state, t } = useWorkspace();
 
   const sources = useMemo(
     () =>
@@ -79,54 +79,61 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
 
   return (
     <Dialog
-      title={`Copy variables into ${destination.name}`}
-      description="Take the names from somewhere that already has them, then change the values that differ."
+      title={t('copy.title', { name: destination.name })}
+      description={t('copy.description')}
       onClose={onClose}
       testId="dialog-copy-variables"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={apply}
             disabled={chosen.length === 0}
             data-testid="button-confirm-copy-variables"
           >
-            <ArrowDownToLine /> Copy {chosen.length || ''}
+            <ArrowDownToLine />{' '}
+            {chosen.length > 0 ? t('copy.confirmCount', { count: chosen.length }) : t('copy.confirm')}
           </Button>
         </>
       }
     >
       {sources.length === 0 ? (
         <p className="hint" data-testid="text-no-sources">
-          There is nowhere to copy from yet — this is the only place in the workspace holding variables.
+          {t('copy.noSources')}
         </p>
       ) : (
         <div className="stack" style={{ gap: 10 }}>
-          <div className="section-label">Copy from</div>
+          <div className="section-label">{t('copy.from')}</div>
           <SelectField
             value={sourceId}
             onChange={setSourceId}
-            options={sources.map((item) => ({ value: item.id, label: `${item.name} (${item.kind})` }))}
-            ariaLabel="Copy from"
+            options={sources.map((item) => ({
+              value: item.id,
+              label: t('copy.sourceOption', {
+                name: item.name,
+                kind: t(item.kind === 'folder' ? 'copy.kind.folder' : 'copy.kind.environment'),
+              }),
+            }))}
+            ariaLabel={t('copy.from')}
             testId="select-copy-source"
             block
           />
 
           <div className="section-label">
-            Variables
+            {t('environments.variables')}
             <span className="spacer" />
             <span className="hint" style={{ fontSize: 'var(--fs-10)' }}>
               {copyable.filter((item) => item.conflict).length > 0
-                ? 'names already here start unticked'
-                : `${copyable.length} available`}
+                ? t('copy.conflictsHint')
+                : t('copy.availableHint', { count: copyable.length })}
             </span>
           </div>
 
           <div className="pick-tree" data-testid="copy-variable-list">
             {copyable.length === 0 ? (
-              <div className="tree-empty">That one has no variables to copy.</div>
+              <div className="tree-empty">{t('copy.noneToCopy')}</div>
             ) : (
               copyable.map((item) => {
                 const on = picked.has(item.key);
@@ -142,11 +149,11 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
                       {item.key}
                     </span>
                     <span className="hint mono truncate" style={{ flex: 1, minWidth: 0 }}>
-                      {withValues ? item.value || '(empty)' : '(blank)'}
+                      {withValues ? item.value || t('variable.emptyValue') : t('copy.blank')}
                     </span>
                     {item.conflict ? (
                       <Badge variant="outline" className="chip" style={{ color: 'var(--yellow)' }}>
-                        replaces
+                        {t('copy.replaces')}
                       </Badge>
                     ) : null}
                   </label>
@@ -161,11 +168,10 @@ export function CopyVariablesDialog({ destination, onApply, onClose }: CopyVaria
               onCheckedChange={(checked) => setWithValues(checked === true)}
               data-testid="checkbox-copy-values"
             />
-            Copy the values too
+            {t('copy.withValues')}
           </label>
           <p className="hint">
-            Leave that off to bring only the names across — which is usually what a Staging copied from Production
-            wants, since the keys match and every value differs.
+            {t('copy.withValuesHint')}
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { discoverFields, docField, fieldsOf, mergeFields } from '@/lib/docs';
 import { DOC_FIELD_LOCATIONS, DOC_FIELD_TYPES, type DocField, type RequestRecord } from '@/types';
+import { useT } from '@/state/workspace-store';
 
 /**
  * The field table in the Docs tab.
@@ -24,6 +25,7 @@ export function DocFieldsTable({
   onChange: (fields: DocField[]) => void;
 }) {
   const { toast } = useToast();
+  const t = useT();
   const fields = fieldsOf(request);
 
   const update = (id: string, patch: Partial<DocField>) =>
@@ -33,11 +35,11 @@ export function DocFieldsTable({
     const { fields: merged, added } = mergeFields(fields, discoverFields(request));
     onChange(merged);
     toast({
-      title: added === 0 ? 'Nothing new to add' : `Added ${added} field${added === 1 ? '' : 's'}`,
+      title: added === 0 ? t('docs.nothingNew') : t('docs.added', { count: added }),
       description:
         added === 0
-          ? 'Every parameter, header and body key is already in the table.'
-          : 'Descriptions you had written were left as they are.',
+          ? t('docs.allPresent')
+          : t('docs.keptDescriptions'),
       kind: added === 0 ? 'info' : 'success',
     });
   };
@@ -70,12 +72,12 @@ export function DocFieldsTable({
         <div className="doc-fields-scroll">
           <div className="doc-fields" data-testid="doc-fields">
           <div className="kv-head">
-            <span>In</span>
-            <span>Name</span>
-            <span>Type</span>
-            <span>Req</span>
-            <span>Example</span>
-            <span>Description</span>
+            <span>{t('docs.column.in')}</span>
+            <span>{t('common.name')}</span>
+            <span>{t('docs.column.type')}</span>
+            <span>{t('docs.column.required')}</span>
+            <span>{t('docs.column.example')}</span>
+            <span>{t('common.description')}</span>
             <span />
           </div>
           {fields.map((field) => (
@@ -94,9 +96,9 @@ export function DocFieldsTable({
               <div className="kv-cell">
                 <input
                   value={field.name}
-                  placeholder="name"
+                  placeholder={t('docs.namePlaceholder')}
                   onChange={(event) => update(field.id, { name: event.target.value })}
-                  aria-label="Field name"
+                  aria-label={t('docs.nameAria')}
                   data-testid={`input-field-name-${field.id}`}
                 />
               </div>
@@ -115,31 +117,31 @@ export function DocFieldsTable({
                 <Checkbox
                   checked={field.required}
                   onCheckedChange={(checked) => update(field.id, { required: checked === true })}
-                  aria-label={`${field.name || 'This field'} is required`}
+                  aria-label={t('docs.requiredAria', { name: field.name || t('docs.thisField') })}
                   data-testid={`checkbox-field-required-${field.id}`}
                 />
               </div>
               <div className="kv-cell">
                 <input
                   value={field.example}
-                  placeholder="example"
+                  placeholder={t('docs.examplePlaceholder')}
                   onChange={(event) => update(field.id, { example: event.target.value })}
-                  aria-label="Example value"
+                  aria-label={t('docs.exampleAria')}
                   data-testid={`input-field-example-${field.id}`}
                 />
               </div>
               <div className="kv-cell">
                 <input
                   value={field.description}
-                  placeholder="what it is for"
+                  placeholder={t('docs.descriptionPlaceholder')}
                   onChange={(event) => update(field.id, { description: event.target.value })}
-                  aria-label="Field description"
+                  aria-label={t('docs.descriptionAria')}
                   data-testid={`input-field-description-${field.id}`}
                 />
               </div>
               <div className="kv-cell center">
                 <IconButton
-                  label="Remove this field"
+                  label={t('docs.remove')}
                   onClick={() => onChange(fields.filter((item) => item.id !== field.id))}
                   testId={`button-remove-field-${field.id}`}
                 >

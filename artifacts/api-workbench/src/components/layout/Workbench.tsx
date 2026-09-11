@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Columns2,
+  Dices,
   Download,
   FilePlus2,
   FolderInput,
@@ -23,6 +24,7 @@ import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
+import { DynamicVariablesDialog } from '@/components/dialogs/DynamicVariablesDialog';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
 import { FolderPane } from '@/components/layout/FolderPane';
 import { SidebarResizer } from '@/components/layout/SidebarResizer';
@@ -58,10 +60,11 @@ type Overlay =
   | 'import'
   | 'export'
   | 'shortcuts'
+  | 'dynamic'
   | null;
 
 export function Workbench() {
-  const { state, dispatch, activeRequest, activeFolder } = useWorkspace();
+  const { state, dispatch, activeRequest, activeFolder, t, tNodes } = useWorkspace();
   const { toast } = useToast();
   const { status: proxyStatus } = useProxyHealth();
   const { sending, send, cancel, scriptLogs, scriptTests } = useSendRequest(proxyStatus);
@@ -99,7 +102,7 @@ export function Workbench() {
       request: createRequest({
         workspaceId: state.activeWorkspaceId,
         folderId: activeRequest?.folderId ?? null,
-        name: 'New request',
+        name: t('sidebar.newRequest'),
         sortIndex: state.requests.length,
       }),
     });
@@ -138,7 +141,11 @@ export function Workbench() {
   const saveActive = () => {
     if (!state.activeRequestId) return;
     if (!state.drafts[state.activeRequestId]) {
-      toast({ title: 'Nothing to save', description: 'This request has no unsaved changes.', kind: 'info' });
+      toast({
+        title: t('workbench.nothingToSave'),
+        description: t('workbench.nothingToSaveDetail'),
+        kind: 'info',
+      });
       return;
     }
     dispatch({ type: 'request/save', id: state.activeRequestId });
@@ -146,7 +153,7 @@ export function Workbench() {
 
   const sendActive = () => {
     if (!activeRequest) {
-      toast({ title: 'Nothing to send', description: 'Open a request first.', kind: 'info' });
+      toast({ title: t('workbench.nothingToSend'), description: t('workbench.nothingToSendDetail'), kind: 'info' });
       return;
     }
     void send(activeRequest);
@@ -183,19 +190,20 @@ export function Workbench() {
   ]);
 
   const commands: Command[] = [
-    { id: 'new-request', label: 'New request', icon: <FilePlus2 size={13} />, hint: formatBinding(bindings.newRequest), run: newRequest },
-    { id: 'send', label: 'Send request', icon: <Send size={13} />, hint: formatBinding(bindings.send), run: sendActive },
-    { id: 'save', label: 'Save the request', icon: <Save size={13} />, hint: formatBinding(bindings.saveRequest), run: saveActive },
-    { id: 'search-tabs', label: 'Search the open tabs', icon: <Search size={13} />, hint: formatBinding(bindings.searchTabs), run: () => setOverlay('palette.tabs') },
-    { id: 'environments', label: 'Edit environments', icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
-    { id: 'import-curl', label: 'Import from curl', icon: <Terminal size={13} />, run: () => setOverlay('curl') },
-    { id: 'import-file', label: 'Import from another tool', icon: <FolderInput size={13} />, run: () => setOverlay('import') },
-    { id: 'export', label: 'Export requests and environments', icon: <Download size={13} />, run: () => openExport() },
-    { id: 'settings', label: 'Settings', icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
-    { id: 'shortcuts', label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
+    { id: 'new-request', label: t('sidebar.newRequest'), icon: <FilePlus2 size={13} />, hint: formatBinding(bindings.newRequest), run: newRequest },
+    { id: 'send', label: t('workbench.send'), icon: <Send size={13} />, hint: formatBinding(bindings.send), run: sendActive },
+    { id: 'save', label: t('workbench.save'), icon: <Save size={13} />, hint: formatBinding(bindings.saveRequest), run: saveActive },
+    { id: 'search-tabs', label: t('tabs.search'), icon: <Search size={13} />, hint: formatBinding(bindings.searchTabs), run: () => setOverlay('palette.tabs') },
+    { id: 'environments', label: t('workbench.environments'), icon: <Layers size={13} />, hint: formatBinding(bindings.environments), run: () => setOverlay('environments') },
+    { id: 'import-curl', label: t('sidebar.importCurl'), icon: <Terminal size={13} />, run: () => setOverlay('curl') },
+    { id: 'import-file', label: t('workbench.importFile'), icon: <FolderInput size={13} />, run: () => setOverlay('import') },
+    { id: 'export', label: t('workbench.export'), icon: <Download size={13} />, run: () => openExport() },
+    { id: 'settings', label: t('settings.title'), icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
+    { id: 'shortcuts', label: t('workbench.shortcuts'), icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
+    { id: 'dynamic', label: t('dynamic.open'), icon: <Dices size={13} />, run: () => setOverlay('dynamic') },
     {
       id: 'layout',
-      label: state.settings.layout === 'horizontal' ? 'Stack the panes' : 'Place panes side by side',
+      label: t(state.settings.layout === 'horizontal' ? 'workbench.stackPanes' : 'workbench.sideBySide'),
       icon: state.settings.layout === 'horizontal' ? <Rows2 size={13} /> : <Columns2 size={13} />,
       run: () =>
         dispatch({
@@ -243,7 +251,7 @@ export function Workbench() {
             always reachable.
           */}
           <IconButton
-            label={sidebarVisible ? 'Hide the sidebar' : 'Show the sidebar'}
+            label={t(sidebarVisible ? 'workbench.hideSidebar' : 'workbench.showSidebar')}
             onClick={() => setSidebarVisible(!sidebarVisible)}
             hint={formatBinding(bindings.toggleSidebar)}
             testId="button-toggle-sidebar"
@@ -262,14 +270,14 @@ export function Workbench() {
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
-            <IconButton label="Environments"
+            <IconButton label={t('workbench.environmentsShort')}
               onClick={() => setOverlay('environments')}
               hint={formatBinding(bindings.environments)}
               testId="button-environments"
             >
               <Layers />
             </IconButton>
-            <IconButton label="Switch pane layout"
+            <IconButton label={t('workbench.switchLayout')}
               onClick={() =>
                 dispatch({
                   type: 'settings/update',
@@ -281,7 +289,7 @@ export function Workbench() {
               {state.settings.layout === 'horizontal' ? <Rows2 /> : <Columns2 />}
             </IconButton>
             <UpdateBadge />
-            <IconButton label="Settings"
+            <IconButton label={t('settings.title')}
               onClick={() => setOverlay('settings')}
               hint={formatBinding(bindings.settings)}
               testId="button-settings"
@@ -318,12 +326,14 @@ export function Workbench() {
               <div className="empty-icon">
                 <Send size={19} />
               </div>
-              <h3>No request open</h3>
+              <h3>{t('workbench.emptyTitle')}</h3>
               <p>
-                Pick one from the sidebar, or press <span className="kbd">{formatBinding(bindings.newRequest)}</span> to start a new one.
+                {tNodes('workbench.emptyBody', {
+                  shortcut: <span className="kbd">{formatBinding(bindings.newRequest)}</span>,
+                })}
               </p>
               <Button style={{ marginTop: 14 }} onClick={newRequest} data-testid="button-empty-new-request">
-                <FilePlus2 /> New request
+                <FilePlus2 /> {t('sidebar.newRequest')}
               </Button>
             </div>
           </div>
@@ -361,20 +371,18 @@ export function Workbench() {
         <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
       ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'dynamic' ? <DynamicVariablesDialog onClose={() => setOverlay(null)} /> : null}
       {closing ? (
         <ConfirmDialog
-          title={closing.length === 1 ? 'Save before closing?' : 'Save before closing these tabs?'}
-          message={
-            <>
-              {unsavedAmong(closing)
-                .map((id) => state.requests.find((request) => request.id === id)?.name ?? 'A request')
-                .join(', ')}{' '}
-              {unsavedAmong(closing).length === 1 ? 'has' : 'have'} changes that were never saved. Closing without
-              saving throws them away.
-            </>
-          }
-          confirmLabel="Save and close"
-          secondaryLabel="Close without saving"
+          title={t(closing.length === 1 ? 'workbench.closeOneTitle' : 'workbench.closeManyTitle')}
+          message={t('workbench.closeMessage', {
+            count: unsavedAmong(closing).length,
+            names: unsavedAmong(closing)
+              .map((id) => state.requests.find((request) => request.id === id)?.name ?? t('workbench.closeUnnamed'))
+              .join(', '),
+          })}
+          confirmLabel={t('workbench.saveAndClose')}
+          secondaryLabel={t('workbench.closeWithoutSaving')}
           tone="default"
           onConfirm={() => finishClosing(true)}
           onSecondary={() => finishClosing(false)}

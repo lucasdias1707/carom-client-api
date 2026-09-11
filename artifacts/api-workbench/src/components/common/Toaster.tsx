@@ -1,7 +1,8 @@
-import { type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
+import { useT } from '@/state/workspace-store';
 
 type ToastKind = 'success' | 'error' | 'info';
 
@@ -52,18 +53,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 /**
  * Kept as a hook, and kept returning `{ toast }`, so the thirty-odd call sites
  * did not have to change when what is underneath did.
+ *
+ * The dismiss label is bound here rather than read inside the toast: a toast
+ * is drawn by sonner outside this tree, where a hook cannot reach. Memoised on
+ * the label itself so `toast` keeps its identity between renders — several
+ * callers list it in a dependency array, and a new function each render would
+ * turn those into loops.
  */
 export function useToast(): ToastApi {
-  return { toast: showToast };
+  const dismissLabel = useT()('common.dismiss');
+  return useMemo(() => ({ toast: (options) => showToast(options, dismissLabel) }), [dismissLabel]);
 }
 
-function showToast({
-  title,
-  description,
-  kind = 'info',
-  action,
-  durationMs,
-}: Parameters<ToastApi['toast']>[0]): void {
+function showToast(
+  { title, description, kind = 'info', action, durationMs }: Parameters<ToastApi['toast']>[0],
+  dismissLabel: string,
+): void {
   sonnerToast.custom(
     (id) => (
       <div className={`toast ${kind}`} role="status" data-testid="status-toast">
@@ -93,7 +98,7 @@ function showToast({
         <button
           className="toast-close"
           onClick={() => sonnerToast.dismiss(id)}
-          aria-label="Dismiss"
+          aria-label={dismissLabel}
           data-testid="button-toast-close"
         >
           <X size={11} />

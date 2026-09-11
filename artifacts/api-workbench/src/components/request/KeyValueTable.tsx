@@ -4,6 +4,7 @@ import { row } from '@/lib/factories';
 import type { KeyValue } from '@/types';
 import { IconButton } from '@/components/common/IconButton';
 import { useToast } from '@/components/common/Toaster';
+import { useT } from '@/state/workspace-store';
 import { describeFile, dropFile, putFile } from '@/lib/files';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -35,12 +36,17 @@ type KeyValueTableProps = {
 export function KeyValueTable({
   items,
   onChange,
-  keyPlaceholder = 'Name',
-  valuePlaceholder = 'Value',
+  keyPlaceholder: keyLabel,
+  valuePlaceholder: valueLabel,
   testPrefix,
   allowFiles = false,
 }: KeyValueTableProps) {
   const { toast } = useToast();
+  const t = useT();
+  // Defaulted here rather than in the signature: the fallbacks are words, and
+  // words need the catalogue, which a default parameter cannot reach.
+  const keyPlaceholder = keyLabel ?? t('common.name');
+  const valuePlaceholder = valueLabel ?? t('common.value');
   const pickerRef = useRef<HTMLInputElement>(null);
   const pickingFor = useRef<number>(-1);
   const rows = [...items, row('', '', true)];
@@ -65,7 +71,7 @@ export function KeyValueTable({
     toast({
       title: `Removed ${removed.key.trim() || 'the empty row'}`,
       kind: 'info',
-      action: { label: 'Undo', run: () => onChange(previous) },
+      action: { label: t('table.undo'), run: () => onChange(previous) },
     });
   };
 
@@ -106,7 +112,7 @@ export function KeyValueTable({
                 spellCheck={false}
                 placeholder={isPlaceholder ? keyPlaceholder : ''}
                 onChange={(event) => update(index, { key: event.target.value })}
-                aria-label={`${keyPlaceholder} ${index + 1}`}
+                aria-label={t('table.rowAria', { label: keyPlaceholder, index: index + 1 })}
                 data-testid={`input-${testPrefix}-key-${index}`}
               />
             </div>
@@ -134,7 +140,7 @@ export function KeyValueTable({
                   spellCheck={false}
                   placeholder={isPlaceholder ? valuePlaceholder : ''}
                   onChange={(event) => update(index, { value: event.target.value })}
-                  aria-label={`${valuePlaceholder} ${index + 1}`}
+                  aria-label={t('table.rowAria', { label: valuePlaceholder, index: index + 1 })}
                   data-testid={`input-${testPrefix}-value-${index}`}
                 />
               )}

@@ -24,46 +24,46 @@ const POST_PLACEHOLDER = `// const body = carom.json();
  * it stays visible rather than being tucked into a tooltip.
  */
 export function ScriptEditor({ preScript, postScript, onChange, subject, testPrefix }: ScriptEditorProps) {
-  const { variableTable } = useWorkspace();
-  const scope =
-    subject === 'folder'
-      ? 'These run around every request in this folder, outside any script the request itself has.'
-      : 'These run only for this request, inside any script its folders have.';
+  const { variableTable, t, tNodes } = useWorkspace();
 
   return (
     <div className="pane-pad stack">
-      <div className="section-label">Pre-request script</div>
+      <div className="section-label">{t('scripts.pre')}</div>
       <CodeEditor
         variables={variableTable}
         value={preScript}
         onChange={(value) => onChange({ preScript: value })}
         language="plain"
         placeholder={PRE_PLACEHOLDER}
-        ariaLabel="Pre-request script"
+        ariaLabel={t('scripts.pre')}
         testId={`${testPrefix}-pre-script`}
         style={{ minHeight: 130 }}
       />
 
-      <div className="section-label">Post-response script</div>
+      <div className="section-label">{t('scripts.post')}</div>
       <CodeEditor
         variables={variableTable}
         value={postScript}
         onChange={(value) => onChange({ postScript: value })}
         language="plain"
         placeholder={POST_PLACEHOLDER}
-        ariaLabel="Post-response script"
+        ariaLabel={t('scripts.post')}
         testId={`${testPrefix}-post-script`}
         style={{ minHeight: 130 }}
       />
 
       <p className="hint">
-        {scope} Read and write variables with <code>carom.get</code> and <code>carom.set</code>, add a header with{' '}
-        <code>carom.header</code>, and read the response with <code>carom.json()</code>. Postman&rsquo;s{' '}
-        <code>pm.*</code> works too, so imported scripts run unchanged.
+        {t(subject === 'folder' ? 'scripts.scopeFolder' : 'scripts.scopeRequest')}{' '}
+        {tNodes('scripts.api', {
+          get: <code>carom.get</code>,
+          set: <code>carom.set</code>,
+          header: <code>carom.header</code>,
+          json: <code>carom.json()</code>,
+          pm: <code>pm.*</code>,
+        })}
       </p>
       <p className="hint" data-testid="script-warning">
-        <strong>Scripts are not sandboxed.</strong> They run with everything this app can reach, including the network.
-        Treat a script that came in with an imported collection as code from whoever wrote it.
+        <strong>{t('scripts.notSandboxedTitle')}</strong> {t('scripts.notSandboxedBody')}
       </p>
     </div>
   );

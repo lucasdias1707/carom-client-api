@@ -13,7 +13,7 @@ describe('recordVersion', () => {
     const [entry] = recordVersion([], saved, draft);
     expect(entry.requestId).toBe(saved.id);
     expect(entry.request.url).toBe('https://api.test/v2');
-    expect(entry.changed).toEqual(['Method', 'URL']);
+    expect(entry.changed).toEqual(['method', 'url']);
   });
 
   it('puts the newest first', () => {
@@ -73,15 +73,15 @@ describe('what a version reads as', () => {
       bodyType: 'json' as const,
       body: '{"a":1}',
     });
-    expect(sectionText(saved, 'URL')).toBe('https://api.test/x');
-    expect(sectionText(saved, 'Params')).toBe('page=2  · debug=1');
-    expect(sectionText(saved, 'Body')).toBe('json · {"a":1}');
-    expect(sectionText(saved, 'Scripts')).toBe('none');
+    expect(sectionText(saved, 'url')).toBe('https://api.test/x');
+    expect(sectionText(saved, 'params')).toBe('page=2  · debug=1');
+    expect(sectionText(saved, 'body')).toBe('json · {"a":1}');
+    expect(sectionText(saved, 'scripts')).toBe('none');
   });
 
   it('says something for a section that is empty', () => {
-    expect(sectionText(request({ url: '' }), 'URL')).toBe('—');
-    expect(sectionText(request(), 'Params')).toBe('—');
+    expect(sectionText(request({ url: '' }), 'url')).toBe('—');
+    expect(sectionText(request(), 'params')).toBe('—');
   });
 });
 

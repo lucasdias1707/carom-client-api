@@ -3,11 +3,15 @@ import { History, RotateCcw, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { sectionText } from '@/lib/draft';
+import { sectionId, sectionText, type SectionId } from '@/lib/draft';
 import { formatRelative } from '@/lib/format';
 import { MAX_VERSIONS_PER_REQUEST, versionsFor } from '@/lib/versions';
 import { useWorkspace } from '@/state/workspace-store';
+import type { MessageKey } from '@/locales/en';
 import type { RequestRecord } from '@/types';
+
+/** A part of a request, named in the language on screen. */
+const sectionLabel = (id: SectionId): MessageKey => `section.${id}` as MessageKey;
 
 /**
  * What this request used to be, one entry per save.
@@ -18,7 +22,7 @@ import type { RequestRecord } from '@/types';
  * on its own.
  */
 export function RequestHistory({ request }: { request: RequestRecord }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes, language } = useWorkspace();
   const [openId, setOpenId] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
 
@@ -30,10 +34,9 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
   if (versions.length === 0) {
     return (
       <div className="pane-pad stack">
-        <div className="section-label">Saved versions</div>
+        <div className="section-label">{t('history.title')}</div>
         <p className="hint" data-testid="text-no-versions">
-          Nothing saved yet. Each time you save a request — ⌘S, the Save button, or saving on the way out of a tab —
-          the version before it is kept here, and can be brought back.
+          {t('history.empty')}
         </p>
       </div>
     );
@@ -43,13 +46,11 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
     <>
       <div className="pane-pad stack" style={{ gap: 8 }}>
         <div className="section-label">
-          Saved versions
+          {t('history.title')}
           <span className="spacer" />
-          <span>
-            {versions.length} of {MAX_VERSIONS_PER_REQUEST} kept
-          </span>
+          <span>{t('history.kept', { count: versions.length, max: MAX_VERSIONS_PER_REQUEST })}</span>
           <Button variant="ghost" size="sm" onClick={() => setClearing(true)} data-testid="button-clear-versions">
-            <Trash2 size={12} /> Clear
+            <Trash2 size={12} /> {t('common.clear')}
           </Button>
         </div>
 
@@ -58,7 +59,8 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
             const open = version.id === openId;
             /* Against what is saved now, so the panel answers "what would come
                back if I restored this", not "what did that save change". */
-            const differs = version.changed.length > 0 ? version.changed : ['Name'];
+            const changed = version.changed.map(sectionId).filter((id): id is SectionId => id !== null);
+            const differs = changed.length > 0 ? changed : (['name'] as SectionId[]);
             return (
               <div key={version.id}>
                 <button
@@ -73,25 +75,23 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
                   <span className="mono truncate" style={{ flex: 1, fontSize: 'var(--fs-11)' }}>
                     {version.request.url || '—'}
                   </span>
-                  {version.changed.slice(0, 3).map((label) => (
-                    <Badge key={label} variant="accent">{label}</Badge>
+                  {changed.slice(0, 3).map((id) => (
+                    <Badge key={id} variant="accent">{t(sectionLabel(id))}</Badge>
                   ))}
-                  {version.changed.length > 3 ? (
-                    <Badge variant="accent">+{version.changed.length - 3}</Badge>
-                  ) : null}
+                  {changed.length > 3 ? <Badge variant="accent">+{changed.length - 3}</Badge> : null}
                   <span className="status-meta" style={{ width: 72, textAlign: 'right' }}>
-                    {formatRelative(version.savedAt)}
+                    {formatRelative(version.savedAt, t, language)}
                   </span>
                 </button>
 
                 {open ? (
                   <div className="version-detail" data-testid={`version-detail-${version.id}`}>
-                    {differs.map((label) => {
-                      const then = sectionText(version.request, label);
-                      const now = sectionText(saved, label);
+                    {differs.map((id) => {
+                      const then = sectionText(version.request, id);
+                      const now = sectionText(saved, id);
                       return (
-                        <div className="version-field" key={label}>
-                          <span className="section-label m-0">{label}</span>
+                        <div className="version-field" key={id}>
+                          <span className="section-label m-0">{t(sectionLabel(id))}</span>
                           <span className="version-then mono">{then || '—'}</span>
                           <span className="version-now mono">{now || '—'}</span>
                         </div>
@@ -99,14 +99,14 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
                     })}
                     <div className="version-actions">
                       <p className="hint" style={{ margin: 0 }}>
-                        Restoring brings this back as an unsaved change — it is yours to save or revert.
+                        {t('history.restoreHint')}
                       </p>
                       <Button
                         size="sm"
                         onClick={() => dispatch({ type: 'request/restore-version', versionId: version.id })}
                         data-testid={`button-restore-${version.id}`}
                       >
-                        <RotateCcw size={12} /> Restore
+                        <RotateCcw size={12} /> {t('history.restore')}
                       </Button>
                     </div>
                   </div>
@@ -119,14 +119,12 @@ export function RequestHistory({ request }: { request: RequestRecord }) {
 
       {clearing ? (
         <ConfirmDialog
-          title="Forget this request's history?"
-          message={
-            <>
-              All {versions.length} saved version{versions.length === 1 ? '' : 's'} of <strong>{saved.name}</strong> go.
-              The request itself stays exactly as it is.
-            </>
-          }
-          confirmLabel="Clear history"
+          title={t('history.clearTitle')}
+          message={tNodes('history.clearMessage', {
+            count: versions.length,
+            name: <strong>{saved.name}</strong>,
+          })}
+          confirmLabel={t('history.clearConfirm')}
           onCancel={() => setClearing(false)}
           onConfirm={() => {
             dispatch({ type: 'request/clear-versions', id: request.id });

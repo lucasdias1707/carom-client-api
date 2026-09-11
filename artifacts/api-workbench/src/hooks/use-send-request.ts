@@ -22,7 +22,7 @@ export type SendState = {
 
 /** Drive one in-flight request at a time, storing the result in the workspace. */
 export function useSendRequest(proxyStatus: ProxyStatus): SendState {
-  const { state, variables, dispatch } = useWorkspace();
+  const { state, variables, dispatch, t, dataLanguage } = useWorkspace();
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -89,14 +89,19 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
       */
       const announce = (response: ResponseRecord) => {
         if (activeRef.current === request.id) return;
-        const outcome = response.error
-          ? response.error
-          : `${response.status} ${response.statusText} · ${formatDuration(response.durationMs)} · ${formatBytes(response.size)}`;
+        const outcome =
+          response.error ??
+          t('send.outcome', {
+            status: response.status,
+            statusText: response.statusText,
+            duration: formatDuration(response.durationMs),
+            size: formatBytes(response.size),
+          });
         toast({
-          title: `${request.name} finished`,
+          title: t('send.finished', { name: request.name }),
           description: outcome,
           kind: response.error ? 'error' : response.status >= 400 ? 'error' : 'success',
-          action: { label: 'View', run: () => dispatch({ type: 'request/open', id: request.id }) },
+          action: { label: t('send.view'), run: () => dispatch({ type: 'request/open', id: request.id }) },
         });
       };
 
@@ -125,8 +130,8 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         const resolved = { ...variables };
         for (const write of pre.variables) resolved[write.key] = write.value;
 
-        const prepared = prepareRequest(request, resolved, { folders: chain, extraHeaders: pre.headers });
-        if (!prepared.url.trim()) throw new Error('Enter a URL before sending.');
+        const prepared = prepareRequest(request, resolved, { folders: chain, extraHeaders: pre.headers, language: dataLanguage });
+        if (!prepared.url.trim()) throw new Error(t('send.noUrl'));
         sent = prepared;
 
         const result = await sendRequest(prepared, {
@@ -155,7 +160,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           // Cancelled by the user or by the timeout; nothing to record.
-          setLastError(controller.signal.reason === 'timeout' ? 'Request timed out.' : null);
+          setLastError(controller.signal.reason === 'timeout' ? t('send.timedOut') : null);
           return;
         }
         // The prepared request when there is one: a failure recorded with the
@@ -166,14 +171,14 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         const response: ResponseRecord = { ...failure, requestId: request.id };
         dispatch({ type: 'response/add', response });
         announce(response);
-        setLastError(failure.error ?? 'Request failed.');
+        setLastError(failure.error ?? t('send.failed'));
       } finally {
         window.clearTimeout(timeout);
         if (controllerRef.current === controller) controllerRef.current = null;
         setSending(false);
       }
     },
-    [dispatch, proxyStatus, state, toast, variables],
+    [dataLanguage, dispatch, proxyStatus, state, t, toast, variables],
   );
 
   return { sending, send, cancel, lastError, scriptLogs, scriptTests };

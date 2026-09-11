@@ -43,14 +43,46 @@ describe('mirrorTokens', () => {
     expect(variable).toMatchObject({
       text: '{{first_name}}',
       kind: 'string',
-      variable: { name: 'first_name', defined: true },
+      variable: { name: 'first_name', defined: true, dynamic: false },
     });
   });
 
   it('marks one that resolves to nothing as undefined', () => {
     // This is the case that used to be invisible: it goes out as literal text.
     const tokens = mirrorTokens('{"name":"{{frist_name}}"}', 'json', table);
-    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'frist_name', defined: false });
+    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'frist_name', defined: false, dynamic: false });
+  });
+
+  /*
+    The unquoted case. `{"n": {{count}}}` is how a number or a boolean goes into
+    a JSON body, and the lexer cuts those braces into four separate pieces of
+    punctuation — so for as long as variables were searched for inside each
+    token, this one was invisible while working.
+  */
+  it('picks out a variable the lexer split across tokens', () => {
+    const tokens = mirrorTokens('{"n":{{count}},"b":{{flag}}}', 'json', { count: defined('count', '3') });
+    const variables = tokens.filter((token) => token.variable);
+    expect(variables.map((token) => token.text)).toEqual(['{{count}}', '{{flag}}']);
+    expect(variables.map((token) => token.variable?.defined)).toEqual([true, false]);
+  });
+
+  it('still reassembles the whole text it was given', () => {
+    // Whatever the splitting does, the mirror sits under the real textarea: a
+    // character gained or lost here moves every character after it out of line.
+    const source = '{"a":"{{x}} y","n":{{z}},"plain":1}';
+    const tokens = mirrorTokens(source, 'json', {});
+    expect(tokens.map((token) => token.text).join('')).toBe(source);
+  });
+
+  it('marks a generator as a third thing, so the body does not paint it red', () => {
+    // Undefined and generated look identical to a naive check, and painting a
+    // working generator red is the confusion this flag exists to prevent.
+    const tokens = mirrorTokens('{"nome":"{{$randomFirstName}}"}', 'json', {});
+    expect(tokens.find((token) => token.variable)?.variable).toEqual({
+      name: '$randomFirstName',
+      defined: false,
+      dynamic: true,
+    });
   });
 
   it('splits the quotes away from the variable, so only the variable is marked', () => {
@@ -69,7 +101,7 @@ describe('mirrorTokens', () => {
 
   it('marks variables in plain text too, where there is no JSON to colour', () => {
     const tokens = mirrorTokens("carom.get('{{first_name}}')", 'plain', table);
-    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'first_name', defined: true });
+    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'first_name', defined: true, dynamic: false });
   });
 
   it('leaves text with no variables as the lexer produced it', () => {
@@ -97,7 +129,7 @@ describe('mirrorTokens', () => {
       'tag:host',
       'tag-punct:>',
     ]);
-    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'first_name', defined: true });
+    expect(tokens.find((token) => token.variable)?.variable).toEqual({ name: 'first_name', defined: true, dynamic: false });
   });
 
   it('marks no variable at all when the text is not a template', () => {

@@ -1,5 +1,6 @@
 import { fieldsIn, fieldsOf, inferType } from '@/lib/docs';
 import { pruneTree } from '@/lib/tree';
+import type { Translate } from '@/lib/i18n';
 import type { DocField, Folder, RequestRecord, ResponseRecord, WorkspaceState } from '@/types';
 
 /**
@@ -192,9 +193,9 @@ function requestBodyFor(request: RequestRecord): Json | null {
  * the operation still needs a `responses` object to be valid, so it gets the
  * one line that says nothing false.
  */
-function responsesFor(request: RequestRecord, responses: ResponseRecord[]): Json {
+function responsesFor(request: RequestRecord, responses: ResponseRecord[], t: Translate): Json {
   const mine = responses.filter((response) => response.requestId === request.id && !response.error);
-  if (mine.length === 0) return { default: { description: 'No response recorded.' } };
+  if (mine.length === 0) return { default: { description: t('openapi.noResponse') } };
 
   const out: Json = {};
   // Newest first, so re-sending replaces an old example rather than being
@@ -249,6 +250,12 @@ const METHOD_KEYS: Record<string, string> = {
 export function toOpenApi(
   state: WorkspaceState,
   selection: { title: string; selected: ReadonlySet<string> },
+  /**
+   * For the two lines this document writes on its own behalf. Everything else
+   * in the output comes from the requests, so the exported description reads
+   * in the same language as the descriptions you typed into it.
+   */
+  t: Translate,
 ): Json {
   const workspaceId = state.activeWorkspaceId;
   const { folders, requests } = pruneTree(
@@ -291,7 +298,7 @@ export function toOpenApi(
       operationId: request.id,
       ...(parameters.length > 0 ? { parameters } : {}),
       ...(body ? { requestBody: body } : {}),
-      responses: responsesFor(request, state.responses),
+      responses: responsesFor(request, state.responses, t),
     };
     paths[path] = item;
   }
@@ -303,7 +310,7 @@ export function toOpenApi(
   */
   if (servers.size > 1) {
     for (const [path, server] of serverOfPath) {
-      (paths[path] as Json).servers = [serverEntry(server)];
+      (paths[path] as Json).servers = [serverEntry(server, t)];
     }
   }
 
@@ -316,18 +323,20 @@ export function toOpenApi(
     },
     // A `{{variable}}` server stays a variable: OpenAPI has its own syntax for
     // one, and a description whose host is literally "{{baseUrl}}" is broken.
-    ...(servers.size > 0 ? { servers: [...servers].map((url) => serverEntry(url)) } : {}),
+    ...(servers.size > 0 ? { servers: [...servers].map((url) => serverEntry(url, t)) } : {}),
     ...(tags.size > 0 ? { tags: [...tags].map((name) => ({ name })) } : {}),
     paths,
   };
 }
 
-function serverEntry(url: string): Json {
+function serverEntry(url: string, t: Translate): Json {
   const variable = url.match(/^\{\{\s*([\w.-]+)\s*\}\}$/);
   if (!variable) return { url };
   return {
     url: `{${variable[1]}}`,
-    variables: { [variable[1]]: { default: 'https://example.com', description: 'Set by the environment it came from.' } },
+    variables: {
+      [variable[1]]: { default: 'https://example.com', description: t('openapi.serverVariable') },
+    },
   };
 }
 

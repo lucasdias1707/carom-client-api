@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/common/IconButton';
 import { SelectField } from '@/components/common/SelectField';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useT } from '@/state/workspace-store';
+import type { SectionId } from '@/lib/draft';
+import type { MessageKey } from '@/locales/en';
 
 type UrlBarProps = {
   method: HttpMethod;
@@ -20,7 +23,7 @@ type UrlBarProps = {
    * the two buttons are not drawn at all — there would be nothing for them to
    * do, and this row is the busiest one in the app.
    */
-  unsaved: string[];
+  unsaved: SectionId[];
   saveHint: string;
   onSave: () => void;
   onRevert: () => void;
@@ -40,13 +43,14 @@ export function UrlBar({
   onSave,
   onRevert,
 }: UrlBarProps) {
+  const t = useT();
   return (
     <div className="urlbar">
       <SelectField
         value={method}
         onChange={onMethodChange}
         options={HTTP_METHODS.map((item) => ({ value: item, label: item, className: `m-${item.toLowerCase()}` }))}
-        ariaLabel="HTTP method"
+        ariaLabel={t('url.methodAria')}
         testId="select-request-method"
         className={`method-select m-${method.toLowerCase()}`}
       />
@@ -56,8 +60,8 @@ export function UrlBar({
         table={variables}
         onChange={onUrlChange}
         onSubmit={onSend}
-        placeholder="https://api.example.com/resource"
-        ariaLabel="Request URL"
+        placeholder={t('url.placeholder')}
+        ariaLabel={t('url.aria')}
         testId="input-request-url"
         className="url-field"
       />
@@ -74,14 +78,17 @@ export function UrlBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="secondary" onClick={onSave} data-testid="button-save-request">
-                <Save /> Save
+                <Save /> {t('common.save')}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Unsaved: {unsaved.join(', ')} · {saveHint}
+              {t('url.unsaved', {
+                parts: unsaved.map((id) => t(`section.${id}` as MessageKey)).join(', '),
+                shortcut: saveHint,
+              })}
             </TooltipContent>
           </Tooltip>
-          <IconButton label="Discard the unsaved changes" onClick={onRevert} testId="button-revert-request">
+          <IconButton label={t('url.revert')} onClick={onRevert} testId="button-revert-request">
             <Undo2 />
           </IconButton>
         </>
@@ -89,11 +96,11 @@ export function UrlBar({
 
       {sending ? (
         <Button variant="secondary" onClick={onCancel} data-testid="button-cancel-request">
-          <Square /> Cancel
+          <Square /> {t('common.cancel')}
         </Button>
       ) : (
         <Button onClick={onSend} data-testid="button-send-request">
-          <Send /> Send
+          <Send /> {t('url.send')}
         </Button>
       )}
       {sending ? <Loader2 size={14} className="spin" aria-hidden="true" /> : null}

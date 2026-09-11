@@ -115,7 +115,11 @@ export function CodeEditor({
         {tokens.map((token, index) => (
           <span
             key={index}
-            className={`jt-${token.kind}${token.variable ? ` jt-var${token.variable.defined ? '' : ' missing'}` : ''}`}
+            className={`jt-${token.kind}${
+              token.variable
+                ? ` jt-var${token.variable.defined ? '' : token.variable.dynamic ? ' dynamic' : ' missing'}`
+                : ''
+            }`}
           >
             {token.text}
           </span>

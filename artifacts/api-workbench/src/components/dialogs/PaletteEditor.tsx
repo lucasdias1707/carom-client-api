@@ -42,7 +42,7 @@ import { useWorkspace } from '@/state/workspace-store';
  * and only Save keeps it.
  */
 export function PaletteEditor() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const settings = state.settings;
   const palettes = allPalettes(settings);
   const current = paletteById(settings, settings.palette ?? DEFAULT_PALETTE);
@@ -103,7 +103,7 @@ export function PaletteEditor() {
     }
 
     const built = isBuiltInPalette(current.id);
-    const target = built ? duplicatePalette(current, mode) : current;
+    const target = built ? duplicatePalette(current, mode, copyLabels()) : current;
     const owned = built ? [...(settings.palettes ?? []), target] : (settings.palettes ?? []);
 
     save(
@@ -120,8 +120,19 @@ export function PaletteEditor() {
     save((settings.palettes ?? []).map((palette) => (palette.id === current.id ? { ...palette, name } : palette)));
   };
 
+  /**
+   * The words a copy is created with. Written into the palette once, not
+   * looked up on every render: from the moment it exists it is yours, and a
+   * later change of language renaming something you can rename yourself would
+   * be the app editing your data.
+   */
+  const copyLabels = () => ({
+    name: t('palette.copyName', { name: current.name }),
+    note: t('palette.note.yours'),
+  });
+
   const duplicate = () => {
-    const copy = duplicatePalette(current, mode);
+    const copy = duplicatePalette(current, mode, copyLabels());
     save([...(settings.palettes ?? []), copy], copy.id);
   };
 
@@ -191,7 +202,7 @@ export function PaletteEditor() {
 
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <Label className="section-label m-0">Colours</Label>
+      <Label className="section-label m-0">{t('palette.coloursLabel')}</Label>
 
       {draft && !drafting ? (
         <div className="palette-notice" data-testid="notice-palette-draft">
@@ -203,7 +214,7 @@ export function PaletteEditor() {
             Back to it
           </Button>
           <Button variant="ghost" size="sm" onClick={discardDraft} data-testid="button-drop-palette">
-            Discard
+            {t('palette.discard')}
           </Button>
         </div>
       ) : null}
@@ -213,23 +224,29 @@ export function PaletteEditor() {
           value={current.id}
           onChange={(id) => (id === DRAFT_PALETTE ? resumeDraft() : select(id))}
           options={[
-            ...palettes.map((palette) => ({ value: palette.id, label: `${palette.name} — ${palette.note}` })),
+            ...palettes.map((palette) => ({
+              value: palette.id,
+              label: t('palette.option', {
+                name: palette.name,
+                note: palette.noteKey ? t(palette.noteKey) : (palette.note ?? ''),
+              }),
+            })),
             // While a draft exists it has to be listed, or the field shows
             // nothing at all whenever the generated palette is the one on
             // screen. It leaves the list again the moment it is saved or
             // dropped.
-            ...(draft ? [{ value: DRAFT_PALETTE, label: `${draft.name} — not saved` }] : []),
+            ...(draft ? [{ value: DRAFT_PALETTE, label: t('palette.notSaved', { name: draft.name }) }] : []),
           ]}
-          ariaLabel="Colour palette"
+          ariaLabel={t('palette.label')}
           testId="select-palette"
           block
           className="flex-1"
         />
-        <IconButton label="Duplicate this palette" onClick={duplicate} testId="button-duplicate-palette">
+        <IconButton label={t('palette.duplicate')} onClick={duplicate} testId="button-duplicate-palette">
           <Copy />
         </IconButton>
         {owned && !drafting ? (
-          <IconButton label="Delete this palette" tone="danger" onClick={remove} testId="button-delete-palette">
+          <IconButton label={t('palette.delete')} tone="danger" onClick={remove} testId="button-delete-palette">
             <Trash2 />
           </IconButton>
         ) : null}
@@ -263,9 +280,9 @@ export function PaletteEditor() {
           <button
             className={`palette-swatch draft ${drafting ? 'active' : ''}`}
             onClick={resumeDraft}
-            aria-label={`${draft.name}, not saved`}
+            aria-label={t('palette.notSavedAria', { name: draft.name })}
             aria-pressed={drafting}
-            title={`${draft.name} — not saved`}
+            title={t('palette.notSaved', { name: draft.name })}
             data-testid="button-palette-draft"
           >
             <span style={{ background: draft[mode]?.['--bg-app'] }} />
@@ -285,19 +302,19 @@ export function PaletteEditor() {
           <Input
             value={draft?.name ?? ''}
             onChange={(event) => rename(event.target.value)}
-            aria-label="Name for the generated palette"
+            aria-label={t('palette.draftName')}
             data-testid="input-draft-name"
           />
           <div className="palette-draft-actions">
             <Button variant="secondary" size="sm" onClick={surprise} data-testid="button-random-palette">
-              <Shuffle size={12} /> Shuffle again
+              <Shuffle size={12} /> {t('palette.shuffle')}
             </Button>
             <span className="spacer" />
             <Button variant="ghost" size="sm" onClick={discardDraft} data-testid="button-discard-palette">
-              <X size={12} /> Discard
+              <X size={12} /> {t('palette.discard')}
             </Button>
             <Button size="sm" onClick={keepDraft} data-testid="button-save-palette">
-              <Check size={12} /> Save
+              <Check size={12} /> {t('common.save')}
             </Button>
           </div>
           <p className="hint">
@@ -324,25 +341,25 @@ export function PaletteEditor() {
         used to leave behind, so this is where you see that it no longer does.
       */}
       <div className="palette-sample" data-testid="palette-sample">
-        <div className="palette-sample-row">Ordinary row</div>
-        <div className="palette-sample-row hovered">Under the pointer</div>
-        <div className="palette-sample-row selected">Selected</div>
+        <div className="palette-sample-row">{t('palette.sample.row')}</div>
+        <div className="palette-sample-row hovered">{t('palette.sample.hovered')}</div>
+        <div className="palette-sample-row selected">{t('palette.sample.selected')}</div>
         <div className="palette-sample-buttons">
-          <span className="palette-sample-button">Button</span>
-          <span className="palette-sample-button hovered">Hovered</span>
-          <span className="palette-sample-soft">Soft wash</span>
+          <span className="palette-sample-button">{t('palette.sample.button')}</span>
+          <span className="palette-sample-button hovered">{t('palette.sample.buttonHovered')}</span>
+          <span className="palette-sample-soft">{t('palette.sample.soft')}</span>
         </div>
         <div className="palette-sample-text">
-          <span style={{ color: 'var(--text-strong)' }}>Strong</span>
-          <span style={{ color: 'var(--text)' }}>Body</span>
-          <span style={{ color: 'var(--text-dim)' }}>Dim</span>
-          <span style={{ color: 'var(--text-faint)' }}>Faint</span>
+          <span style={{ color: 'var(--text-strong)' }}>{t('palette.sample.strong')}</span>
+          <span style={{ color: 'var(--text)' }}>{t('palette.sample.body')}</span>
+          <span style={{ color: 'var(--text-dim)' }}>{t('palette.sample.dim')}</span>
+          <span style={{ color: 'var(--text-faint)' }}>{t('palette.sample.faint')}</span>
         </div>
       </div>
 
       {drafting ? null : owned ? (
         <>
-          <Label className="section-label m-0" htmlFor="palette-name">Name</Label>
+          <Label className="section-label m-0" htmlFor="palette-name">{t('common.name')}</Label>
           <Input
             id="palette-name"
             value={current.name}
@@ -352,26 +369,26 @@ export function PaletteEditor() {
         </>
       ) : (
         <p className="hint" data-testid="text-palette-builtin">
-          This one is built in. Change any colour below and it becomes a copy you own — the built-in stays as it was.
+          {t('palette.builtIn')}
         </p>
       )}
 
       <div className="section-label" data-testid="text-palette-mode">
-        Editing the {mode} colours
+        {t(mode === 'dark' ? 'palette.editingDark' : 'palette.editingLight')}
         <span className="spacer" />
-        <span>switch the theme above for the other half</span>
+        <span>{t('palette.switchTheme')}</span>
       </div>
 
       {TOKEN_GROUPS.map((group) => (
-        <div className="palette-group" key={group.title} data-testid={`palette-group-${group.title.toLowerCase()}`}>
+        <div className="palette-group" key={group.id} data-testid={`palette-group-${group.id}`}>
           <div className="palette-group-head">
-            <strong>{group.title}</strong>
-            <span>{group.note}</span>
+            <strong>{t(group.title)}</strong>
+            <span>{t(group.note)}</span>
           </div>
           <div className="color-rows">
             {group.tokens.map(({ token, label }) => (
               <div className="color-row" key={token}>
-                <Label htmlFor={`token${token}`} className="font-normal">{label}</Label>
+                <Label htmlFor={`token${token}`} className="font-normal">{t(label)}</Label>
                 <input
                   id={`token${token}`}
                   type="color"
@@ -387,9 +404,7 @@ export function PaletteEditor() {
       ))}
 
       <p className="hint">
-        Hovers, selections and the dialog backdrop are worked out from these rather than picked: they are
-        see-through, and a colour picker has no transparency to give them. That is why they now follow a change of
-        background instead of staying behind.
+        {t('palette.derivedHint')}
       </p>
     </div>
   );

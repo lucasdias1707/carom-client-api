@@ -15,7 +15,7 @@ import { useWorkspace } from '@/state/workspace-store';
 const UpdateContext = createContext<UpdateApi | null>(null);
 
 export function UpdateProvider({ children }: { children: ReactNode }) {
-  const { state } = useWorkspace();
+  const { state, t } = useWorkspace();
   const { toast } = useToast();
   const updates = useUpdateCheck(state.settings.autoCheckUpdates);
   /** Versions already announced, so a re-check does not re-announce. */
@@ -28,8 +28,8 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     if (!version || updates.phase !== 'available' || announced.current.has(version)) return;
     announced.current.add(version);
     toast({
-      title: `Carom ${version} is available`,
-      description: 'Click the download button in the top bar to install it.',
+      title: t('updates.availableToast', { version }),
+      description: t('updates.availableToastBody'),
       kind: 'info',
     });
   }, [updates.phase, updates.update?.version, toast]);
@@ -44,8 +44,8 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     if (updates.phase !== 'ready' || !version || installed.current.has(version)) return;
     installed.current.add(version);
     toast({
-      title: `Carom ${version} is ready`,
-      description: 'Restart to finish — the button in the top bar does it.',
+      title: t('updates.readyToast', { version }),
+      description: t('updates.readyToastBody'),
       kind: 'success',
     });
   }, [updates.phase, updates.update?.version, toast]);
