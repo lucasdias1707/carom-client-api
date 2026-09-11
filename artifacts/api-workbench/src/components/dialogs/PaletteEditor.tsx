@@ -182,6 +182,11 @@ export function PaletteEditor() {
     on offered nothing to edit.
   */
   const tokens = useMemo(() => current[mode] ?? readTokens(mode), [current, mode]);
+  /**
+   * What the built-ins with no tokens of their own look like — Carom, which
+   * is the stylesheet itself. Read once per half rather than per swatch.
+   */
+  const shipped = useMemo(() => readTokens(mode), [mode]);
   const owned = !isBuiltInPalette(current.id);
 
   return (
@@ -232,7 +237,7 @@ export function PaletteEditor() {
 
       <div className="palette-swatches" data-testid="palette-swatches">
         {palettes.map((palette) => {
-          const preview = palette[mode] ?? palette.dark ?? palette.light;
+          const preview = palette[mode] ?? palette.dark ?? palette.light ?? shipped;
           const active = current.id === palette.id;
           return (
             <button
@@ -243,11 +248,13 @@ export function PaletteEditor() {
               aria-pressed={active}
               data-testid={`button-palette-${palette.id}`}
             >
-              {/* The default carries no tokens of its own; it previews with the
-                  ones in force, which is exactly what choosing it applies. */}
-              <span style={{ background: preview?.['--bg-app'] ?? 'var(--bg-app)' }} />
-              <span style={{ background: preview?.['--bg-raised'] ?? 'var(--bg-raised)' }} />
-              <span style={{ background: preview?.['--accent'] ?? 'var(--accent)' }} />
+              {/* The default carries no tokens of its own, so it previews with
+                  what the stylesheet says. It used to preview with `var(...)`
+                  — the colours *in force* — which made Carom's swatch take on
+                  the appearance of whichever palette you had chosen instead. */}
+              <span style={{ background: preview['--bg-app'] }} />
+              <span style={{ background: preview['--bg-raised'] }} />
+              <span style={{ background: preview['--accent'] }} />
             </button>
           );
         })}

@@ -200,6 +200,13 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
       <IconButton label="New request" hint={newHint} onClick={onNew} testId="button-new-tab">
         <Plus />
       </IconButton>
+
+      {/*
+        The menu itself. Losing this one line is what made right-clicking a tab
+        do nothing: the handler above kept recording where you clicked, into a
+        state that nothing drew.
+      */}
+      {menu ? <ContextMenu x={menu.x} y={menu.y} entries={menu.entries} onClose={() => setMenu(null)} /> : null}
     </div>
   );
 }

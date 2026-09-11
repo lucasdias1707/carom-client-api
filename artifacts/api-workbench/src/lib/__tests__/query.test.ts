@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { row } from '@/lib/factories';
 import { prepareRequest } from '@/lib/http';
-import { paramsMatchUrl, splitQuery, syncUrlParams } from '@/lib/query';
+import { paramsMatchUrl, splitQuery, syncUrlParams, writeUrlParams } from '@/lib/query';
 import type { KeyValue } from '@/types';
 import { createRequest } from '@/lib/factories';
 
@@ -165,6 +165,78 @@ describe('syncUrlParams', () => {
       ],
     );
     expect(new Set(synced.map((item) => item.id)).size).toBe(2);
+  });
+});
+
+describe('writeUrlParams', () => {
+  const on = (key: string, value: string) => row(key, value);
+  const off = (key: string, value: string) => ({ ...row(key, value), enabled: false });
+
+  it('writes the table into the query, leaving the address alone', () => {
+    expect(writeUrlParams('https://api.test/users', [on('page', '2'), on('limit', '10')])).toBe(
+      'https://api.test/users?page=2&limit=10',
+    );
+  });
+
+  it('replaces whatever query was there', () => {
+    expect(writeUrlParams('https://api.test/x?old=1&stale=2', [on('page', '3')])).toBe('https://api.test/x?page=3');
+  });
+
+  it('drops the question mark when nothing is left to say', () => {
+    expect(writeUrlParams('https://api.test/x?page=2', [])).toBe('https://api.test/x');
+    expect(writeUrlParams('https://api.test/x?page=2', [off('page', '2')])).toBe('https://api.test/x');
+    expect(writeUrlParams('https://api.test/x?page=2', [on('', 'orphan')])).toBe('https://api.test/x');
+  });
+
+  it('leaves unticked and unnamed rows out, keeping the rest', () => {
+    const written = writeUrlParams('/x', [on('a', '1'), off('b', '2'), on('', '3'), on('c', '4')]);
+    expect(written).toBe('/x?a=1&c=4');
+  });
+
+  it('keeps a variable readable, so the field can still draw it as a chip', () => {
+    // encodeURIComponent would write %7B%7BapiKey%7D%7D, which is neither
+    // readable nor a chip.
+    expect(writeUrlParams('{{baseUrl}}/x', [on('token', '{{apiKey}}')])).toBe('{{baseUrl}}/x?token={{apiKey}}');
+  });
+
+  it('puts the fragment back where it was', () => {
+    expect(writeUrlParams('/docs?page=1#section', [on('page', '2')])).toBe('/docs?page=2#section');
+    expect(writeUrlParams('/docs#section', [on('page', '2')])).toBe('/docs?page=2#section');
+    expect(writeUrlParams('/docs?page=1#section', [])).toBe('/docs#section');
+  });
+
+  it('escapes only what would be read back as something else', () => {
+    expect(writeUrlParams('/x', [on('a b', 'c d')])).toBe('/x?a b=c d');
+    expect(writeUrlParams('/x', [on('q', 'a&b')])).toBe('/x?q=a%26b');
+    expect(writeUrlParams('/x', [on('q', '100%')])).toBe('/x?q=100%25');
+    expect(writeUrlParams('/x', [on('q', 'a+b')])).toBe('/x?q=a%2Bb');
+    expect(writeUrlParams('/x', [on('a=b', 'v')])).toBe('/x?a%3Db=v');
+    // A `=` in a value is safe: the split is on the first one.
+    expect(writeUrlParams('/x', [on('q', 'a=b')])).toBe('/x?q=a=b');
+  });
+
+  it('round-trips through splitQuery, which is the property that matters', () => {
+    const rows = [
+      on('page', '2'),
+      on('q', 'hello world'),
+      on('weird', 'a&b=c#d+e 100%'),
+      on('token', '{{apiKey}}'),
+      on('empty', ''),
+      on('id', '1'),
+      on('id', '2'),
+      off('hidden', 'x'),
+    ];
+    const back = splitQuery(writeUrlParams('https://api.test/users#top', rows)).params;
+    expect(back).toEqual(
+      rows.filter((item) => item.enabled && item.key).map((item) => ({ key: item.key, value: item.value })),
+    );
+  });
+
+  it('settles: what it wrote is what the mirror already agrees with', () => {
+    // Otherwise editing a row would dispatch a sync a beat later and undo it.
+    const rows = [{ ...row('cnpj', '000110'), source: 'url' as const }];
+    const url = writeUrlParams('http://localhost:3000/hotel/cnpj-exists', rows);
+    expect(paramsMatchUrl(rows, splitQuery(url).params)).toBe(true);
   });
 });
 

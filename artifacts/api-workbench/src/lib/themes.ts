@@ -399,23 +399,42 @@ export function withDerived(tokens: PaletteTokens, mode: 'dark' | 'light'): Pale
 export { expandHex } from '@/lib/color';
 
 /**
- * The tokens actually in force for a mode, read off the document.
+ * The tokens the *stylesheet* defines for a mode, whatever is applied on top.
  *
  * The default palette defines nothing of its own — that is what keeps it in
- * step with the stylesheet — so duplicating it has to ask the browser what the
- * stylesheet says. Reading the *other* mode means flipping the attribute,
- * reading, and flipping back: `getComputedStyle` forces the recalculation
- * synchronously and no frame is painted in between, so nothing flashes.
+ * step with the stylesheet — so previewing or duplicating it has to ask the
+ * browser what the stylesheet says. Reading the *other* mode means flipping
+ * the attribute, reading, and flipping back: `getComputedStyle` forces the
+ * recalculation synchronously and no frame is painted in between, so nothing
+ * flashes.
  */
 export function readTokens(mode: 'dark' | 'light'): PaletteTokens {
   const root = document.documentElement;
   const before = root.dataset.theme;
+
+  /*
+    The palette in force sits on the root as inline custom properties, and
+    inline beats the stylesheet — so reading with them still in place hands
+    back whatever is applied rather than what the app ships with. That is how
+    the Carom swatch came to take on the colours of whichever palette had been
+    chosen instead of showing its own. They are lifted for the read and put
+    straight back; no frame is painted in between, so nothing flashes.
+
+    The callers that duplicate a palette were never wrong, because you can
+    only duplicate the selected one and selecting Carom clears the overrides.
+    This makes the function mean what its name says either way.
+  */
+  const applied = TOKEN_NAMES.map((name) => [name, root.style.getPropertyValue(name)] as const);
+  for (const [name] of applied) root.style.removeProperty(name);
+
   root.dataset.theme = mode;
   const style = getComputedStyle(root);
   const tokens = {} as PaletteTokens;
   for (const name of TOKEN_NAMES) tokens[name] = expandHex(style.getPropertyValue(name));
+
   if (before === undefined) delete root.dataset.theme;
   else root.dataset.theme = before;
+  for (const [name, value] of applied) if (value) root.style.setProperty(name, value);
   return tokens;
 }
 

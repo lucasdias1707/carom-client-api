@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Copy, Terminal } from 'lucide-react';
 import { IconButton } from '@/components/common/IconButton';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import { useToast } from '@/components/common/Toaster';
 import { toCurl } from '@/lib/curl';
 import { prepareRequest } from '@/lib/http';
 import { formatBinding, resolveBindings } from '@/lib/shortcuts';
-import { paramsMatchUrl, splitQuery, syncUrlParams } from '@/lib/query';
+import { paramsMatchUrl, splitQuery, syncUrlParams, writeUrlParams } from '@/lib/query';
 import { folderPath } from '@/state/selectors';
 import { useWorkspace } from '@/state/workspace-store';
 import { resolveAuth } from '@/lib/inherit';
@@ -53,6 +53,15 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
   const mirror = (changes: Partial<RequestRecord>) =>
     dispatch({ type: 'request/update', id: request.id, patch: changes, mirror: true });
 
+  /**
+   * The URL this pane last wrote out of the table, and for which request.
+   *
+   * The request id travels with it because two requests can hold the same URL,
+   * and one of them having written it must not silence the mirror for the
+   * other.
+   */
+  const written = useRef<{ id: string; url: string } | null>(null);
+
   // Mirror the URL's query string into the Params table, a beat after typing
   // stops. Doing it on every keystroke would add a row for `?p`, then replace
   // it for `?pa`, and so on down the word.
@@ -61,6 +70,11 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
   // instead of the URL so nothing is sent twice.
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      // A URL this pane wrote from the table is not a URL somebody typed, and
+      // reading it back would undo the edit that produced it — rows claimed by
+      // the URL are rewritten, and the unticked ones would jump to the top of
+      // the table while you were still typing in it.
+      if (written.current?.id === request.id && written.current.url === request.url) return;
       const { params } = splitQuery(request.url);
       if (paramsMatchUrl(request.params, params)) return;
       mirror({ params: syncUrlParams(request.params, params) });
@@ -69,7 +83,22 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
     // `patch` closes over the id, which is what the other dependencies pin.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.id, request.url, request.params]);
+
   const setRows = (field: 'params' | 'headers') => (items: KeyValue[]) => patch({ [field]: items });
+
+  /**
+   * Editing the table rewrites the URL's query, immediately.
+   *
+   * Immediately rather than on a debounce because this direction has nothing
+   * to wait for: you are not building a word a letter at a time that would
+   * each make their own row — the row already exists, and the address should
+   * follow it as you type, the way it does in every other client.
+   */
+  const setParams = (items: KeyValue[]) => {
+    const url = writeUrlParams(request.url, items);
+    written.current = { id: request.id, url };
+    patch({ params: items, url });
+  };
 
   const activeCount = (items: KeyValue[]) => items.filter((item) => item.enabled && item.key.trim()).length;
   const badges: Partial<Record<RequestTab, number>> = {
@@ -172,8 +201,11 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
         <TabsContent value="params" className="contents">
           <div className="pane-pad stack">
             <div className="section-label">Query parameters</div>
-            <KeyValueTable items={request.params} onChange={setRows('params')} testPrefix="params" />
-            <p className="hint">Parameters are appended to the URL when the request is sent, after variables resolve.</p>
+            <KeyValueTable items={request.params} onChange={setParams} testPrefix="params" />
+            <p className="hint">
+              The table and the address are the same query: editing a row rewrites the URL, and unticking one takes
+              it out. Variables resolve when the request is sent.
+            </p>
           </div>
         </TabsContent>
 

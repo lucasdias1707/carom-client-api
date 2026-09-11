@@ -94,6 +94,54 @@ export function syncUrlParams(
 }
 
 /**
+ * Characters that would change what the query means if they went in raw.
+ *
+ * Deliberately a short list. `encodeURIComponent` would be correct for a URL
+ * about to be sent and wrong here: this text goes back into the field you type
+ * in, where `{{baseUrl}}` has to stay readable and become a variable chip.
+ * `%7B%7BbaseUrl%7D%7D` is neither. So only what `URLSearchParams` would read
+ * back as something else is escaped — and `=` only in a key, because a value
+ * may contain one: the split is on the first.
+ */
+function escapeForQuery(text: string, inKey: boolean): string {
+  return text.replace(inKey ? /[%&#+=]/g : /[%&#+]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+/**
+ * Write the table back into the URL's query string.
+ *
+ * The other direction of `syncUrlParams`, and the half that was missing: with
+ * only URL → table, editing a row was undone half a second later by the mirror
+ * reading a URL that still said the old thing. Now whichever one you touch is
+ * the one that writes.
+ *
+ * Only rows that are ticked and have a key go in — the rest still exist in the
+ * table, they just have nothing to say in a URL. Unticking one therefore takes
+ * it out of the address and ticking it puts it back, which keeps what you are
+ * looking at equal to what would be sent.
+ *
+ * The address and the fragment are left exactly as they were; only what sits
+ * between `?` and `#` is rewritten.
+ */
+export function writeUrlParams(url: string, params: KeyValue[]): string {
+  // Same reading as `splitQuery`: a `#` counts as the fragment from where the
+  // query starts, so the two cannot disagree about what the address is.
+  const start = url.indexOf('?');
+  const hash = start === -1 ? url.indexOf('#') : url.indexOf('#', start);
+  const address = start === -1 ? (hash === -1 ? url : url.slice(0, hash)) : url.slice(0, start);
+  const fragment = hash === -1 ? '' : url.slice(hash);
+
+  const query = params
+    .filter((item) => item.enabled && item.key.trim())
+    .map((item) => `${escapeForQuery(item.key, true)}=${escapeForQuery(item.value, false)}`)
+    .join('&');
+
+  return query ? `${address}?${query}${fragment}` : `${address}${fragment}`;
+}
+
+/**
  * True when the table already reflects the URL's query, so the mirror can skip
  * dispatching and leave the request untouched.
  *
