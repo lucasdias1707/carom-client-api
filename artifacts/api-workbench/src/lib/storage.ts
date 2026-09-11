@@ -35,9 +35,13 @@ function trimResponses(responses: ResponseRecord[], persist: boolean): ResponseR
 }
 
 /**
- * Persist the workspace. Response bodies are the only unbounded part of the
- * state, so on a quota error we shed them progressively rather than losing the
- * user's requests.
+ * Persist the workspace, shedding what is heavy before what is irreplaceable.
+ *
+ * Two parts of the state grow without a natural bound: recorded responses, and
+ * the saved versions of each request. Neither may be the thing that costs
+ * someone their requests, so on a quota error they go in that order —
+ * responses first, because a response can be fetched again and a version you
+ * might want to restore cannot.
  */
 export function writeState(state: WorkspaceState): void {
   if (!isBrowser()) return;
@@ -45,6 +49,8 @@ export function writeState(state: WorkspaceState): void {
     { ...state, responses: trimResponses(state.responses, state.settings.persistResponses) },
     { ...state, responses: trimResponses(state.responses.slice(0, 5), state.settings.persistResponses) },
     { ...state, responses: [] },
+    { ...state, responses: [], versions: state.versions.slice(0, 20) },
+    { ...state, responses: [], versions: [] },
   ];
   for (const attempt of attempts) {
     try {

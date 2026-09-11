@@ -106,6 +106,7 @@ export function createSeedState(): WorkspaceState {
     activeEnvironmentId: null,
     openTabIds: [requests[0].id],
     drafts: {},
+    versions: [],
     activeFolderId: null,
     activeRequestId: requests[0].id,
     settings: defaultSettings(),

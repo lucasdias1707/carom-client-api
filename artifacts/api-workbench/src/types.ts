@@ -261,6 +261,22 @@ export type ResponseRecord = {
   error?: string;
 };
 
+/**
+ * A request as it stood at one Save.
+ *
+ * The whole record is kept, not a diff: restoring has to produce a request that
+ * works, and a chain of diffs that has to be replayed is a second thing that
+ * can be wrong. `changed` is only for the list to read.
+ */
+export type RequestVersion = {
+  id: string;
+  requestId: string;
+  savedAt: string;
+  /** Which parts moved in this save, in composer order. */
+  changed: string[];
+  request: RequestRecord;
+};
+
 export type WorkspaceState = {
   version: number;
   workspaces: Workspace[];
@@ -279,6 +295,11 @@ export type WorkspaceState = {
    * which `hydrate` reads as "nothing unsaved".
    */
   drafts: Record<string, RequestRecord>;
+  /**
+   * Every saved version of every request, newest first. Absent on a state
+   * written before this existed, which `hydrate` reads as "no history yet".
+   */
+  versions: RequestVersion[];
   activeRequestId: string | null;
   /** Set when a folder's own pane is open; clears when a request is opened. */
   activeFolderId: string | null;

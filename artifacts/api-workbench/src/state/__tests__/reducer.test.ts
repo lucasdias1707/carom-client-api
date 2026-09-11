@@ -166,6 +166,77 @@ describe('drafts', () => {
     expect(next.requests.find((request) => request.id === target.id)!.params).toEqual(target.params);
   });
 
+  it('saving keeps a version, and saving without a draft keeps none', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const saved = reducer(edit(state, target.id, { url: 'https://api.test/v2' }), { type: 'request/save', id: target.id });
+    expect(saved.versions).toHaveLength(1);
+    expect(saved.versions[0]).toMatchObject({ requestId: target.id, changed: ['URL'] });
+    // Nothing to commit means nothing to record.
+    expect(reducer(saved, { type: 'request/save', id: target.id }).versions).toHaveLength(1);
+  });
+
+  it('restores a version into the draft, leaving the saved request alone', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const before = target.url;
+    let next = reducer(edit(state, target.id, { url: 'https://api.test/second' }), { type: 'request/save', id: target.id });
+    next = reducer(edit(next, target.id, { url: 'https://api.test/third' }), { type: 'request/save', id: target.id });
+
+    const oldest = next.versions.at(-1)!;
+    const restored = reducer(next, { type: 'request/restore-version', versionId: oldest.id });
+    expect(restored.drafts[target.id].url).toBe('https://api.test/second');
+    // The saved one is still the latest save until ⌘S is pressed again.
+    expect(restored.requests.find((request) => request.id === target.id)!.url).toBe('https://api.test/third');
+    expect(before).not.toBe('https://api.test/third');
+  });
+
+  it('keeps the request where it lives when restoring what it said', () => {
+    const state = seed();
+    const target = state.requests[0];
+    // Two saves, so restoring the older one is a real change and not a no-op.
+    let saved = reducer(edit(state, target.id, { url: 'first' }), { type: 'request/save', id: target.id });
+    saved = reducer(edit(saved, target.id, { url: 'second' }), { type: 'request/save', id: target.id });
+    const version = saved.versions.at(-1)!;
+    // The request has since been dragged elsewhere; the version must not drag
+    // it back, because a version records what a request said, not where it is.
+    const elsewhere = {
+      ...saved,
+      requests: saved.requests.map((request) =>
+        request.id === target.id ? { ...request, folderId: 'fld_elsewhere' } : request,
+      ),
+    };
+    const restored = reducer(elsewhere, { type: 'request/restore-version', versionId: version.id });
+    expect(restored.drafts[target.id].url).toBe('first');
+    expect(restored.drafts[target.id].folderId).toBe('fld_elsewhere');
+    expect(restored.drafts[target.id].id).toBe(target.id);
+  });
+
+  it('restoring what is already saved leaves no draft behind', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const saved = reducer(edit(state, target.id, { url: 'once' }), { type: 'request/save', id: target.id });
+    const restored = reducer(saved, { type: 'request/restore-version', versionId: saved.versions[0].id });
+    expect(restored.drafts[target.id]).toBeUndefined();
+  });
+
+  it('deleting the request takes its history with it', () => {
+    const state = seed();
+    const target = state.requests[0];
+    const saved = reducer(edit(state, target.id, { url: 'gone' }), { type: 'request/save', id: target.id });
+    expect(reducer(saved, { type: 'request/delete', id: target.id }).versions).toHaveLength(0);
+  });
+
+  it('clears one request\u2019s history and nobody else\u2019s', () => {
+    let state = seed();
+    const [first, second] = state.requests;
+    state = reducer(edit(state, first.id, { url: 'a' }), { type: 'request/save', id: first.id });
+    state = reducer(edit(state, second.id, { url: 'b' }), { type: 'request/save', id: second.id });
+    const cleared = reducer(state, { type: 'request/clear-versions', id: first.id });
+    expect(cleared.versions.filter((version) => version.requestId === first.id)).toHaveLength(0);
+    expect(cleared.versions.filter((version) => version.requestId === second.id)).toHaveLength(1);
+  });
+
   it('renaming from the tree saves at once, and renames the draft with it', () => {
     const state = seed();
     const target = state.requests[0];
