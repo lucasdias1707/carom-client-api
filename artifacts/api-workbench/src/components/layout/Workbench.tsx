@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Columns2,
+  Dices,
   Download,
   FilePlus2,
   FolderInput,
@@ -23,6 +24,7 @@ import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
+import { DynamicVariablesDialog } from '@/components/dialogs/DynamicVariablesDialog';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
 import { FolderPane } from '@/components/layout/FolderPane';
 import { SidebarResizer } from '@/components/layout/SidebarResizer';
@@ -58,6 +60,7 @@ type Overlay =
   | 'import'
   | 'export'
   | 'shortcuts'
+  | 'dynamic'
   | null;
 
 export function Workbench() {
@@ -197,6 +200,7 @@ export function Workbench() {
     { id: 'export', label: t('workbench.export'), icon: <Download size={13} />, run: () => openExport() },
     { id: 'settings', label: t('settings.title'), icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
     { id: 'shortcuts', label: t('workbench.shortcuts'), icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
+    { id: 'dynamic', label: t('dynamic.open'), icon: <Dices size={13} />, run: () => setOverlay('dynamic') },
     {
       id: 'layout',
       label: t(state.settings.layout === 'horizontal' ? 'workbench.stackPanes' : 'workbench.sideBySide'),
@@ -367,6 +371,7 @@ export function Workbench() {
         <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
       ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'dynamic' ? <DynamicVariablesDialog onClose={() => setOverlay(null)} /> : null}
       {closing ? (
         <ConfirmDialog
           title={t(closing.length === 1 ? 'workbench.closeOneTitle' : 'workbench.closeManyTitle')}

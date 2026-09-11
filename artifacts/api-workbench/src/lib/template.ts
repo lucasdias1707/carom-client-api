@@ -1,3 +1,4 @@
+import { dynamicVariable, generateDynamic, looksDynamic } from '@/lib/dynamic';
 import type { Environment, Folder, KeyValue, ResolvedVariable, VariableOrigin, VariableTable } from '@/types';
 
 export const VARIABLE_PATTERN = /\{\{\s*([^}\s][^}]*?)\s*\}\}/g;
@@ -7,7 +8,20 @@ export const LOCAL_VARIABLE_COLOR = '#4d90d8';
 
 export type TemplateToken =
   | { kind: 'text'; text: string }
-  | { kind: 'variable'; text: string; name: string; resolved: ResolvedVariable | null; start: number; end: number };
+  | {
+      kind: 'variable';
+      text: string;
+      name: string;
+      resolved: ResolvedVariable | null;
+      /**
+       * True for a `{{$name}}` this app knows how to make up. It has no value
+       * to show — the value does not exist until the request goes out — which
+       * is why it is a flag beside `resolved` rather than a fake entry in it.
+       */
+      dynamic: boolean;
+      start: number;
+      end: number;
+    };
 
 /**
  * Layer every scope into one lookup, nearest first.
@@ -74,12 +88,26 @@ export function valuesOf(table: VariableTable): Record<string, string> {
  * Replace `{{ name }}` placeholders. Unknown names are left untouched so the
  * user can see what is still missing instead of silently sending an empty
  * string.
+ *
+ * A `{{$name}}` is generated here rather than looked up, and generated **once
+ * per occurrence**: two `{{$randomFirstName}}` in one body are two different
+ * people, which is the whole point of putting one in a list of guests. A
+ * defined variable is the opposite — the same value everywhere it appears —
+ * and that difference is why they are written differently.
+ *
+ * A defined variable wins over a generator of the same name, on the principle
+ * that what someone wrote down beats what the app would have invented. It
+ * takes a `$` in the name to reach one at all, so this only arises if someone
+ * deliberately defines one.
  */
 export function interpolate(value: string, variables: Record<string, string>): string {
   if (!value) return value;
-  return value.replace(VARIABLE_PATTERN, (match, name: string) => {
-    const resolved = variables[name.trim()];
-    return resolved === undefined ? match : resolved;
+  return value.replace(VARIABLE_PATTERN, (match, raw: string) => {
+    const name = raw.trim();
+    const defined = variables[name];
+    if (defined !== undefined) return defined;
+    if (looksDynamic(name)) return generateDynamic(name) ?? match;
+    return match;
   });
 }
 
@@ -96,6 +124,7 @@ export function tokenize(value: string, table: VariableTable): TemplateToken[] {
       text: match[0],
       name,
       resolved: table[name] ?? null,
+      dynamic: table[name] === undefined && dynamicVariable(name) !== null,
       start: index,
       end: index + match[0].length,
     });
@@ -105,12 +134,21 @@ export function tokenize(value: string, table: VariableTable): TemplateToken[] {
   return tokens;
 }
 
-/** Variable names referenced by a string but not defined anywhere. */
+/**
+ * Variable names referenced by a string but not defined anywhere.
+ *
+ * A generator counts as defined: it has no value yet, but it will have one by
+ * the time the request leaves, and warning about it would be warning about
+ * something that is working. A misspelt `{{$randomFrstName}}` is not a
+ * generator and does show up here, which is the case worth catching.
+ */
 export function missingVariables(value: string, variables: Record<string, string>): string[] {
   const missing = new Set<string>();
   for (const match of value.matchAll(VARIABLE_PATTERN)) {
     const name = match[1].trim();
-    if (variables[name] === undefined) missing.add(name);
+    if (variables[name] !== undefined) continue;
+    if (dynamicVariable(name)) continue;
+    missing.add(name);
   }
   return [...missing];
 }

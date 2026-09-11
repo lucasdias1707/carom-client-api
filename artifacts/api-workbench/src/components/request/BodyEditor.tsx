@@ -75,12 +75,12 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
   return (
     <div className={`pane-pad stack ${FILLS.includes(request.bodyType) ? 'fills' : ''}`}>
       <div className="section-label">
-        Body
+        {t('request.tab.body')}
         <span className="spacer" />
         <SelectField
           value={request.bodyType}
           onChange={(bodyType) => onChange({ bodyType })}
-          options={BODY_TYPES.map((type) => ({ value: type, label: BODY_LABELS[type] }))}
+          options={BODY_TYPES.map((type) => ({ value: type, label: t(BODY_LABELS[type]) }))}
           ariaLabel={t('body.typeAria')}
           testId="select-body-type"
           className="min-w-[150px]"

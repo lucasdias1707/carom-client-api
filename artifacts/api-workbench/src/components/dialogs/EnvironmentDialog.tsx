@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowDownToLine, Plus, Trash2 } from 'lucide-react';
+import { ArrowDownToLine, Dices, Plus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CopyVariablesDialog } from '@/components/dialogs/CopyVariablesDialog';
+import { DynamicVariablesDialog } from '@/components/dialogs/DynamicVariablesDialog';
 import { Dialog } from '@/components/common/Dialog';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { createEnvironment, ENVIRONMENT_COLORS } from '@/lib/factories';
@@ -22,6 +23,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
   const base = environments.find((environment) => environment.isBase) ?? environments[0];
   // Open on whatever is in use, so managing follows straight on from picking.
   const [selectedId, setSelectedId] = useState(state.activeEnvironmentId ?? base?.id ?? '');
+  const [showingDynamic, setShowingDynamic] = useState(false);
   const [copying, setCopying] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const deleteWithUndo = useDeleteWithUndo();
@@ -54,6 +56,14 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
       testId="dialog-environments"
       footer={
         <>
+          {/*
+            The other half of "what can I put between braces". Someone looking
+            for a variable name looks here first, and until now this screen
+            only knew about the ones they had written down themselves.
+          */}
+          <Button variant="ghost" onClick={() => setShowingDynamic(true)} data-testid="button-open-dynamic">
+            <Dices size={13} /> {t('dynamic.open')}
+          </Button>
           <span className="spacer" />
           <Button onClick={onClose} data-testid="button-close-environments">
             {t('common.done')}
@@ -174,6 +184,8 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
           }}
         />
       ) : null}
+
+      {showingDynamic ? <DynamicVariablesDialog onClose={() => setShowingDynamic(false)} /> : null}
 
       {copying ? (
         <CopyVariablesDialog

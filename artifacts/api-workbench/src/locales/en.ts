@@ -648,6 +648,31 @@ export const en = {
   'time.hoursAgo': '{count}h ago',
   'time.daysAgo': '{count}d ago',
   'format.unknownType': 'Unknown',
+
+  // ── Generated variables ──────────────────────────────────────────────
+  'dynamic.badge': 'generated',
+  'dynamic.explain': 'Made up when the request is sent. Every place it appears gets its own value — two of these in one body are two different people.',
+  'dynamic.sample': 'For example',
+  'dynamic.another': 'Another',
+  'dynamic.overridden': 'A variable you defined has this name, so yours is what gets sent.',
+  'dynamic.unknown': 'Nothing here generates {name}. Check the spelling against the list of generated variables.',
+  'dynamic.title': 'Generated variables',
+  'dynamic.description': 'Write one of these between braces and it becomes a fresh value each time the request is sent. The names match Postman\'s, so a collection that used them keeps working.',
+  'dynamic.filter': 'Filter generated variables',
+  'dynamic.copied': 'Copied {name}',
+  'dynamic.copyHint': 'Click one to copy it, braces and all.',
+  'dynamic.reroll': 'Show different examples',
+  'dynamic.noMatches': 'Nothing matches that.',
+  'dynamic.open': 'Generated variables',
+  'dynamic.count': { one: '{count} generator', other: '{count} generators' },
+  'dynamic.group.identifiers': 'Identifiers and timestamps',
+  'dynamic.group.person': 'People',
+  'dynamic.group.internet': 'Internet',
+  'dynamic.group.location': 'Places',
+  'dynamic.group.business': 'Commerce',
+  'dynamic.group.text': 'Words and colours',
+  'dynamic.group.numbers': 'Numbers',
+  'dynamic.group.dates': 'Dates',
 };
 
 /** The shape every other language has to fill. */

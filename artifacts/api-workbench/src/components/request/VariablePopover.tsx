@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Check, Plus } from 'lucide-react';
+import { Check, Dices, Plus } from 'lucide-react';
 import { LOCAL_VARIABLE_COLOR } from '@/lib/template';
+import { dynamicVariable, generateDynamic, looksDynamic } from '@/lib/dynamic';
 import { row } from '@/lib/factories';
 import { useWorkspace } from '@/state/workspace-store';
 import type { ResolvedVariable } from '@/types';
@@ -34,6 +35,15 @@ type VariablePopoverProps = {
 export function VariablePopover({ name, variable, anchor, onPointerEnter, onPointerLeave, onClose }: VariablePopoverProps) {
   const { state, dispatch, activeRequest, t, tNodes } = useWorkspace();
   const [value, setValue] = useState(variable?.value ?? '');
+
+  /*
+    A generator is shown, not edited: there is nothing to define, and the only
+    useful thing to say about it is what it produces. The sample is held in
+    state rather than generated on render, because a value that changed every
+    time React repainted would be impossible to read.
+  */
+  const generator = variable ? null : dynamicVariable(name);
+  const [sample, setSample] = useState(() => (generator ? generator.generate() : ''));
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId,
@@ -133,6 +143,10 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
           <Badge variant="outline" className="chip" style={{ color: accent }}>
             {t(variable.scope === 'folder' ? 'variable.local' : 'variable.global')}
           </Badge>
+        ) : generator ? (
+          <Badge variant="outline" className="chip" style={{ color: 'var(--purple)' }}>
+            {t('dynamic.badge')}
+          </Badge>
         ) : (
           <Badge variant="outline" className="chip" style={{ color: 'var(--red)' }}>
             {t('variable.undefined')}
@@ -140,7 +154,29 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
         )}
       </div>
 
-      {variable ? (
+      {generator ? (
+        <>
+          <div className="var-popover-origin">{t('dynamic.explain')}</div>
+          <div className="var-popover-row">
+            <span className="hint">{t('dynamic.sample')}</span>
+            <span className="mono truncate" style={{ flex: 1, minWidth: 0 }} data-testid="text-dynamic-sample">
+              {sample}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSample(generateDynamic(name) ?? '')}
+              data-testid="button-dynamic-another"
+            >
+              <Dices size={12} /> {t('dynamic.another')}
+            </Button>
+          </div>
+        </>
+      ) : !variable && looksDynamic(name) ? (
+        <div className="var-popover-origin" data-testid="text-dynamic-unknown">
+          {t('dynamic.unknown', { name })}
+        </div>
+      ) : variable ? (
         <>
           <div className="var-popover-origin">
             {tNodes(variable.scope === 'folder' ? 'variable.fromFolder' : 'variable.fromEnvironment', {
