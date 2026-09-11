@@ -1115,6 +1115,35 @@
   .history-row:hover { background: var(--bg-hover); }
   .history-row.active { background: var(--accent-soft); }
 
+  /* One version opened: what it said, beside what is saved now. */
+  .version-detail {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-raised);
+  }
+  .version-field {
+    display: grid;
+    grid-template-columns: 76px 1fr 1fr;
+    align-items: start;
+    gap: 10px;
+  }
+  .version-then,
+  .version-now {
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-11);
+    overflow-wrap: anywhere;
+  }
+  /* The old one is the claim being made; the current one is the ground it is
+     read against, so only the first is tinted. */
+  .version-then { background: var(--accent-soft); color: var(--text); }
+  .version-now { background: var(--bg-code); color: var(--text-dim); }
+  .version-actions { display: flex; align-items: center; gap: 10px; }
+  .version-actions .hint { flex: 1; }
+
   /* ==========================================================================
      Template fields: variables rendered inline, hoverable and clickable
      ========================================================================== */

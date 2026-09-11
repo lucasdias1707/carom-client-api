@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Copy, Crosshair, Plus, Search, X, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Crosshair, FilePlus2, Plus, Search, X, XCircle } from 'lucide-react';
 import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
 import { IconButton } from '@/components/common/IconButton';
 import { useWorkspace } from '@/state/workspace-store';
@@ -110,8 +110,31 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
     },
   ];
 
+  /**
+   * Right-clicking the strip itself rather than a tab on it.
+   *
+   * Every tab stops its own context menu from bubbling, so what reaches here is
+   * the empty space — and with no tabs open the whole strip is empty space,
+   * which is where the browser's own menu used to appear instead.
+   */
+  const stripMenu = (): MenuEntry[] => [
+    { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: onNew },
+    ...(state.openTabIds.length > 0
+      ? ([
+          { kind: 'separator' },
+          { kind: 'item', label: 'Close all', icon: <XCircle size={13} />, onSelect: () => onClose(state.openTabIds) },
+        ] as MenuEntry[])
+      : []),
+  ];
+
   return (
-    <div className="tabstrip-bar">
+    <div
+      className="tabstrip-bar"
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY, entries: stripMenu() });
+      }}
+    >
       {more.left ? (
         <button className="tabstrip-arrow" onClick={() => scrollBy(-1)} aria-label="Scroll tabs left" data-testid="button-tabs-left">
           <ChevronLeft size={13} />

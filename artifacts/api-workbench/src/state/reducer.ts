@@ -1,4 +1,5 @@
 import { dropDrafts, isDirty } from '@/lib/draft';
+import { dropVersions, recordVersion } from '@/lib/versions';
 import { cloneRequest } from '@/lib/factories';
 import { createId } from '@/lib/id';
 import type { Action } from '@/state/actions';
@@ -55,6 +56,7 @@ function removeRequests(state: WorkspaceState, ids: Set<string>): WorkspaceState
     openTabIds,
     activeRequestId,
     drafts: dropDrafts(state.drafts, ids),
+    versions: dropVersions(state.versions, ids),
     responses: state.responses.filter((response) => !ids.has(response.requestId)),
   };
 }
@@ -64,7 +66,7 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case 'state/replace':
       // A file written by an older build carries no drafts, and an imported
       // workspace has no unsaved edits by definition.
-      return { ...action.state, drafts: action.state.drafts ?? {} };
+      return { ...action.state, drafts: action.state.drafts ?? {}, versions: action.state.versions ?? [] };
 
     case 'restore': {
       const previous = action.previous;
@@ -164,15 +166,55 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       };
     }
 
+    /*
+      The one place a save happens: the Save button, ⌘S and the "Save and close"
+      of the closing prompt all dispatch this. Recording the version here rather
+      than in any of them is what keeps the three from disagreeing.
+    */
     case 'request/save': {
       const draft = state.drafts[action.id];
-      if (!draft) return state;
+      const saved = state.requests.find((request) => request.id === action.id);
+      if (!draft || !saved) return state;
       return {
         ...state,
         requests: state.requests.map((request) => (request.id === action.id ? draft : request)),
         drafts: dropDrafts(state.drafts, new Set([action.id])),
+        versions: recordVersion(state.versions, saved, draft),
       };
     }
+
+    /*
+      Restoring lands in the draft. Writing it straight into the saved request
+      would make this the only thing in the app that changes a request without
+      passing through the draft — and would leave no way back except another
+      restore. From the draft, Revert is already the way out.
+    */
+    case 'request/restore-version': {
+      const version = state.versions.find((item) => item.id === action.versionId);
+      if (!version) return state;
+      const saved = state.requests.find((request) => request.id === version.requestId);
+      if (!saved) return state;
+      // Its own id and place in the tree are the request's, not the version's:
+      // restoring what a request said, not where it lives.
+      const restored: RequestRecord = {
+        ...version.request,
+        id: saved.id,
+        workspaceId: saved.workspaceId,
+        folderId: saved.folderId,
+        sortIndex: saved.sortIndex,
+        createdAt: saved.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+      return {
+        ...state,
+        drafts: isDirty(saved, restored)
+          ? { ...state.drafts, [saved.id]: restored }
+          : dropDrafts(state.drafts, new Set([saved.id])),
+      };
+    }
+
+    case 'request/clear-versions':
+      return { ...state, versions: dropVersions(state.versions, new Set([action.id])) };
 
     case 'request/revert':
       return { ...state, drafts: dropDrafts(state.drafts, new Set([action.id])) };

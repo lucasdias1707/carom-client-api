@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { AuthEditor } from '@/components/request/AuthEditor';
 import { BodyEditor } from '@/components/request/BodyEditor';
 import { DocFieldsTable } from '@/components/request/DocFieldsTable';
+import { RequestHistory } from '@/components/request/RequestHistory';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { ScriptEditor } from '@/components/request/ScriptEditor';
 import { UrlBar } from '@/components/request/UrlBar';
@@ -16,13 +17,14 @@ import { useToast } from '@/components/common/Toaster';
 import { toCurl } from '@/lib/curl';
 import { prepareRequest } from '@/lib/http';
 import { formatBinding, resolveBindings } from '@/lib/shortcuts';
+import { versionsFor } from '@/lib/versions';
 import { paramsMatchUrl, splitQuery, syncUrlParams, writeUrlParams } from '@/lib/query';
 import { folderPath } from '@/state/selectors';
 import { useWorkspace } from '@/state/workspace-store';
 import { resolveAuth } from '@/lib/inherit';
 import type { Auth, HttpMethod, KeyValue, RequestRecord } from '@/types';
 
-type RequestTab = 'params' | 'body' | 'headers' | 'auth' | 'scripts' | 'docs';
+type RequestTab = 'params' | 'body' | 'headers' | 'auth' | 'scripts' | 'docs' | 'history';
 
 /** Long enough to finish a word, short enough to feel like the table follows. */
 const URL_PARAM_DEBOUNCE_MS = 500;
@@ -34,6 +36,10 @@ const TABS: Array<{ id: RequestTab; label: string }> = [
   { id: 'auth', label: 'Auth' },
   { id: 'scripts', label: 'Scripts' },
   { id: 'docs', label: 'Docs' },
+  // "Versions", not "History": the response pane has a History tab of its own,
+  // and two tabs with the same name a pane apart is the exact question this was
+  // built to answer — "the history of the request, not of the response".
+  { id: 'history', label: 'Versions' },
 ];
 
 type RequestPaneProps = {
@@ -104,6 +110,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
   const badges: Partial<Record<RequestTab, number>> = {
     params: activeCount(request.params),
     headers: activeCount(request.headers),
+    history: versionsFor(state.versions, request.id).length,
   };
 
   // What this request actually authenticates with, which may come from a
@@ -267,6 +274,10 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
               turns what is above into an operation, its parameters and its body schema.
             </p>
           </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="contents">
+          <RequestHistory request={request} />
         </TabsContent>
         </div>
       </Tabs>

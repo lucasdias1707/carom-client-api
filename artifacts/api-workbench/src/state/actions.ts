@@ -25,6 +25,13 @@ export type Action =
   | { type: 'request/save'; id: string }
   /** Throw the draft away and go back to what was saved. */
   | { type: 'request/revert'; id: string }
+  /**
+   * Bring an old version back — into the draft, not into the saved request, so
+   * it is something you look at before committing with ⌘S.
+   */
+  | { type: 'request/restore-version'; versionId: string }
+  /** Forget one request's saved versions. */
+  | { type: 'request/clear-versions'; id: string }
   /** Rename in the tree, which is not a composer edit and saves straight away. */
   | { type: 'request/rename'; id: string; name: string }
   | { type: 'request/create'; request: RequestRecord }
