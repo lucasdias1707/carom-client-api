@@ -12,16 +12,16 @@ import type { Settings, ThemeName } from '@/types';
  * nothing at all, which is what makes it the default rather than a copy.
  */
 export function useTheme(
-  settings: Pick<Settings, 'theme' | 'palette' | 'palettes' | 'fontTheme' | 'fontThemes'>,
+  settings: Pick<Settings, 'theme' | 'palette' | 'palettes' | 'draftPalette' | 'fontTheme' | 'fontThemes'>,
 ): void {
-  const { theme, palette: paletteId, fontTheme: fontId } = settings;
+  const { theme, palette: paletteId, fontTheme: fontId, draftPalette } = settings;
   const custom = settings.fontThemes;
   const customPalettes = settings.palettes;
 
   useEffect(() => {
     const root = document.documentElement;
     const media = window.matchMedia('(prefers-color-scheme: light)');
-    const palette = paletteById({ palettes: customPalettes }, paletteId);
+    const palette = paletteById({ palettes: customPalettes, draftPalette }, paletteId);
     const font = fontById({ fontThemes: custom }, fontId);
 
     // Anything this hook set last time, so switching back to Carom does not
@@ -58,5 +58,8 @@ export function useTheme(
       media.removeEventListener('change', apply);
       clear();
     };
-  }, [theme, paletteId, customPalettes, fontId, custom]);
+    // `draftPalette` earns its place in here: shuffling again changes the
+    // palette without changing which one is selected, so without it the second
+    // shuffle would repaint nothing at all.
+  }, [theme, paletteId, customPalettes, draftPalette, fontId, custom]);
 }

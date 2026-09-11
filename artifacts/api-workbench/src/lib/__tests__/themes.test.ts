@@ -4,6 +4,7 @@ import {
   BUILT_IN_FONTS,
   DEFAULT_FONT,
   DEFAULT_PALETTE,
+  DRAFT_PALETTE,
   EDITABLE_TOKENS,
   PALETTES,
   accentHover,
@@ -68,6 +69,30 @@ describe('palettes', () => {
     for (const token of editable) {
       expect(PALETTES[1].dark?.[token]).toMatch(/^#/);
     }
+  });
+});
+
+describe('the draft palette', () => {
+  const draft = { id: DRAFT_PALETTE, name: 'Clear drift', note: 'Generated', dark: null, light: null, from: 'midnight' };
+
+  it('resolves by id, so the whole app can be painted with it', () => {
+    expect(paletteById({ draftPalette: draft }, DRAFT_PALETTE).name).toBe('Clear drift');
+  });
+
+  it('stays out of the list you choose from', () => {
+    // It is the thing being decided about, not another option beside the rest.
+    const listed = allPalettes({ palettes: [], draftPalette: draft } as never);
+    expect(listed.some((palette) => palette.id === DRAFT_PALETTE)).toBe(false);
+    expect(listed).toHaveLength(PALETTES.length);
+  });
+
+  it('does not shadow a saved palette of the same name', () => {
+    const mine = { id: 'p1', name: 'Mine', note: 'Yours', dark: null, light: null };
+    expect(paletteById({ palettes: [mine], draftPalette: draft }, 'p1').name).toBe('Mine');
+  });
+
+  it('falls back to the default when there is no draft to find', () => {
+    expect(paletteById({}, DRAFT_PALETTE).id).toBe(DEFAULT_PALETTE);
   });
 });
 

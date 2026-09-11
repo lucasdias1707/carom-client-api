@@ -89,12 +89,16 @@ const NOUNS = ['harbour', 'orchard', 'signal', 'meridian', 'lantern', 'thicket',
  * A whole palette, both halves on the same hue.
  *
  * `random` is injectable so the tests can pin it; nothing else passes one.
+ * `id` is what makes shuffling repeatable in place: the editor passes
+ * `DRAFT_PALETTE` every time, so ten shuffles are ten repaints of one record
+ * rather than ten palettes to clean up afterwards. A fresh id is minted only
+ * when one is saved.
  */
-export function randomPalette(random: () => number = Math.random): Palette {
+export function randomPalette(random: () => number = Math.random, id: string = createId('pal')): Palette {
   const hue = Math.floor(random() * 360);
   const name = `${ADJECTIVES[Math.floor(random() * ADJECTIVES.length)]} ${NOUNS[Math.floor(random() * NOUNS.length)]}`;
   return {
-    id: createId('pal'),
+    id,
     name,
     note: 'Generated',
     dark: half(hue, 'dark', random),

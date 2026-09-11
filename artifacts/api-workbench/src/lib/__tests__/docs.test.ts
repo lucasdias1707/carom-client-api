@@ -3,7 +3,7 @@ import { discoverFields, docField, inferType, mergeFields, pathVariables } from 
 import { splitUrl, toOpenApi } from '@/lib/openapi-export';
 import { createEnvironment, createFolder, createRequest, row } from '@/lib/factories';
 import { defaultSettings } from '@/lib/settings';
-import type { RequestRecord, ResponseRecord, WorkspaceState } from '@/types';
+import type { DocField, RequestRecord, ResponseRecord, WorkspaceState } from '@/types';
 
 const request = (over: Partial<RequestRecord> = {}) =>
   createRequest({ workspaceId: 'ws', name: 'Create order', method: 'POST', ...over });
@@ -61,6 +61,48 @@ describe('discoverFields', () => {
   it('says nothing about a body that is not valid JSON yet', () => {
     // Half-typed is the normal state of a body someone is editing.
     expect(discoverFields(request({ bodyType: 'json', body: '{"a": ' }))).toEqual([]);
+  });
+
+  it('walks into an array, so its contents get rows of their own', () => {
+    const found = discoverFields(
+      request({
+        bodyType: 'json',
+        body: '{"nota": 1, "itens": [{"sku": "A-1", "qtd": 2}]}',
+      }),
+    );
+    expect(found.map((field) => [field.name, field.type, field.example])).toEqual([
+      ['nota', 'integer', '1'],
+      ['itens', 'array', ''],
+      ['itens[].sku', 'string', 'A-1'],
+      ['itens[].qtd', 'integer', '2'],
+    ]);
+  });
+
+  it('takes the union of the keys across an array, with the first example seen', () => {
+    const found = discoverFields(
+      request({ bodyType: 'json', body: '{"itens": [{"sku": "A"}, {"sku": "B", "nota": "tarde"}]}' }),
+    );
+    expect(found.map((field) => [field.name, field.example])).toEqual([
+      ['itens', ''],
+      ['itens[].sku', 'A'],
+      ['itens[].nota', 'tarde'],
+    ]);
+  });
+
+  it('walks into nested objects too', () => {
+    const found = discoverFields(request({ bodyType: 'json', body: '{"cliente": {"email": "a@b.test"}}' }));
+    expect(found.map((field) => field.name)).toEqual(['cliente', 'cliente.email']);
+  });
+
+  it('describes a body that is itself an array', () => {
+    const found = discoverFields(request({ bodyType: 'json', body: '[{"sku": "A-1"}]' }));
+    expect(found.map((field) => [field.name, field.in])).toEqual([['[].sku', 'body']]);
+  });
+
+  it('stops before a deeply nested payload becomes an unreadable table', () => {
+    const deep = '{"a":{"b":{"c":{"d":{"e":{"f": 1}}}}}}';
+    const names = discoverFields(request({ bodyType: 'json', body: deep })).map((field) => field.name);
+    expect(names).toEqual(['a', 'a.b', 'a.b.c', 'a.b.c.d']);
   });
 
   it('reads a form body from its rows rather than its text', () => {
@@ -257,5 +299,80 @@ describe('toOpenApi with more than one host', () => {
       selected: new Set([...state.requests.map((item) => item.id), ...state.folders.map((folder) => folder.id)]),
     }) as any;
     expect(doc.paths['/a'].servers).toBeUndefined();
+  });
+});
+
+describe('a body schema built from path-shaped field names', () => {
+  /** The request body schema `toOpenApi` writes for one described request. */
+  const schemaOf = (fields: DocField[]) => {
+    // A body type is what makes there be a body at all; the described fields
+    // are what shape it.
+    const target = request({ url: 'https://api.test/orders', bodyType: 'json', docs: { fields } });
+    const state = stateWith([target]);
+    const selected = new Set([...state.folders.map((f) => f.id), ...state.requests.map((r) => r.id)]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const doc = toOpenApi(state, { title: 'X', selected }) as any;
+    return doc.paths['/orders'].post.requestBody.content['application/json'].schema;
+  };
+
+  it('leaves a flat body flat', () => {
+    expect(schemaOf([docField({ in: 'body', name: 'email', type: 'string', required: true })])).toEqual({
+      type: 'object',
+      properties: { email: { type: 'string' } },
+      required: ['email'],
+    });
+  });
+
+  it('nests what the dots said was nested', () => {
+    expect(
+      schemaOf([
+        docField({ in: 'body', name: 'cliente', type: 'object' }),
+        docField({ in: 'body', name: 'cliente.email', type: 'string', required: true }),
+      ]),
+    ).toEqual({
+      type: 'object',
+      properties: {
+        cliente: { type: 'object', properties: { email: { type: 'string' } }, required: ['email'] },
+      },
+    });
+  });
+
+  it('turns `[]` back into an array of objects', () => {
+    // Pasting the names in as properties would describe an object with a
+    // property called "itens[].sku", which is not a thing.
+    expect(
+      schemaOf([
+        docField({ in: 'body', name: 'itens', type: 'array', description: 'The lines' }),
+        docField({ in: 'body', name: 'itens[].sku', type: 'string', required: true }),
+        docField({ in: 'body', name: 'itens[].qtd', type: 'integer', example: '2' }),
+      ]),
+    ).toEqual({
+      type: 'object',
+      properties: {
+        itens: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { sku: { type: 'string' }, qtd: { type: 'integer', example: 2 } },
+            required: ['sku'],
+          },
+          description: 'The lines',
+        },
+      },
+    });
+  });
+
+  it('describes a body that is itself an array', () => {
+    expect(schemaOf([docField({ in: 'body', name: '[].sku', type: 'string' })])).toEqual({
+      type: 'array',
+      items: { type: 'object', properties: { sku: { type: 'string' } } },
+    });
+  });
+
+  it('leaves an array nobody looked inside as a plain array', () => {
+    expect(schemaOf([docField({ in: 'body', name: 'tags', type: 'array' })])).toEqual({
+      type: 'object',
+      properties: { tags: { type: 'array' } },
+    });
   });
 });

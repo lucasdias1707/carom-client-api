@@ -1,4 +1,4 @@
-import { downloadJson } from '@/lib/download';
+import { downloadJson, downloadText } from '@/lib/download';
 import { isDesktop } from '@/lib/http';
 
 /**
@@ -15,19 +15,31 @@ import { isDesktop } from '@/lib/http';
  */
 export type SaveOutcome = 'saved' | 'downloaded' | 'cancelled';
 
-export async function saveJson(filename: string, payload: unknown): Promise<SaveOutcome> {
-  const text = JSON.stringify(payload, null, 2);
+/** What the file picker should offer, worked out from the name it is given. */
+function filterFor(filename: string): { name: string; extensions: string[] } {
+  const extension = filename.split('.').pop()?.toLowerCase();
+  const named: Record<string, string> = { json: 'JSON', xml: 'XML', txt: 'Text', html: 'HTML', csv: 'CSV' };
+  return extension && named[extension]
+    ? { name: named[extension], extensions: [extension] }
+    : { name: 'All files', extensions: ['*'] };
+}
 
+/**
+ * Save any text file, asking where when the app is allowed to ask.
+ *
+ * Everything that writes a file goes through here. A response body used to
+ * build its own `<a download>` instead, which on the desktop means the file
+ * lands in Downloads with no question asked — the app can open a real save
+ * sheet, and not using it was just an oversight.
+ */
+export async function saveText(filename: string, text: string, mime = 'text/plain'): Promise<SaveOutcome> {
   if (!isDesktop()) {
-    downloadJson(filename, payload);
+    downloadText(filename, text, mime);
     return 'downloaded';
   }
 
   const { save } = await import('@tauri-apps/plugin-dialog');
-  const path = await save({
-    defaultPath: filename,
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-  });
+  const path = await save({ defaultPath: filename, filters: [filterFor(filename)] });
   // Null is the sheet being dismissed, which is an answer, not a failure.
   if (!path) return 'cancelled';
 
@@ -36,10 +48,22 @@ export async function saveJson(filename: string, payload: unknown): Promise<Save
   return 'saved';
 }
 
+export async function saveJson(filename: string, payload: unknown): Promise<SaveOutcome> {
+  if (!isDesktop()) {
+    downloadJson(filename, payload);
+    return 'downloaded';
+  }
+  return saveText(filename, JSON.stringify(payload, null, 2), 'application/json');
+}
+
 /** What to tell someone after a save, given where it went. */
-export function saveMessage(outcome: SaveOutcome, name: string): { title: string; description?: string } | null {
+export function saveMessage(
+  outcome: SaveOutcome,
+  name: string,
+  verb = 'Exported',
+): { title: string; description?: string } | null {
   if (outcome === 'cancelled') return null;
   return outcome === 'saved'
-    ? { title: `Exported ${name}` }
-    : { title: `Exported ${name}`, description: 'Saved to your downloads — a browser tab cannot choose the folder.' };
+    ? { title: `${verb} ${name}` }
+    : { title: `${verb} ${name}`, description: 'Saved to your downloads — a browser tab cannot choose the folder.' };
 }

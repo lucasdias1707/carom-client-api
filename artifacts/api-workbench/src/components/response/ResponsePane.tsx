@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { JsonTree } from '@/components/response/JsonTree';
 import { SyntaxText } from '@/components/response/SyntaxText';
 import { useToast } from '@/components/common/Toaster';
+import { saveMessage, saveText } from '@/lib/save';
 import { byteLength, contentTypeLabel, formatBytes, formatDuration, formatRelative, statusFamily, tryPrettyJson } from '@/lib/format';
 import { useWorkspace } from '@/state/workspace-store';
 import type { ScriptLogEntry, ScriptTest } from '@/lib/scripts';
@@ -107,14 +108,31 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
     `${header.key} ${header.value}`.toLowerCase().includes(filter.toLowerCase()),
   );
 
-  const download = () => {
-    const blob = new Blob([response.body], { type: contentType ?? 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `response-${response.status}.${parsed !== null ? 'json' : xml ? 'xml' : 'txt'}`;
-    link.click();
-    URL.revokeObjectURL(url);
+  /**
+   * Save the body, asking where on the desktop.
+   *
+   * This used to build its own `<a download>`, which is the one thing a
+   * desktop app should not do: the file went to Downloads and there was no
+   * way to say otherwise. `saveText` opens the native sheet where there is
+   * one and falls back to the download in a browser tab, where a page is not
+   * allowed to choose a folder.
+   */
+  const download = async () => {
+    const extension = parsed !== null ? 'json' : xml ? 'xml' : 'txt';
+    const name = `response-${response.status}.${extension}`;
+    try {
+      // `prettyText`, not the raw body: what lands in the file is what the
+      // Pretty tab shows. A minified payload is what the wire carried, not
+      // something anyone opens a saved file to read.
+      const message = saveMessage(await saveText(name, prettyText, contentType ?? 'text/plain'), name, 'Saved');
+      if (message) toast({ ...message, kind: 'success' });
+    } catch (error) {
+      toast({
+        title: 'Could not save the response',
+        description: error instanceof Error ? error.message : undefined,
+        kind: 'error',
+      });
+    }
   };
 
   const tabs: Array<{ id: ResponseTab; label: string; count?: number }> = [
@@ -169,7 +187,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         >
           <Copy />
         </IconButton>
-        <IconButton label="Download response body" onClick={download}>
+        <IconButton label="Save the response body" onClick={() => void download()} testId="button-save-response">
           <Download />
         </IconButton>
         <IconButton
