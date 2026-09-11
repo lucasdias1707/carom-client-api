@@ -1,3 +1,4 @@
+import { translatorFor } from '@/locales';
 import { describe, expect, it } from 'vitest';
 import { discoverFields, docField, inferType, mergeFields, pathVariables } from '@/lib/docs';
 import { splitUrl, toOpenApi } from '@/lib/openapi-export';
@@ -7,6 +8,9 @@ import type { DocField, RequestRecord, ResponseRecord, WorkspaceState } from '@/
 
 const request = (over: Partial<RequestRecord> = {}) =>
   createRequest({ workspaceId: 'ws', name: 'Create order', method: 'POST', ...over });
+
+/** The exported document writes two lines of its own; these read them in English. */
+const t = translatorFor('en');
 
 describe('pathVariables', () => {
   it('reads the holes in the path and leaves the server alone', () => {
@@ -180,7 +184,7 @@ describe('toOpenApi', () => {
 
   it('turns each request into an operation under its path', () => {
     const state = stateWith([documented]);
-    const doc = toOpenApi(state, { title: 'Orders API', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'Orders API', selected: all(state) }, t) as any;
     expect(doc.openapi).toBe('3.1.0');
     expect(Object.keys(doc.paths)).toEqual(['/orders/{orderId}']);
     expect(doc.paths['/orders/{orderId}'].put.summary).toBe('Create order');
@@ -189,14 +193,14 @@ describe('toOpenApi', () => {
 
   it('keeps the server as an OpenAPI variable rather than a literal `{{baseUrl}}`', () => {
     const state = stateWith([documented]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     expect(doc.servers[0].url).toBe('{baseUrl}');
     expect(doc.servers[0].variables.baseUrl).toBeTruthy();
   });
 
   it('writes the documented fields as parameters, path ones always required', () => {
     const state = stateWith([documented]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     const parameters = doc.paths['/orders/{orderId}'].put.parameters;
     expect(parameters.map((item: any) => [item.in, item.name, item.required])).toEqual([
       ['path', 'orderId', true],
@@ -208,7 +212,7 @@ describe('toOpenApi', () => {
 
   it('builds the body schema from the described fields, typing the example', () => {
     const state = stateWith([documented]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     const schema = doc.paths['/orders/{orderId}'].put.requestBody.content['application/json'].schema;
     expect(schema.properties.total).toMatchObject({ type: 'integer', example: 10 });
     expect(schema.required).toEqual(['total']);
@@ -217,7 +221,7 @@ describe('toOpenApi', () => {
   it('falls back to the body itself when nobody has described anything', () => {
     const plain = request({ url: 'https://api.test/orders', body: '{"total": 10, "paid": false}', bodyType: 'json' });
     const state = stateWith([plain]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     const content = doc.paths['/orders'].post.requestBody.content['application/json'];
     expect(content.schema.properties).toEqual({ total: { type: 'integer' }, paid: { type: 'boolean' } });
     expect(content.example).toEqual({ total: 10, paid: false });
@@ -226,7 +230,7 @@ describe('toOpenApi', () => {
   it('never gives a GET a request body', () => {
     const get = request({ method: 'GET', url: 'https://api.test/orders', bodyType: 'json', body: '{"x":1}' });
     const state = stateWith([get]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     expect(doc.paths['/orders'].get.requestBody).toBeUndefined();
   });
 
@@ -251,14 +255,14 @@ describe('toOpenApi', () => {
       [target],
       [response(201, '{"id":1}', '2024-01-01T00:00:00Z'), response(201, '{"id":2}', '2024-02-01T00:00:00Z')],
     );
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     expect(doc.paths['/orders'].post.responses['201'].content['application/json'].example).toEqual({ id: 2 });
   });
 
   it('still produces a valid operation when nothing came back yet', () => {
     // `responses` is required by the spec, so it says the honest thing.
     const state = stateWith([request({ url: 'https://api.test/orders' })]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     expect(doc.paths['/orders'].post.responses.default.description).toMatch(/No response recorded/);
   });
 
@@ -266,13 +270,13 @@ describe('toOpenApi', () => {
     const kept = request({ url: 'https://api.test/kept' });
     const left = request({ url: 'https://api.test/left' });
     const state = stateWith([kept, left]);
-    const doc = toOpenApi(state, { title: 'X', selected: new Set([kept.id]) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: new Set([kept.id]) }, t) as any;
     expect(Object.keys(doc.paths)).toEqual(['/kept']);
   });
 
   it('names the folder path as the tag, so the tree survives the trip', () => {
     const state = stateWith([documented]);
-    const doc = toOpenApi(state, { title: 'X', selected: all(state) }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected: all(state) }, t) as any;
     expect(doc.tags).toEqual([{ name: 'Orders' }]);
     expect(doc.paths['/orders/{orderId}'].put.tags).toEqual(['Orders']);
   });
@@ -286,7 +290,7 @@ describe('toOpenApi with more than one host', () => {
     const doc = toOpenApi(state, {
       title: 'X',
       selected: new Set([a.id, b.id, ...state.folders.map((folder) => folder.id)]),
-    }) as any;
+    }, t) as any;
     expect(doc.servers.map((server: any) => server.url).sort()).toEqual(['https://one.test', 'https://two.test']);
     expect(doc.paths['/a'].servers[0].url).toBe('https://one.test');
     expect(doc.paths['/b'].servers[0].url).toBe('https://two.test');
@@ -297,7 +301,7 @@ describe('toOpenApi with more than one host', () => {
     const doc = toOpenApi(state, {
       title: 'X',
       selected: new Set([...state.requests.map((item) => item.id), ...state.folders.map((folder) => folder.id)]),
-    }) as any;
+    }, t) as any;
     expect(doc.paths['/a'].servers).toBeUndefined();
   });
 });
@@ -311,7 +315,7 @@ describe('a body schema built from path-shaped field names', () => {
     const state = stateWith([target]);
     const selected = new Set([...state.folders.map((f) => f.id), ...state.requests.map((r) => r.id)]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const doc = toOpenApi(state, { title: 'X', selected }) as any;
+    const doc = toOpenApi(state, { title: 'X', selected }, t) as any;
     return doc.paths['/orders'].post.requestBody.content['application/json'].schema;
   };
 

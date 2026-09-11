@@ -12,7 +12,7 @@ import { SyntaxText } from '@/components/response/SyntaxText';
 import { useToast } from '@/components/common/Toaster';
 import { saveMessage, saveText } from '@/lib/save';
 import { byteLength, contentTypeLabel, formatBytes, formatDuration, formatRelative, statusFamily, tryPrettyJson } from '@/lib/format';
-import { useWorkspace } from '@/state/workspace-store';
+import { useT, useWorkspace } from '@/state/workspace-store';
 import type { ScriptLogEntry, ScriptTest } from '@/lib/scripts';
 import { prettyXml } from '@/lib/xml';
 import type { ResponseRecord } from '@/types';
@@ -56,7 +56,7 @@ function parseCookie(raw: string): { name: string; value: string; attributes: st
 }
 
 export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests = [] }: ResponsePaneProps) {
-  const { responsesFor, dispatch } = useWorkspace();
+  const { responsesFor, dispatch, t, language } = useWorkspace();
   const { toast } = useToast();
   const [tab, setTab] = useState<ResponseTab>('pretty');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,14 +84,14 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
 
   if (!response) {
     return (
-      <section className="pane" aria-label="Response">
+      <section className="pane" aria-label={t('pane.response')}>
         <div className="empty" data-testid="empty-response">
           <div>
             <div className="empty-icon">
               <Waypoints size={19} />
             </div>
-            <h3>{sending ? 'Sending…' : 'No response yet'}</h3>
-            <p>Send the request and the status, timing, headers and payload will land here.</p>
+            <h3>{t(sending ? 'response.sending' : 'response.emptyTitle')}</h3>
+            <p>{t('response.emptyBody')}</p>
           </div>
         </div>
       </section>
@@ -124,11 +124,15 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
       // `prettyText`, not the raw body: what lands in the file is what the
       // Pretty tab shows. A minified payload is what the wire carried, not
       // something anyone opens a saved file to read.
-      const message = saveMessage(await saveText(name, prettyText, contentType ?? 'text/plain'), name, 'Saved');
+      const message = saveMessage(
+        await saveText(name, prettyText, contentType ?? 'text/plain', t('save.anyFile')),
+        t('save.saved', { name }),
+        t('save.downloaded'),
+      );
       if (message) toast({ ...message, kind: 'success' });
     } catch (error) {
       toast({
-        title: 'Could not save the response',
+        title: t('response.saveFailed'),
         description: error instanceof Error ? error.message : undefined,
         kind: 'error',
       });
@@ -136,17 +140,17 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
   };
 
   const tabs: Array<{ id: ResponseTab; label: string; count?: number }> = [
-    { id: 'pretty', label: 'Pretty' },
-    { id: 'raw', label: 'Raw' },
-    { id: 'preview', label: 'Preview' },
-    { id: 'headers', label: 'Headers', count: response.headers.length },
-    { id: 'cookies', label: 'Cookies', count: cookies.length },
-    { id: 'console', label: 'Console', count: scriptLogs.length + scriptTests.length },
-    { id: 'history', label: 'History', count: responses.length },
+    { id: 'pretty', label: t('response.tab.pretty') },
+    { id: 'raw', label: t('response.tab.raw') },
+    { id: 'preview', label: t('response.tab.preview') },
+    { id: 'headers', label: t('response.tab.headers'), count: response.headers.length },
+    { id: 'cookies', label: t('response.tab.cookies'), count: cookies.length },
+    { id: 'console', label: t('response.tab.console'), count: scriptLogs.length + scriptTests.length },
+    { id: 'history', label: t('response.tab.history'), count: responses.length },
   ];
 
   return (
-    <section className="pane" aria-label="Response">
+    <section className="pane" aria-label={t('pane.response')}>
       <div className="status-line">
         <span className={`status-code ${response.error ? 'none' : family}`} data-testid="status-response">
           {response.error ? 'FAILED' : `${response.status} ${response.statusText}`}
@@ -159,39 +163,39 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="chip">{contentTypeLabel(contentType)}</Badge>
+            <Badge variant="outline" className="chip">{contentTypeLabel(contentType, t('format.unknownType'))}</Badge>
           </TooltipTrigger>
-          <TooltipContent>{contentType ?? 'No content type'}</TooltipContent>
+          <TooltipContent>{contentType ?? t('response.noContentType')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className="chip">{response.via}</Badge>
           </TooltipTrigger>
-          <TooltipContent>Sent through the {response.via}</TooltipContent>
+          <TooltipContent>{t('response.sentVia', { via: response.via })}</TooltipContent>
         </Tooltip>
         <span className="spacer" />
         <IconButton
-          label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'}
+          label={t(wrap ? 'response.wrapOff' : 'response.wrapOn')}
           onClick={() => setWrap((current) => !current)}
           tone={wrap ? 'accent' : 'default'}
         >
           <Waypoints />
         </IconButton>
         <IconButton
-          label="Copy response body"
+          label={t('response.copy')}
           onClick={() => {
             navigator.clipboard?.writeText(response.body);
-            toast({ title: 'Response copied', kind: 'success' });
+            toast({ title: t('response.copied'), kind: 'success' });
           }}
           testId="button-copy-response"
         >
           <Copy />
         </IconButton>
-        <IconButton label="Save the response body" onClick={() => void download()} testId="button-save-response">
+        <IconButton label={t('response.save')} onClick={() => void download()} testId="button-save-response">
           <Download />
         </IconButton>
         <IconButton
-          label="Clear responses"
+          label={t('response.clear')}
           hint={responses.length > 1 ? `all ${responses.length}` : undefined}
           tone="danger"
           onClick={() => setClearing(true)}
@@ -208,13 +212,9 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
       */}
       {clearing ? (
         <ConfirmDialog
-          title="Clear the response history?"
-          message={
-            responses.length > 1
-              ? `All ${responses.length} saved responses for this request go away. This one cannot be undone.`
-              : 'The saved response for this request goes away. This one cannot be undone.'
-          }
-          confirmLabel="Clear"
+          title={t('response.clearTitle')}
+          message={t('response.clearMessage', { count: responses.length })}
+          confirmLabel={t('common.clear')}
           onCancel={() => setClearing(false)}
           onConfirm={() => {
             dispatch({ type: 'response/clear', requestId });
@@ -226,7 +226,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
 
       {response.error ? (
         <div className="error-box" data-testid="status-network-error">
-          <strong>Could not reach this endpoint</strong>
+          <strong>{t('response.networkError')}</strong>
           {/* The reason first, then why this transport tends to fail that way;
               run together they read as one confused sentence. */}
           {response.error.split('\n\n').map((paragraph, index) => (
@@ -259,9 +259,9 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
             <Input
               className="h-6 border-0 bg-transparent px-1"
               value={filter}
-              placeholder={tab === 'headers' ? 'Filter headers' : 'Highlight in body'}
+              placeholder={t(tab === 'headers' ? 'response.filterHeaders' : 'response.filterBody')}
               onChange={(event) => setFilter(event.target.value)}
-              aria-label="Filter response"
+              aria-label={t('response.filterAria')}
               data-testid="input-response-filter"
             />
           </div>
@@ -323,8 +323,8 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
           <Table className="headers-table" data-testid="table-response-headers">
             <TableHeader>
               <TableRow>
-                <TableHead>Header</TableHead>
-                <TableHead>Value</TableHead>
+                <TableHead>{t('response.header')}</TableHead>
+                <TableHead>{t('common.value')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,16 +342,16 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
           {cookies.length === 0 ? (
             <div className="empty">
               <div>
-                <p>This response did not set any cookies.</p>
+                <p>{t('response.noCookies')}</p>
               </div>
             </div>
           ) : (
             <Table className="headers-table" data-testid="table-response-cookies">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Attributes</TableHead>
+                  <TableHead>{t('common.name')}</TableHead>
+                  <TableHead>{t('common.value')}</TableHead>
+                  <TableHead>{t('response.cookieAttributes')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -391,7 +391,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
                 <span className="status-meta">{formatDuration(item.durationMs)}</span>
                 <span className="status-meta">{formatBytes(item.size)}</span>
                 <span className="status-meta" style={{ width: 66, textAlign: 'right' }}>
-                  {formatRelative(item.sentAt)}
+                  {formatRelative(item.sentAt, t, language)}
                 </span>
               </button>
             ))}
@@ -411,10 +411,11 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
 
 /** Render HTML and images inline; everything else falls back to plain text. */
 function Preview({ body, contentType }: { body: string; contentType: string | undefined }) {
+  const t = useT();
   if (contentType && /html/i.test(contentType)) {
     return (
       <iframe
-        title="Response preview"
+        title={t('response.previewTitle')}
         sandbox=""
         srcDoc={body}
         style={{ width: '100%', height: '100%', border: 0, background: 'white' }}
@@ -425,7 +426,7 @@ function Preview({ body, contentType }: { body: string; contentType: string | un
   if (contentType && /^image\//i.test(contentType)) {
     return (
       <div className="empty">
-        <p>Binary image responses are not rendered yet.</p>
+        <p>{t('response.imageUnsupported')}</p>
       </div>
     );
   }

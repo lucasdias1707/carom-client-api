@@ -23,6 +23,28 @@ const rowsText = (rows: KeyValue[]): string => {
 };
 
 /**
+ * The parts of a request the composer can change, named.
+ *
+ * These ids are written into every saved version's `changed` list, so they are
+ * storage, not display: a version saved in Portuguese has to read the same
+ * after switching to English, which it cannot do if the stored word is itself
+ * a translation. The label comes from the catalogue at the moment of drawing.
+ */
+export const SECTION_IDS = [
+  'method',
+  'url',
+  'params',
+  'headers',
+  'body',
+  'auth',
+  'scripts',
+  'docs',
+  'name',
+] as const;
+
+export type SectionId = (typeof SECTION_IDS)[number];
+
+/**
  * One comparable part of a request, in the order the composer shows them.
  *
  * `parts` is what decides whether it changed; `text` is how it reads when the
@@ -30,16 +52,16 @@ const rowsText = (rows: KeyValue[]): string => {
  * section cannot be compared on one thing and displayed as another.
  */
 const SECTIONS: Array<{
-  label: string;
+  id: SectionId;
   parts: (request: RequestRecord) => unknown;
   text: (request: RequestRecord) => string;
 }> = [
-  { label: 'Method', parts: (request) => request.method, text: (request) => request.method },
-  { label: 'URL', parts: (request) => request.url, text: (request) => request.url || '—' },
-  { label: 'Params', parts: (request) => request.params, text: (request) => rowsText(request.params) },
-  { label: 'Headers', parts: (request) => request.headers, text: (request) => rowsText(request.headers) },
+  { id: 'method', parts: (request) => request.method, text: (request) => request.method },
+  { id: 'url', parts: (request) => request.url, text: (request) => request.url || '—' },
+  { id: 'params', parts: (request) => request.params, text: (request) => rowsText(request.params) },
+  { id: 'headers', parts: (request) => request.headers, text: (request) => rowsText(request.headers) },
   {
-    label: 'Body',
+    id: 'body',
     parts: (request) => [request.bodyType, request.body, request.form, request.multipart, request.graphql],
     text: (request) =>
       request.bodyType === 'none' ? 'none'
@@ -49,28 +71,41 @@ const SECTIONS: Array<{
       : `${request.bodyType} · ${request.body || '—'}`,
   },
   {
-    label: 'Auth',
+    id: 'auth',
     parts: (request) => request.auth,
     text: (request) => request.auth.type,
   },
   {
-    label: 'Scripts',
+    id: 'scripts',
     parts: (request) => [request.preScript, request.postScript],
     text: (request) =>
       [request.preScript.trim() && 'pre', request.postScript.trim() && 'post'].filter(Boolean).join(' + ') || 'none',
   },
   {
-    label: 'Docs',
+    id: 'docs',
     parts: (request) => [request.description, request.docs ?? null],
     text: (request) =>
       [request.description.trim(), `${request.docs?.fields.length ?? 0} fields`].filter(Boolean).join(' · '),
   },
-  { label: 'Name', parts: (request) => request.name, text: (request) => request.name },
+  { id: 'name', parts: (request) => request.name, text: (request) => request.name },
 ];
 
 /** How one section of a request reads, for showing two of them side by side. */
-export function sectionText(request: RequestRecord, label: string): string {
-  return SECTIONS.find((section) => section.label === label)?.text(request) ?? '';
+export function sectionText(request: RequestRecord, id: SectionId): string {
+  return SECTIONS.find((section) => section.id === id)?.text(request) ?? '';
+}
+
+/**
+ * Read a stored `changed` entry as a section id.
+ *
+ * Versions saved before the ids existed hold the English label — 'Method',
+ * 'URL' — which lowercases straight onto its id. Anything that does not match
+ * is dropped rather than shown: a badge saying nothing recognisable is worse
+ * than one badge fewer, and the version itself still restores in full.
+ */
+export function sectionId(stored: string): SectionId | null {
+  const lowered = stored.toLowerCase();
+  return SECTION_IDS.find((id) => id === lowered) ?? null;
 }
 
 /**
@@ -79,10 +114,10 @@ export function sectionText(request: RequestRecord, label: string): string {
  * `updatedAt` is deliberately not one of them: every keystroke moves it, so
  * comparing it would make a draft that was typed and untyped look changed.
  */
-export function draftChanges(saved: RequestRecord, draft: RequestRecord): string[] {
+export function draftChanges(saved: RequestRecord, draft: RequestRecord): SectionId[] {
   return SECTIONS.filter(
     (section) => JSON.stringify(section.parts(saved)) !== JSON.stringify(section.parts(draft)),
-  ).map((section) => section.label);
+  ).map((section) => section.id);
 }
 
 /** True when the draft still differs from what is saved. */

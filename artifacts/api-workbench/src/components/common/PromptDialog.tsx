@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '@/state/workspace-store';
 import { Dialog } from '@/components/common/Dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +21,11 @@ export function PromptDialog({
   description,
   label,
   initialValue = '',
-  confirmLabel = 'Save',
+  confirmLabel,
   onCancel,
   onConfirm,
 }: PromptDialogProps) {
+  const t = useT();
   const [value, setValue] = useState(initialValue);
   const submit = () => {
     const trimmed = value.trim();
@@ -39,10 +41,10 @@ export function PromptDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} data-testid="button-prompt-cancel">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={submit} disabled={!value.trim()} data-testid="button-prompt-confirm">
-            {confirmLabel}
+            {confirmLabel ?? t('common.save')}
           </Button>
         </>
       }

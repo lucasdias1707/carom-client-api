@@ -31,7 +31,7 @@ export function ExportDialog({
   /** Pre-ticked ids, when the dialog was opened from a folder or a request. */
   initialSelection?: string[];
 }) {
-  const { state } = useWorkspace();
+  const { state, t, tNodes } = useWorkspace();
   const { toast } = useToast();
 
   const scoped = useMemo(
@@ -77,22 +77,26 @@ export function ExportDialog({
     if (pruned.folders.length === 1 && pruned.requests.length === 0) return pruned.folders[0].name;
     if (pruned.folders.length === 0 && pruned.requests.length === 1) return pruned.requests[0].name;
     if (pruned.folders.length === 1) return pruned.folders[0].name;
-    return workspace?.name ?? 'Carom export';
-  }, [scoped, selected, workspace]);
+    return workspace?.name ?? t('export.defaultName');
+  }, [scoped, selected, workspace, t]);
 
   const run = async () => {
     setSaving(true);
     try {
       const payload = openApi
-        ? toOpenApi(state, { title: name, selected })
+        ? toOpenApi(state, { title: name, selected }, t)
         : exportSelection(state, { name, selected, environmentIds });
       const filename = openApi ? exportFileName(`${name}-openapi`) : exportFileName(name);
-      const message = saveMessage(await saveJson(filename, payload), name);
+      const message = saveMessage(
+        await saveJson(filename, payload, t('save.anyFile')),
+        t('save.exported', { name }),
+        t('save.downloaded'),
+      );
       if (message) toast({ ...message, kind: 'success' });
       onClose();
     } catch (error) {
       toast({
-        title: 'Could not write the file',
+        title: t('export.writeFailed'),
         description: error instanceof Error ? error.message : undefined,
         kind: 'error',
       });
@@ -111,18 +115,17 @@ export function ExportDialog({
 
   return (
     <Dialog
-      title="Export"
+      title={t('export.title')}
       description={
-        openApi
-          ? 'An OpenAPI 3.1 description of the requests you pick, from what the Docs tab knows.'
-          : `From ${workspace?.name ?? 'this workspace'}. Import reads this file back.`
+        openApi ? t('export.openapiDescription')
+        : t('export.caromDescription', { workspace: workspace?.name ?? t('export.thisWorkspace') })
       }
       onClose={onClose}
       testId="dialog-export"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={() => void run()} disabled={!anything || saving} data-testid="button-confirm-export">
             Export
@@ -131,27 +134,27 @@ export function ExportDialog({
       }
     >
       <div className="stack" style={{ gap: 10 }}>
-        <div className="section-label">Format</div>
+        <div className="section-label">{t('export.format')}</div>
         <SelectField
           value={format}
           onChange={(next) => setFormat(next as 'carom' | 'openapi')}
           options={[
-            { value: 'carom', label: 'Carom — reads back into this app' },
-            { value: 'openapi', label: 'OpenAPI 3.1 — a description of the API' },
+            { value: 'carom', label: t('export.formatCarom') },
+            { value: 'openapi', label: t('export.formatOpenapi') },
           ]}
-          ariaLabel="Export format"
+          ariaLabel={t('export.formatAria')}
           testId="select-export-format"
           block
         />
 
         <div className="section-label">
-          What to export
+          {t('export.whatToExport')}
           <span className="spacer" />
           <Button variant="ghost" size="sm" onClick={() => setSelected(new Set(allIds(tree)))} data-testid="button-select-all-export">
-            All
+            {t('common.all')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())} data-testid="button-select-none-export">
-            None
+            {t('common.selectNone')}
           </Button>
         </div>
 
@@ -160,7 +163,7 @@ export function ExportDialog({
         {environments.length > 0 && !openApi ? (
           <>
             <div className="section-label">
-              Environments
+              {t('export.environments')}
               <span className="spacer" />
               <Button
                 variant="ghost"
@@ -168,10 +171,10 @@ export function ExportDialog({
                 onClick={() => setEnvironmentIds(new Set(environments.map((environment) => environment.id)))}
                 data-testid="button-select-all-environments"
               >
-                All
+                {t('common.all')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setEnvironmentIds(new Set())} data-testid="button-select-none-environments">
-                None
+                {t('common.selectNone')}
               </Button>
             </div>
             <div className="pick-tree">
@@ -186,7 +189,7 @@ export function ExportDialog({
                   <span className="var-dot" style={{ background: environment.color }} />
                   <Label htmlFor={`export-env-${environment.id}`} className="truncate font-normal">
                     {environment.name}
-                    {environment.isBase ? ' (base)' : ''}
+                    {environment.isBase ? t('export.baseSuffix') : ''}
                   </Label>
                   <span className="spacer" />
                   <span className="tree-count">{environment.variables.length}</span>
@@ -194,29 +197,35 @@ export function ExportDialog({
               ))}
             </div>
             <p className="hint">
-              Variables are exported <strong>as they are</strong>, values included. A token in one of these travels
-              with the file — check before sending it on.
+              {tNodes('export.variablesWarning', { asTheyAre: <strong>{t('export.asTheyAre')}</strong> })}
             </p>
           </>
         ) : null}
 
         {openApi ? (
           <p className="hint" data-testid="text-openapi-note">
-            {described === 0
-              ? 'No fields are described yet, so bodies are described from the JSON you have and parameters are left out. The Docs tab of a request has a “Read from the request” button that fills them in.'
-              : `${described} documented field${described === 1 ? '' : 's'} across the ticked requests become parameters and body properties. Recorded responses become response examples.`}
+            {described === 0 ? t('export.openapiNoFields') : t('export.openapiFields', { count: described })}
           </p>
         ) : null}
 
         <p className="hint" data-testid="text-export-summary">
-          {counts.requests} request{counts.requests === 1 ? '' : 's'} in {counts.folders} folder
-          {counts.folders === 1 ? '' : 's'}
+          {/*
+            Three counted nouns in one sentence, so each is its own key and the
+            sentence joining them is another. A translation then puts them in
+            whatever order it needs, and none of them has to agree with a plural
+            rule invented in JSX.
+          */}
           {!openApi && environmentIds.size > 0
-            ? `, and ${environmentIds.size} environment${environmentIds.size === 1 ? '' : 's'}`
-            : ''}
-          .
-          A folder you left unticked still comes along when something inside it is ticked — otherwise that request
-          would have nowhere to sit.
+            ? t('export.summaryWithEnvironments', {
+                requests: t('count.requests', { count: counts.requests }),
+                folders: t('count.folders', { count: counts.folders }),
+                environments: t('count.environments', { count: environmentIds.size }),
+              })
+            : t('export.summary', {
+                requests: t('count.requests', { count: counts.requests }),
+                folders: t('count.folders', { count: counts.folders }),
+              })}{' '}
+          {t('export.untickedNote')}
         </p>
       </div>
     </Dialog>

@@ -36,7 +36,7 @@ const NEW_WORKSPACE = 'new';
  * file itself can answer.
  */
 export function ImportDialog({ onClose }: { onClose: () => void }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const { toast } = useToast();
   const [raw, setRaw] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
     } catch (importError) {
       setPreview(null);
       setFormat(null);
-      setError(importError instanceof Error ? importError.message : 'Could not read that file.');
+      setError(importError instanceof Error ? importError.message : t('import.readFailed'));
     }
   };
 
@@ -75,7 +75,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
     try {
       read(await file.text());
     } catch {
-      setError('That file could not be read.');
+      setError(t('import.fileUnreadable'));
     }
   };
 
@@ -111,7 +111,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       workspace,
       // A new workspace needs a base environment, the same one the workspace
       // menu would have given it.
-      baseEnvironment: workspace ? createEnvironment(workspace.id, 'Base', true, []) : null,
+      baseEnvironment: workspace ? createEnvironment(workspace.id, t('import.baseEnvironment'), true, []) : null,
       workspaceId,
     });
 
@@ -137,18 +137,16 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog
-      title="Import"
+      title={t('import.title')}
       description={
-        format
-          ? `Read as ${FORMAT_LABELS[format]}.`
-          : 'A Carom export, Postman, Insomnia v4, OpenAPI or Swagger, or a HAR from a browser. The format is worked out from the file.'
+        format ? t('import.readAs', { format: t(FORMAT_LABELS[format]) }) : t('import.description')
       }
       onClose={onClose}
       testId="dialog-import"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           {preview ? (
             <Button
@@ -156,7 +154,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               disabled={!canImport}
               data-testid="button-confirm-import"
             >
-              Import
+              {t('common.import')}
             </Button>
           ) : (
             <Button
@@ -164,7 +162,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               disabled={!raw.trim()}
               data-testid="button-read-postman"
             >
-              Continue
+              {t('import.continue')}
             </Button>
           )}
         </>
@@ -173,7 +171,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       {preview ? (
         <div className="stack" style={{ gap: 10 }}>
           <div className="section-label">
-            {preview.environment ? 'Environment' : 'What to import'}
+            {t(preview.environment ? 'import.environment' : 'import.whatToImport')}
             <span className="spacer" />
             {preview.environment ? null : (
               <>
@@ -181,13 +179,13 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
                   onClick={() => setSelected(new Set(allIds(tree)))}
                   data-testid="button-select-all-import"
                 >
-                  All
+                  {t('common.all')}
                 </Button>
                 <Button variant="ghost" size="sm"
                   onClick={() => setSelected(new Set())}
                   data-testid="button-select-none-import"
                 >
-                  None
+                  {t('common.selectNone')}
                 </Button>
               </>
             )}
@@ -195,8 +193,10 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
           {preview.environment ? (
             <p className="hint" data-testid="text-import-environment">
-              <strong>{preview.environment.name}</strong> — {preview.environment.variables.length} variables. An
-              environment belongs to one workspace, so it lands in whichever you pick below.
+              {tNodes('import.environmentNote', {
+                name: <strong>{preview.environment.name}</strong>,
+                count: preview.environment.variables.length,
+              })}
             </p>
           ) : (
             <TreePicker nodes={tree} selected={selected} onChange={setSelected} testPrefix="import" />
@@ -204,25 +204,24 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
           {extraEnvironments.length > 0 ? (
             <p className="hint" data-testid="text-import-environments">
-              Also carries{' '}
-              <strong>{extraEnvironments.map((environment) => environment.name).join(', ')}</strong>. They come across
-              whole — an environment is a handful of names, and picking through them is what the environments screen
-              is for.
+              {tNodes('import.alsoCarries', {
+                names: <strong>{extraEnvironments.map((environment) => environment.name).join(', ')}</strong>,
+              })}
             </p>
           ) : null}
 
-          <div className="section-label">Where it goes</div>
+          <div className="section-label">{t('import.whereItGoes')}</div>
           <SelectField
             value={destination}
             onChange={setDestination}
             options={[
               ...state.workspaces.map((workspace) => ({
                 value: workspace.id,
-                label: workspace.name + (workspace.id === state.activeWorkspaceId ? ' (current)' : ''),
+                label: workspace.name + (workspace.id === state.activeWorkspaceId ? t('import.currentSuffix') : ''),
               })),
-              { value: NEW_WORKSPACE, label: 'New workspace…' },
+              { value: NEW_WORKSPACE, label: t('import.newWorkspace') },
             ]}
-            ariaLabel="Destination workspace"
+            ariaLabel={t('import.destinationAria')}
             testId="select-import-workspace"
             block
           />
@@ -230,30 +229,33 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           {creatingWorkspace ? (
             <Input
               value={newName}
-              placeholder="Workspace name"
+              placeholder={t('import.workspaceName')}
               onChange={(event) => setNewName(event.target.value)}
-              aria-label="New workspace name"
+              aria-label={t('import.newWorkspaceName')}
               data-testid="input-import-workspace-name"
             />
           ) : null}
 
           {preview.environment ? null : (
             <p className="hint" data-testid="text-import-summary">
-              {counts.requests} request{counts.requests === 1 ? '' : 's'} in {counts.folders} folder
-              {counts.folders === 1 ? '' : 's'}. A folder you left unticked still comes across when something inside
-              it is ticked — otherwise that request would have nowhere to sit.
+              {t('import.summary', {
+                requests: t('count.requests', { count: counts.requests }),
+                folders: t('count.folders', { count: counts.folders }),
+              })}
             </p>
           )}
 
           <p className="hint">
-            Scripts come across as written and run against a <code>pm</code> shim. They are{' '}
-            <strong>not sandboxed</strong> — read them before sending anything from a collection you did not write.
+            {tNodes('import.scriptsWarning', {
+              shim: <code>pm</code>,
+              notSandboxed: <strong>{t('import.notSandboxed')}</strong>,
+            })}
           </p>
         </div>
       ) : (
         <div className="stack" style={{ gap: 10 }}>
           <Button variant="secondary" onClick={() => fileRef.current?.click()} data-testid="button-pick-postman-file">
-            <Upload /> Choose a file
+            <Upload /> {t('import.chooseFile')}
           </Button>
           <input
             ref={fileRef}
@@ -264,7 +266,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             data-testid="input-postman-file"
           />
 
-          <div className="section-label">Or paste the JSON</div>
+          <div className="section-label">{t('import.orPaste')}</div>
           <Textarea
             className="min-h-[150px] font-mono"
             value={raw}
@@ -274,7 +276,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               setRaw(event.target.value);
               setError(null);
             }}
-            aria-label="Postman export"
+            aria-label={t('import.pasteAria')}
             data-testid="textarea-postman"
           />
 
@@ -285,8 +287,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           ) : null}
 
           <p className="hint">
-            The collection becomes a folder, keeping its auth and its scripts, so everything inside it still inherits
-            the way it did in Postman. Requests that set their own auth keep it.
+            {t('import.collectionNote')}
           </p>
           <p className="hint">
             Its <strong>variables</strong> go into the base environment, not the folder. Postman resolves an

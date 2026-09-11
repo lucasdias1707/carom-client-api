@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { importSubtree, looksLikeSubtree } from '@/lib/carom';
 import { importHar, looksLikeHar } from '@/lib/har';
 import { importInsomnia, looksLikeInsomnia, looksLikeInsomniaV5 } from '@/lib/insomnia';
@@ -20,12 +21,19 @@ import { importPostman, type ParsedImport } from '@/lib/postman';
 export type ImportFormat = 'postman' | 'insomnia' | 'openapi' | 'har' | 'carom';
 
 /** Written with the article, so a sentence can use them without patching one in. */
-export const FORMAT_LABELS: Record<ImportFormat, string> = {
-  postman: 'a Postman collection',
-  insomnia: 'an Insomnia export',
-  openapi: 'an OpenAPI description',
-  har: 'a HAR network log',
-  carom: 'a Carom export',
+/**
+ * How each format is named in the sentence "Read as …".
+ *
+ * Keys rather than words: the article is part of the name ("a Postman
+ * collection"), and which article a language uses is a thing the language
+ * decides, not this table.
+ */
+export const FORMAT_LABELS: Record<ImportFormat, MessageKey> = {
+  postman: 'format.postman',
+  insomnia: 'format.insomnia',
+  openapi: 'format.openapi',
+  har: 'format.har',
+  carom: 'format.carom',
 };
 
 export function detectFormat(payload: unknown): ImportFormat | null {

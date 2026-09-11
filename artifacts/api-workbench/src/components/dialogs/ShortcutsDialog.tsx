@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Dialog } from '@/components/common/Dialog';
@@ -28,7 +29,7 @@ import { useWorkspace } from '@/state/workspace-store';
  * with another command should not be live while you decide what to do about it.
  */
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const { toast } = useToast();
   const [draft, setDraft] = useState<Partial<Record<CommandId, Binding>>>(state.settings.keyBindings ?? {});
   const [recording, setRecording] = useState<CommandId | null>(null);
@@ -72,8 +73,8 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
     }
     dispatch({ type: 'settings/update', patch: { keyBindings: changed } });
     toast({
-      title: 'Shortcuts saved',
-      description: Object.keys(changed).length === 0 ? 'Back to the defaults.' : undefined,
+      title: t('shortcuts.saved'),
+      description: Object.keys(changed).length === 0 ? t('shortcuts.backToDefaults') : undefined,
       kind: 'success',
     });
     onClose();
@@ -81,21 +82,21 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog
-      title="Keyboard shortcuts"
-      description="Click a shortcut to record a new one. Esc cancels the recording."
+      title={t('shortcuts.title')}
+      description={t('shortcuts.description')}
       onClose={onClose}
       testId="dialog-shortcuts"
       footer={
         <>
           <Button variant="ghost" onClick={() => setDraft({})} data-testid="button-reset-shortcuts">
-            Restore defaults
+            {t('shortcuts.restoreDefaults')}
           </Button>
           <span className="flex-1" />
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={save} disabled={hasConflict} data-testid="button-save-shortcuts">
-            Save
+            {t('common.save')}
           </Button>
         </>
       }
@@ -111,10 +112,15 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
               data-testid={`shortcut-row-${command.id}`}
             >
               <div className="min-w-0">
-                <div className="truncate text-[length:var(--fs-13)]">{command.label}</div>
+                <div className="truncate text-[length:var(--fs-13)]">{t(command.label)}</div>
                 {clash ? (
                   <div className="text-[length:var(--fs-11-5)] text-[var(--red)]">
-                    Also {clash.map(labelFor).join(', ').toLowerCase()}
+                    {t('shortcuts.alsoUsedBy', {
+                      commands: clash
+                        .map((id) => t(labelFor(id) as MessageKey))
+                        .join(', ')
+                        .toLowerCase(),
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -124,15 +130,15 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
                 size="sm"
                 className="min-w-[92px] justify-center font-mono text-[length:var(--fs-12)]"
                 onClick={() => setRecording(command.id)}
-                aria-label={`Change the shortcut for ${command.label}`}
+                aria-label={t('shortcuts.change', { command: t(command.label) })}
                 data-testid={`button-record-${command.id}`}
               >
-                {recording === command.id ? 'Press keys…' : formatBinding(bindings[command.id])}
+                {recording === command.id ? t('shortcuts.pressKeys') : formatBinding(bindings[command.id])}
               </Button>
 
               {custom ? (
                 <IconButton
-                  label="Back to the default"
+                  label={t('shortcuts.resetOne')}
                   hint={formatBinding(command.defaultBinding)}
                   onClick={() =>
                     setDraft((current) => {
@@ -155,12 +161,12 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
 
       {hasConflict ? (
         <p className="mt-3 text-[length:var(--fs-12-5)] text-[var(--red)]" data-testid="shortcuts-conflict">
-          Two commands answer to the same keys. Change one of them before saving.
+          {t('shortcuts.conflict')}
         </p>
       ) : null}
 
       <p className="mt-3 text-[length:var(--fs-12-5)] text-[var(--text-faint)]">
-        Enter sends the request while the URL field has focus, whatever is bound above.
+        {t('shortcuts.enterNote')}
       </p>
     </Dialog>
   );

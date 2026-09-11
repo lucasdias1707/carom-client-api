@@ -1,3 +1,5 @@
+import type { Language } from '@/lib/i18n';
+
 /**
  * Domain model for the workbench.
  *
@@ -195,6 +197,13 @@ export type ThemeName = 'dark' | 'light' | 'system';
 
 export type Settings = {
   theme: ThemeName;
+  /**
+   * Which language the interface speaks. Absent means "follow the system",
+   * which is what a fresh install is: the machine already knows what its owner
+   * reads, so asking would be asking a question we can answer. Choosing one
+   * here pins it, and a later change of system language then leaves it alone.
+   */
+  language?: Language;
   layout: PaneLayout;
   sendMode: SendMode;
   /** Follow redirects when sending through the proxy. */
@@ -272,7 +281,14 @@ export type RequestVersion = {
   id: string;
   requestId: string;
   savedAt: string;
-  /** Which parts moved in this save, in composer order. */
+  /**
+   * Which parts moved in this save, in composer order, as `SectionId`s.
+   *
+   * Typed loosely on purpose: versions written before the ids existed hold the
+   * English label instead, and `sectionId` in `lib/draft` is what reconciles
+   * the two on the way to the screen. Narrowing this would be a lie about what
+   * is already in people's storage.
+   */
   changed: string[];
   request: RequestRecord;
 };

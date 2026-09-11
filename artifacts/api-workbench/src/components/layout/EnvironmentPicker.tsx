@@ -9,7 +9,7 @@ import { useWorkspace } from '@/state/workspace-store';
  * select — telling staging from production at a glance is the point.
  */
 export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   const environments = state.environments.filter(
@@ -21,7 +21,7 @@ export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
   const entries: MenuEntry[] = [
     {
       kind: 'item',
-      label: 'No environment',
+      label: t('environment.none'),
       icon: state.activeEnvironmentId === null ? <Check size={13} /> : <span style={{ width: 13 }} />,
       onSelect: () => dispatch({ type: 'environment/activate', id: null }),
     },
@@ -39,12 +39,12 @@ export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
     { kind: 'separator' },
     {
       kind: 'item',
-      label: 'New environment',
+      label: t('environment.new'),
       icon: <Plus size={13} />,
       onSelect: () => {
         const environment = createEnvironment(
           state.activeWorkspaceId,
-          `Environment ${overlays.length + 1}`,
+          t('environment.numbered', { number: overlays.length + 1 }),
           false,
           [],
           ENVIRONMENT_COLORS[(overlays.length + 1) % ENVIRONMENT_COLORS.length],
@@ -54,7 +54,7 @@ export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
         onManage();
       },
     },
-    { kind: 'item', label: 'Manage environments', icon: <Settings2 size={13} />, onSelect: onManage },
+    { kind: 'item', label: t('environment.manage'), icon: <Settings2 size={13} />, onSelect: onManage },
   ];
 
   return (
@@ -66,7 +66,7 @@ export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
           const rect = event.currentTarget.getBoundingClientRect();
           setMenu({ x: rect.right - 190, y: rect.bottom + 4 });
         }}
-        title={active ? `Environment: ${active.name}` : 'No environment — only the base variables apply'}
+        title={active ? t('environment.activeTitle', { name: active.name }) : t('environment.noneTitle')}
         data-testid="button-environment-picker"
       >
         {active ? (
@@ -75,7 +75,7 @@ export function EnvironmentPicker({ onManage }: { onManage: () => void }) {
           <Layers size={13} style={{ color: 'var(--text-faint)' }} />
         )}
         <span className="truncate" data-testid="text-active-environment">
-          {active?.name ?? 'No environment'}
+          {active?.name ?? t('environment.none')}
         </span>
         <ChevronDown size={12} style={{ color: 'var(--text-faint)' }} />
       </button>

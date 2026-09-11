@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
  * applies; the selected overlay is layered on top when a request is sent.
  */
 export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const environments = state.environments.filter((environment) => environment.workspaceId === state.activeWorkspaceId);
   const base = environments.find((environment) => environment.isBase) ?? environments[0];
   // Open on whatever is in use, so managing follows straight on from picking.
@@ -47,8 +47,8 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog
-      title="Environments"
-      description="Values here replace {{variables}} in URLs, headers, bodies and auth."
+      title={t('environments.title')}
+      description={t('environments.description', { syntax: t('environments.syntax') })}
       onClose={onClose}
       wide
       testId="dialog-environments"
@@ -56,7 +56,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
         <>
           <span className="spacer" />
           <Button onClick={onClose} data-testid="button-close-environments">
-            Done
+            {t('common.done')}
           </Button>
         </>
       }
@@ -64,9 +64,9 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
       <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 14, alignItems: 'start' }}>
         <div>
           <div className="section-label">
-            Environments
+            {t('environments.title')}
             <span className="spacer" />
-            <IconButton label="Add environment" onClick={addEnvironment} testId="button-add-environment">
+            <IconButton label={t('environments.add')} onClick={addEnvironment} testId="button-add-environment">
               <Plus />
             </IconButton>
           </div>
@@ -81,7 +81,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
               >
                 <span className="var-dot" style={{ background: environment.color }} />
                 <span className="tree-name truncate">{environment.name}</span>
-                {environment.isBase ? <span className="tree-count">base</span> : null}
+                {environment.isBase ? <span className="tree-count">{t('environments.base')}</span> : null}
               </button>
             ))}
           </div>
@@ -89,14 +89,14 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
 
         <div className="stack" style={{ gap: 10 }}>
           <div className="section-label">
-            {selected.isBase ? 'Base variables' : 'Name'}
+            {t(selected.isBase ? 'environments.baseVariables' : 'common.name')}
             <span className="spacer" />
             {selected.isBase ? null : (
               <Button variant="destructive"
                 onClick={() => setConfirming(true)}
                 data-testid="button-delete-environment"
               >
-                <Trash2 /> Delete
+                <Trash2 /> {t('common.delete')}
               </Button>
             )}
           </div>
@@ -105,16 +105,16 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
               value={selected.name}
               data-autofocus
               onChange={(event) => dispatch({ type: 'environment/update', id: selected.id, patch: { name: event.target.value } })}
-              aria-label="Environment name"
+              aria-label={t('environments.nameAria')}
               data-testid="input-environment-name"
             />
           )}
 
           <div className="section-label" style={{ margin: 0 }}>
-            Colour
+            {t('folder.colour')}
             <span className="spacer" />
             <span className="hint" style={{ fontSize: 'var(--fs-10)' }}>
-              variables from this environment render in it
+              {t('environments.colourHint')}
             </span>
           </div>
           <div className="swatches">
@@ -124,7 +124,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
                 className={`swatch ${selected.color === color ? 'active' : ''}`}
                 style={{ background: color }}
                 onClick={() => dispatch({ type: 'environment/update', id: selected.id, patch: { color } })}
-                aria-label={`Use colour ${color}`}
+                aria-label={t('environments.useColour', { colour: color })}
                 data-testid={`swatch-${color.replace('#', '')}`}
               />
             ))}
@@ -133,46 +133,41 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
               className="swatch-custom"
               value={selected.color}
               onChange={(event) => dispatch({ type: 'environment/update', id: selected.id, patch: { color: event.target.value } })}
-              aria-label="Custom environment colour"
+              aria-label={t('environments.customColour')}
               data-testid="input-environment-color"
             />
           </div>
           <div className="section-label" style={{ margin: 0 }}>
-            Variables
+            {t('environments.variables')}
             <span className="spacer" />
             <Button variant="secondary" size="sm" onClick={() => setCopying(true)} data-testid="button-copy-variables">
-              <ArrowDownToLine /> Copy from…
+              <ArrowDownToLine /> {t('environments.copyFrom')}
             </Button>
           </div>
           <KeyValueTable
             items={selected.variables}
             onChange={setVariables}
-            keyPlaceholder="Variable"
+            keyPlaceholder={t('folder.variablePlaceholder')}
             testPrefix={`env-${selected.isBase ? 'base' : 'overlay'}`}
           />
           <p className="hint">
-            {selected.isBase
-              ? 'Base variables apply to every request. Environments layered on top override them one value at a time, and folder variables override both.'
-              : 'Only the variables defined here override the base environment. A folder that defines the same name still wins.'}
+            {t(selected.isBase ? 'environments.baseHint' : 'environments.overlayHint')}
           </p>
         </div>
       </div>
 
       {confirming ? (
         <ConfirmDialog
-          title="Delete this environment?"
-          message={
-            <>
-              <strong>{selected.name}</strong> and its {selected.variables.length} variable
-              {selected.variables.length === 1 ? '' : 's'} will be removed. Requests using them fall back to the base
-              environment. You can undo this from the notification straight afterwards.
-            </>
-          }
+          title={t('environments.deleteTitle')}
+          message={tNodes('environments.deleteMessage', {
+            name: <strong>{selected.name}</strong>,
+            count: selected.variables.length,
+          })}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             deleteWithUndo(
               { type: 'environment/delete', id: selected.id },
-              { title: `Deleted ${selected.name}` },
+              { title: t('environments.deleted', { name: selected.name }) },
             );
             setSelectedId(base.id);
             setConfirming(false);

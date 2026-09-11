@@ -15,13 +15,20 @@ import { isDesktop } from '@/lib/http';
  */
 export type SaveOutcome = 'saved' | 'downloaded' | 'cancelled';
 
-/** What the file picker should offer, worked out from the name it is given. */
-function filterFor(filename: string): { name: string; extensions: string[] } {
+/**
+ * What the file picker should offer, worked out from the name it is given.
+ *
+ * The format names stay as they are — JSON is JSON in every language — but the
+ * catch-all is a sentence, so the caller passes it already translated. It is
+ * optional because the fallback only shows for a name with no extension, which
+ * nothing here produces.
+ */
+function filterFor(filename: string, anyFileLabel = 'All files'): { name: string; extensions: string[] } {
   const extension = filename.split('.').pop()?.toLowerCase();
   const named: Record<string, string> = { json: 'JSON', xml: 'XML', txt: 'Text', html: 'HTML', csv: 'CSV' };
   return extension && named[extension]
     ? { name: named[extension], extensions: [extension] }
-    : { name: 'All files', extensions: ['*'] };
+    : { name: anyFileLabel, extensions: ['*'] };
 }
 
 /**
@@ -32,14 +39,19 @@ function filterFor(filename: string): { name: string; extensions: string[] } {
  * lands in Downloads with no question asked — the app can open a real save
  * sheet, and not using it was just an oversight.
  */
-export async function saveText(filename: string, text: string, mime = 'text/plain'): Promise<SaveOutcome> {
+export async function saveText(
+  filename: string,
+  text: string,
+  mime = 'text/plain',
+  anyFileLabel?: string,
+): Promise<SaveOutcome> {
   if (!isDesktop()) {
     downloadText(filename, text, mime);
     return 'downloaded';
   }
 
   const { save } = await import('@tauri-apps/plugin-dialog');
-  const path = await save({ defaultPath: filename, filters: [filterFor(filename)] });
+  const path = await save({ defaultPath: filename, filters: [filterFor(filename, anyFileLabel)] });
   // Null is the sheet being dismissed, which is an answer, not a failure.
   if (!path) return 'cancelled';
 
@@ -48,22 +60,27 @@ export async function saveText(filename: string, text: string, mime = 'text/plai
   return 'saved';
 }
 
-export async function saveJson(filename: string, payload: unknown): Promise<SaveOutcome> {
+export async function saveJson(filename: string, payload: unknown, anyFileLabel?: string): Promise<SaveOutcome> {
   if (!isDesktop()) {
     downloadJson(filename, payload);
     return 'downloaded';
   }
-  return saveText(filename, JSON.stringify(payload, null, 2), 'application/json');
+  return saveText(filename, JSON.stringify(payload, null, 2), 'application/json', anyFileLabel);
 }
 
-/** What to tell someone after a save, given where it went. */
+/**
+ * What to tell someone after a save, given where it went.
+ *
+ * The title arrives already written, rather than being assembled here from a
+ * verb and a name. "Exported the workspace" is one sentence in English and a
+ * differently ordered one elsewhere, and a function that glues two translated
+ * fragments together decides that order for every language at once.
+ */
 export function saveMessage(
   outcome: SaveOutcome,
-  name: string,
-  verb = 'Exported',
+  title: string,
+  downloadedNote: string,
 ): { title: string; description?: string } | null {
   if (outcome === 'cancelled') return null;
-  return outcome === 'saved'
-    ? { title: `${verb} ${name}` }
-    : { title: `${verb} ${name}`, description: 'Saved to your downloads — a browser tab cannot choose the folder.' };
+  return outcome === 'saved' ? { title } : { title, description: downloadedNote };
 }

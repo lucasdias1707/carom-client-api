@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '@/state/workspace-store';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ type ConfirmDialogProps = {
   title: string;
   /** What is about to happen, in enough detail to decide. */
   message: React.ReactNode;
+  /** Defaults to Delete, which is what most of these ask. */
   confirmLabel?: string;
   /**
    * A third answer, between confirming and backing out: "Don't save" to the
@@ -54,7 +56,7 @@ type ConfirmDialogProps = {
 export function ConfirmDialog({
   title,
   message,
-  confirmLabel = 'Delete',
+  confirmLabel,
   secondaryLabel,
   onSecondary,
   tone = 'danger',
@@ -62,6 +64,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const t = useT();
   const [typed, setTyped] = useState('');
   const armed = requireText === undefined || typed.trim() === requireText;
 
@@ -94,7 +97,7 @@ export function ConfirmDialog({
               the dialog was asking for something it was not showing.
             */}
             <Label htmlFor="confirm-name" className="section-label m-0">
-              Type this name to confirm
+              {t('common.confirmTypeName')}
             </Label>
             <code className="confirm-required mono" data-testid="text-confirm-required">
               {requireText}
@@ -105,7 +108,7 @@ export function ConfirmDialog({
               onChange={(event) => setTyped(event.target.value)}
               autoComplete="off"
               spellCheck={false}
-              aria-label={`Type ${requireText} to confirm`}
+              aria-label={t('common.confirmTypeNameAria', { name: requireText })}
               data-testid="input-confirm-name"
               autoFocus
             />
@@ -117,7 +120,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             data-testid="button-cancel-confirm"
           >
-            Cancel
+            {t('common.cancel')}
           </AlertDialogCancel>
           {secondaryLabel ? (
             <AlertDialogAction
@@ -137,7 +140,7 @@ export function ConfirmDialog({
             autoFocus={requireText === undefined}
             data-testid="button-accept-confirm"
           >
-            {confirmLabel}
+            {confirmLabel ?? t('common.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

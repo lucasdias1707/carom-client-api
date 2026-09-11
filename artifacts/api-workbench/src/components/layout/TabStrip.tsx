@@ -24,7 +24,7 @@ const SCROLL_FRACTION = 0.5;
 
 /** Open-request tabs, mirroring how a desktop client keeps several in flight. */
 export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHint }: TabStripProps) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const [menu, setMenu] = useState<{ x: number; y: number; entries: MenuEntry[] } | null>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   /** Whether there is anything left to scroll to, on each side. */
@@ -81,30 +81,30 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
   const tabMenu = (id: string): MenuEntry[] => [
     {
       kind: 'item',
-      label: 'Locate in the sidebar',
+      label: t('tabs.locate'),
       icon: <Crosshair size={13} />,
       onSelect: () => onLocate(id),
     },
     {
       kind: 'item',
-      label: 'Duplicate',
+      label: t('common.duplicate'),
       icon: <Copy size={13} />,
       // The same action the sidebar's own menu dispatches, so the copy is made
       // one way rather than two.
       onSelect: () => dispatch({ type: 'request/duplicate', id }),
     },
     { kind: 'separator' },
-    { kind: 'item', label: 'Close', icon: <X size={13} />, onSelect: () => onClose([id]) },
+    { kind: 'item', label: t('tabs.close'), icon: <X size={13} />, onSelect: () => onClose([id]) },
     {
       kind: 'item',
-      label: 'Close others',
+      label: t('tabs.closeOthers'),
       icon: <XCircle size={13} />,
       onSelect: () => onClose(state.openTabIds.filter((tabId) => tabId !== id)),
     },
     { kind: 'separator' },
     {
       kind: 'item',
-      label: 'Close all',
+      label: t('tabs.closeAll'),
       icon: <XCircle size={13} />,
       onSelect: () => onClose(state.openTabIds),
     },
@@ -118,11 +118,11 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
    * which is where the browser's own menu used to appear instead.
    */
   const stripMenu = (): MenuEntry[] => [
-    { kind: 'item', label: 'New request', icon: <FilePlus2 size={13} />, onSelect: onNew },
+    { kind: 'item', label: t('tabs.new'), icon: <FilePlus2 size={13} />, onSelect: onNew },
     ...(state.openTabIds.length > 0
       ? ([
           { kind: 'separator' },
-          { kind: 'item', label: 'Close all', icon: <XCircle size={13} />, onSelect: () => onClose(state.openTabIds) },
+          { kind: 'item', label: t('tabs.closeAll'), icon: <XCircle size={13} />, onSelect: () => onClose(state.openTabIds) },
         ] as MenuEntry[])
       : []),
   ];
@@ -136,7 +136,7 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
       }}
     >
       {more.left ? (
-        <button className="tabstrip-arrow" onClick={() => scrollBy(-1)} aria-label="Scroll tabs left" data-testid="button-tabs-left">
+        <button className="tabstrip-arrow" onClick={() => scrollBy(-1)} aria-label={t('tabs.scrollLeft')} data-testid="button-tabs-left">
           <ChevronLeft size={13} />
         </button>
       ) : null}
@@ -144,7 +144,7 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
       <div
         className="tabstrip"
         role="tablist"
-        aria-label="Open requests"
+        aria-label={t('tabs.aria')}
         ref={stripRef}
         // A trackpad swipes sideways on its own; a wheel only goes up and down,
         // and over a horizontal strip that is what it means to do.
@@ -190,7 +190,7 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
                 it was added to fix.
               */}
               {unsaved ? (
-                <span className="tab-dot" aria-label="Unsaved changes" data-testid={`dot-unsaved-${request.id}`} />
+                <span className="tab-dot" aria-label={t('tabs.unsaved')} data-testid={`dot-unsaved-${request.id}`} />
               ) : null}
               <span className="truncate">{request.name}</span>
               <button
@@ -199,7 +199,7 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
                   event.stopPropagation();
                   onClose([request.id]);
                 }}
-                aria-label={`Close ${request.name}`}
+                aria-label={t('tabs.closeTab', { name: request.name })}
                 data-testid={`button-close-tab-${request.id}`}
               >
                 <X size={11} />
@@ -210,17 +210,17 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
       </div>
 
       {more.right ? (
-        <button className="tabstrip-arrow" onClick={() => scrollBy(1)} aria-label="Scroll tabs right" data-testid="button-tabs-right">
+        <button className="tabstrip-arrow" onClick={() => scrollBy(1)} aria-label={t('tabs.scrollRight')} data-testid="button-tabs-right">
           <ChevronRight size={13} />
         </button>
       ) : null}
 
       {tabs.length > 1 ? (
-        <IconButton label="Search the open tabs" hint={searchHint} onClick={onSearch} testId="button-search-tabs">
+        <IconButton label={t('tabs.search')} hint={searchHint} onClick={onSearch} testId="button-search-tabs">
           <Search />
         </IconButton>
       ) : null}
-      <IconButton label="New request" hint={newHint} onClick={onNew} testId="button-new-tab">
+      <IconButton label={t('tabs.new')} hint={newHint} onClick={onNew} testId="button-new-tab">
         <Plus />
       </IconButton>
 

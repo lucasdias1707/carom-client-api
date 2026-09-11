@@ -25,7 +25,16 @@ import { useWorkspace } from '@/state/workspace-store';
  * changes all three fields, so duplicating it shows what each one does.
  */
 export function FontThemeEditor() {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
+
+  /**
+   * What a font theme is called on screen.
+   *
+   * Carom is a name; "System, larger" is a description of what that theme does,
+   * and a description belongs in the reader's language. One you made carries
+   * whatever you typed.
+   */
+  const fontName = (theme: FontTheme) => (theme.nameKey ? t(theme.nameKey) : theme.name);
   const settings = state.settings;
   const themes = fontThemes(settings);
   const current = fontById(settings, settings.fontTheme);
@@ -42,7 +51,7 @@ export function FontThemeEditor() {
     saveThemes((settings.fontThemes ?? []).map((theme) => (theme.id === current.id ? { ...theme, ...patch } : theme)));
 
   const duplicate = () => {
-    const copy = duplicateFont(current);
+    const copy = duplicateFont(current, t('palette.copyName', { name: fontName(current) }));
     saveThemes([...(settings.fontThemes ?? []), copy], copy.id);
     setEditing(true);
   };
@@ -54,7 +63,7 @@ export function FontThemeEditor() {
 
   return (
     <div className="stack" style={{ gap: 6 }}>
-      <Label className="section-label m-0">Fonts</Label>
+      <Label className="section-label m-0">{t('font.label')}</Label>
       <div className="flex items-center gap-2">
         <SelectField
           value={current.id}
@@ -64,18 +73,21 @@ export function FontThemeEditor() {
           }}
           options={themes.map((theme) => ({
             value: theme.id,
-            label: `${theme.name}${theme.scale === 1 ? '' : ` · ${Math.round(theme.scale * 100)}%`}`,
+            label:
+              theme.scale === 1
+                ? fontName(theme)
+                : t('font.option', { name: fontName(theme), scale: Math.round(theme.scale * 100) }),
           }))}
-          ariaLabel="Font theme"
+          ariaLabel={t('font.themeAria')}
           testId="select-font-theme"
           block
           className="flex-1"
         />
-        <IconButton label="Duplicate and edit" onClick={duplicate} testId="button-duplicate-font">
+        <IconButton label={t('font.duplicate')} onClick={duplicate} testId="button-duplicate-font">
           <Copy />
         </IconButton>
         {editable ? (
-          <IconButton label="Delete this font theme" tone="danger" onClick={remove} testId="button-delete-font">
+          <IconButton label={t('font.delete')} tone="danger" onClick={remove} testId="button-delete-font">
             <Trash2 />
           </IconButton>
         ) : null}
@@ -89,17 +101,17 @@ export function FontThemeEditor() {
           onClick={() => setEditing((open) => !open)}
           data-testid="button-edit-font"
         >
-          {editing ? 'Done editing' : 'Edit'}
+          {t(editing ? 'font.doneEditing' : 'font.edit')}
         </Button>
       ) : (
         <p className="hint" data-testid="text-font-builtin">
-          Built in, so it cannot be edited. Duplicate it to make one you can.
+          {t('font.builtIn')}
         </p>
       )}
 
       {editable && editing ? (
         <div className="stack" style={{ gap: 6 }} data-testid="font-editor">
-          <Label className="section-label m-0" htmlFor="font-name">Name</Label>
+          <Label className="section-label m-0" htmlFor="font-name">{t('common.name')}</Label>
           <Input
             id="font-name"
             value={current.name}
@@ -107,7 +119,7 @@ export function FontThemeEditor() {
             data-testid="input-font-name"
           />
 
-          <Label className="section-label m-0" htmlFor="font-sans">Interface font</Label>
+          <Label className="section-label m-0" htmlFor="font-sans">{t('font.interface')}</Label>
           <Input
             id="font-sans"
             className="font-mono text-[length:var(--fs-12-5)]"
@@ -117,7 +129,7 @@ export function FontThemeEditor() {
             data-testid="input-font-sans"
           />
 
-          <Label className="section-label m-0" htmlFor="font-mono">Code font</Label>
+          <Label className="section-label m-0" htmlFor="font-mono">{t('font.code')}</Label>
           <Input
             id="font-mono"
             className="font-mono text-[length:var(--fs-12-5)]"
@@ -127,22 +139,21 @@ export function FontThemeEditor() {
             data-testid="input-font-mono"
           />
 
-          <Label className="section-label m-0">Size</Label>
+          <Label className="section-label m-0">{t('font.size')}</Label>
           <SelectField
             value={String(current.scale)}
             onChange={(value) => patchCurrent({ scale: Number(value) })}
             options={FONT_SCALES.map((scale) => ({
               value: String(scale),
-              label: `${Math.round(scale * 100)}%${scale === 1 ? ' — as drawn' : ''}`,
+              label: t(scale === 1 ? 'font.scaleDefault' : 'font.scale', { scale: Math.round(scale * 100) }),
             }))}
-            ariaLabel="Interface size"
+            ariaLabel={t('font.sizeAria')}
             testId="select-font-scale"
             block
           />
 
           <p className="hint">
-            A CSS font stack: names separated by commas, quoted when they contain a space, with a family the system is
-            sure to have at the end. Only fonts installed on this machine are available — nothing is downloaded.
+            {t('font.stackHint')}
           </p>
         </div>
       ) : null}

@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { MOD_LABEL } from '@/hooks/use-hotkeys';
 import type { Settings } from '@/types';
 
@@ -36,7 +37,12 @@ export type CommandId =
 
 export type ShortcutCommand = {
   id: CommandId;
-  label: string;
+  /**
+   * How the shortcuts list names this command. A key, not a word: the `id`
+   * beside it is what a rebind is stored against, so the name can change with
+   * the language while what was rebound stays put.
+   */
+  label: MessageKey;
   defaultBinding: Binding;
 };
 
@@ -48,18 +54,18 @@ export type ShortcutCommand = {
  * `palette.commands` is bound to.
  */
 export const COMMANDS: ShortcutCommand[] = [
-  { id: 'palette', label: 'Search everything', defaultBinding: { key: 'k', mod: true } },
-  { id: 'palette.requests', label: 'Go to a request', defaultBinding: { key: 'p', mod: true } },
-  { id: 'palette.workspaces', label: 'Switch workspace', defaultBinding: { key: 'r', mod: true } },
-  { id: 'palette.commands', label: 'Run a command', defaultBinding: { key: 'p', mod: true, shift: true } },
-  { id: 'send', label: 'Send the active request', defaultBinding: { key: 'enter', mod: true } },
-  { id: 'newRequest', label: 'New request', defaultBinding: { key: 'n', mod: true } },
-  { id: 'saveRequest', label: 'Save the active request', defaultBinding: { key: 's', mod: true } },
-  { id: 'searchTabs', label: 'Search the open tabs', defaultBinding: { key: 'e', mod: true, shift: true } },
-  { id: 'closeTab', label: 'Close the active tab', defaultBinding: { key: 'w', mod: true } },
-  { id: 'environments', label: 'Edit environments', defaultBinding: { key: 'e', mod: true } },
-  { id: 'toggleSidebar', label: 'Show or hide the sidebar', defaultBinding: { key: 'b', mod: true } },
-  { id: 'settings', label: 'Open settings', defaultBinding: { key: ',', mod: true } },
+  { id: 'palette', label: 'shortcut.palette', defaultBinding: { key: 'k', mod: true } },
+  { id: 'palette.requests', label: 'shortcut.paletteRequests', defaultBinding: { key: 'p', mod: true } },
+  { id: 'palette.workspaces', label: 'shortcut.paletteWorkspaces', defaultBinding: { key: 'r', mod: true } },
+  { id: 'palette.commands', label: 'shortcut.paletteCommands', defaultBinding: { key: 'p', mod: true, shift: true } },
+  { id: 'send', label: 'shortcut.send', defaultBinding: { key: 'enter', mod: true } },
+  { id: 'newRequest', label: 'shortcut.newRequest', defaultBinding: { key: 'n', mod: true } },
+  { id: 'saveRequest', label: 'shortcut.saveRequest', defaultBinding: { key: 's', mod: true } },
+  { id: 'searchTabs', label: 'shortcut.searchTabs', defaultBinding: { key: 'e', mod: true, shift: true } },
+  { id: 'closeTab', label: 'shortcut.closeTab', defaultBinding: { key: 'w', mod: true } },
+  { id: 'environments', label: 'shortcut.environments', defaultBinding: { key: 'e', mod: true } },
+  { id: 'toggleSidebar', label: 'shortcut.toggleSidebar', defaultBinding: { key: 'b', mod: true } },
+  { id: 'settings', label: 'shortcut.settings', defaultBinding: { key: ',', mod: true } },
 ];
 
 export type BindingMap = Record<CommandId, Binding>;
@@ -131,6 +137,6 @@ export function bindingConflicts(bindings: BindingMap): Partial<Record<CommandId
   return conflicts;
 }
 
-export function labelFor(id: CommandId): string {
+export function labelFor(id: CommandId): MessageKey | CommandId {
   return COMMANDS.find((command) => command.id === id)?.label ?? id;
 }

@@ -10,7 +10,7 @@ const SAMPLE = `curl https://api.github.com/repos/mountain-loop/yaak \\
   -H 'Accept: application/vnd.github+json'`;
 
 export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
-  const { state, dispatch } = useWorkspace();
+  const { state, dispatch, t } = useWorkspace();
   const [command, setCommand] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +18,7 @@ export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
     try {
       const parsed = parseCurl(command);
       if (!parsed.url) {
-        setError('No URL found in that command.');
+        setError(t('curl.noUrl'));
         return;
       }
       dispatch({
@@ -41,23 +41,23 @@ export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
       });
       onClose();
     } catch (parseError) {
-      setError(parseError instanceof Error ? parseError.message : 'Could not parse that command.');
+      setError(parseError instanceof Error ? parseError.message : t('curl.parseFailed'));
     }
   };
 
   return (
     <Dialog
-      title="Import from curl"
-      description="Paste a command copied from your terminal or from browser devtools."
+      title={t('curl.title')}
+      description={t('curl.description')}
       onClose={onClose}
       testId="dialog-import-curl"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={submit} disabled={!command.trim()} data-testid="button-confirm-import-curl">
-            Create request
+            {t('curl.create')}
           </Button>
         </>
       }
@@ -71,7 +71,7 @@ export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
           setCommand(event.target.value);
           setError(null);
         }}
-        aria-label="curl command"
+        aria-label={t('curl.aria')}
         data-testid="textarea-curl"
       />
       {error ? (

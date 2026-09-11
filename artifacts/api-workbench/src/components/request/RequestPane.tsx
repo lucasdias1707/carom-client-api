@@ -23,23 +23,26 @@ import { folderPath } from '@/state/selectors';
 import { useWorkspace } from '@/state/workspace-store';
 import { resolveAuth } from '@/lib/inherit';
 import type { Auth, HttpMethod, KeyValue, RequestRecord } from '@/types';
+import type { MessageKey } from '@/locales/en';
 
 type RequestTab = 'params' | 'body' | 'headers' | 'auth' | 'scripts' | 'docs' | 'history';
 
 /** Long enough to finish a word, short enough to feel like the table follows. */
 const URL_PARAM_DEBOUNCE_MS = 500;
 
-const TABS: Array<{ id: RequestTab; label: string }> = [
-  { id: 'params', label: 'Params' },
-  { id: 'body', label: 'Body' },
-  { id: 'headers', label: 'Headers' },
-  { id: 'auth', label: 'Auth' },
-  { id: 'scripts', label: 'Scripts' },
-  { id: 'docs', label: 'Docs' },
+const TABS: Array<{ id: RequestTab; label: MessageKey }> = [
+  { id: 'params', label: 'request.tab.params' },
+  { id: 'body', label: 'request.tab.body' },
+  { id: 'headers', label: 'request.tab.headers' },
+  { id: 'auth', label: 'request.tab.auth' },
+  { id: 'scripts', label: 'request.tab.scripts' },
+  { id: 'docs', label: 'request.tab.docs' },
   // "Versions", not "History": the response pane has a History tab of its own,
   // and two tabs with the same name a pane apart is the exact question this was
-  // built to answer — "the history of the request, not of the response".
-  { id: 'history', label: 'Versions' },
+  // built to answer — "the history of the request, not of the response". The
+  // collision is worth keeping an eye on in translation too, which is why both
+  // names are keys rather than words typed in twice.
+  { id: 'history', label: 'request.tab.history' },
 ];
 
 type RequestPaneProps = {
@@ -50,7 +53,7 @@ type RequestPaneProps = {
 };
 
 export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneProps) {
-  const { state, dispatch, variables, variableTable, chainFor, unsavedIn } = useWorkspace();
+  const { state, dispatch, variables, variableTable, chainFor, unsavedIn, t, tNodes } = useWorkspace();
   const { toast } = useToast();
   const [tab, setTab] = useState<RequestTab>('params');
 
@@ -121,10 +124,10 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
   const copyAsCurl = async () => {
     try {
       await navigator.clipboard.writeText(toCurl(prepareRequest(request, variables, { folders: chain })));
-      toast({ title: 'Copied as curl', kind: 'success' });
+      toast({ title: t('request.copiedCurl'), kind: 'success' });
     } catch (error) {
       toast({
-        title: 'Could not copy',
+        title: t('request.copyFailed'),
         description: error instanceof Error ? error.message : undefined,
         kind: 'error',
       });
@@ -139,7 +142,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
   const saveHint = formatBinding(resolveBindings(state.settings).saveRequest);
 
   return (
-    <section className="pane" aria-label="Request">
+    <section className="pane" aria-label={t('pane.request')}>
       <UrlBar
         method={request.method}
         url={request.url}
@@ -164,7 +167,7 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
           <TabsList className="pane-tabs">
             {TABS.map((item) => (
               <TabsTrigger key={item.id} value={item.id} className="pane-tab" data-testid={`tab-request-${item.id}`}>
-                {item.label}
+                {t(item.label)}
                 {badges[item.id] ? <Badge variant="accent">{badges[item.id]}</Badge> : null}
                 {item.id === 'body' && request.bodyType !== 'none' ? (
                   <Badge variant="accent">{request.bodyType}</Badge>
@@ -175,28 +178,28 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
                       <TooltipTrigger asChild>
                         <Badge variant="accent">{authSource.auth.type} ·</Badge>
                       </TooltipTrigger>
-                      <TooltipContent>Inherited from {authSource.folder.name}</TooltipContent>
+                      <TooltipContent>{t('request.inheritedFrom', { name: authSource.folder.name })}</TooltipContent>
                     </Tooltip>
                   ) : (
                     <Badge variant="accent">{authSource.auth.type}</Badge>
                   )
                 ) : null}
                 {item.id === 'scripts' && (request.preScript.trim() || request.postScript.trim()) ? (
-                  <Badge variant="accent">on</Badge>
+                  <Badge variant="accent">{t('request.scriptsOn')}</Badge>
                 ) : null}
               </TabsTrigger>
             ))}
           </TabsList>
           <span className="flex-1" />
-          <IconButton label="Copy as curl" onClick={copyAsCurl} testId="button-copy-curl">
+          <IconButton label={t('request.copyCurl')} onClick={copyAsCurl} testId="button-copy-curl">
             <Terminal />
           </IconButton>
           <IconButton
-            label="Copy resolved URL"
-            hint="variables applied"
+            label={t('request.copyUrl')}
+            hint={t('request.copyUrlHint')}
             onClick={() => {
               navigator.clipboard?.writeText(prepareRequest(request, variables, { folders: chain }).url);
-              toast({ title: 'URL copied', kind: 'success' });
+              toast({ title: t('request.urlCopied'), kind: 'success' });
             }}
             testId="button-copy-url"
           >
@@ -207,21 +210,20 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
         <div className="pane-body">
         <TabsContent value="params" className="contents">
           <div className="pane-pad stack">
-            <div className="section-label">Query parameters</div>
+            <div className="section-label">{t('request.params.label')}</div>
             <KeyValueTable items={request.params} onChange={setParams} testPrefix="params" />
             <p className="hint">
-              The table and the address are the same query: editing a row rewrites the URL, and unticking one takes
-              it out. Variables resolve when the request is sent.
+              {t('request.params.hint')}
             </p>
           </div>
         </TabsContent>
 
         <TabsContent value="headers" className="contents">
           <div className="pane-pad stack">
-            <div className="section-label">Request headers</div>
-            <KeyValueTable items={request.headers} onChange={setRows('headers')} testPrefix="headers" keyPlaceholder="Header" />
+            <div className="section-label">{t('request.headers.label')}</div>
+            <KeyValueTable items={request.headers} onChange={setRows('headers')} testPrefix="headers" keyPlaceholder={t('request.headers.placeholder')} />
             <p className="hint">
-              A <code>Content-Type</code> matching the body type is added automatically unless you set one here.
+              {tNodes('request.contentTypeNote', { header: <code>Content-Type</code> })}
             </p>
           </div>
         </TabsContent>
@@ -251,27 +253,26 @@ export function RequestPane({ request, sending, onSend, onCancel }: RequestPaneP
 
         <TabsContent value="docs" className="contents">
           <div className="pane-pad stack">
-            <div className="section-label">Name</div>
+            <div className="section-label">{t('common.name')}</div>
             <Input
               value={request.name}
               onChange={(event) => patch({ name: event.target.value })}
-              aria-label="Request name"
+              aria-label={t('request.name')}
               data-testid="input-request-name"
             />
-            <div className="section-label">Description</div>
+            <div className="section-label">{t('common.description')}</div>
             <Textarea
               className="min-h-[150px] font-sans"
               value={request.description}
-              placeholder="What is this request for? Who owns the endpoint?"
+              placeholder={t('request.descriptionPlaceholder')}
               onChange={(event) => patch({ description: event.target.value })}
-              aria-label="Request description"
+              aria-label={t('request.descriptionAria')}
               data-testid="textarea-request-description"
             />
             <DocFieldsTable request={request} onChange={(fields) => patch({ docs: { fields } })} />
 
             <p className="hint">
-              {path.length > 0 ? `In ${path.join(' / ')} · ` : ''}Saved locally in this browser. Exporting to OpenAPI
-              turns what is above into an operation, its parameters and its body schema.
+              {path.length > 0 ? t('request.docs.hintIn', { path: path.join(' / ') }) : t('request.docs.hint')}
             </p>
           </div>
         </TabsContent>

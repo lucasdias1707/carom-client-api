@@ -1,3 +1,4 @@
+import type { MessageKey } from '@/locales/en';
 import { useMemo } from 'react';
 import { Wand2 } from 'lucide-react';
 import { SelectField } from '@/components/common/SelectField';
@@ -11,14 +12,14 @@ import { prettyXml, xmlError } from '@/lib/xml';
 import type { BodyType, KeyValue, RequestRecord } from '@/types';
 import { BODY_TYPES } from '@/types';
 
-const BODY_LABELS: Record<BodyType, string> = {
-  none: 'No body',
-  json: 'JSON',
-  text: 'Plain text',
-  xml: 'XML',
-  form: 'Form URL encoded',
-  multipart: 'Multipart form',
-  graphql: 'GraphQL',
+const BODY_LABELS: Record<BodyType, MessageKey> = {
+  none: 'body.none',
+  json: 'body.json',
+  text: 'body.text',
+  xml: 'body.xml',
+  form: 'body.form',
+  multipart: 'body.multipart',
+  graphql: 'body.graphql',
 };
 
 /** Body types that are one text document rather than a table of rows. */
@@ -40,7 +41,7 @@ type BodyEditorProps = {
 };
 
 export function BodyEditor({ request, onChange }: BodyEditorProps) {
-  const { variableTable } = useWorkspace();
+  const { variableTable, t } = useWorkspace();
 
   // Why the body will not parse, in the language it is written in. Shown under
   // the editor and as a red border, so a stray comma or an unclosed tag is
@@ -53,7 +54,7 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
       JSON.parse(request.body);
       return null;
     } catch (error) {
-      return error instanceof Error ? error.message : 'Invalid JSON';
+      return error instanceof Error ? error.message : t('body.invalidJson');
     }
   }, [request.body, request.bodyType]);
 
@@ -80,7 +81,7 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
           value={request.bodyType}
           onChange={(bodyType) => onChange({ bodyType })}
           options={BODY_TYPES.map((type) => ({ value: type, label: BODY_LABELS[type] }))}
-          ariaLabel="Body type"
+          ariaLabel={t('body.typeAria')}
           testId="select-body-type"
           className="min-w-[150px]"
         />
@@ -92,24 +93,24 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
             disabled={!formatSubject.trim()}
             title={
               request.bodyType === 'graphql'
-                ? 'Re-indent the variables'
-                : `Re-indent this ${BODY_LABELS[request.bodyType]} body`
+                ? t('body.formatGraphql')
+                : t('body.formatBody', { type: t(BODY_LABELS[request.bodyType]) })
             }
             data-testid="button-format-body"
           >
-            <Wand2 /> Format
+            <Wand2 /> {t('body.format')}
           </Button>
         ) : null}
       </div>
 
       {request.bodyType === 'none' ? (
         <p className="hint">
-          This request is sent without a body. Pick a body type above to send JSON, a form, or a GraphQL query.
+          {t('body.noneHint')}
         </p>
       ) : null}
 
       {request.bodyType === 'form' ? (
-        <KeyValueTable items={request.form} onChange={setRows('form')} testPrefix="form" keyPlaceholder="Field" />
+        <KeyValueTable items={request.form} onChange={setRows('form')} testPrefix="form" keyPlaceholder={t('body.field')} />
       ) : null}
 
       {request.bodyType === 'multipart' ? (
@@ -118,14 +119,12 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
             items={request.multipart}
             onChange={setRows('multipart')}
             testPrefix="multipart"
-            keyPlaceholder="Field"
-            valuePlaceholder="Value or file"
+            keyPlaceholder={t('body.field')}
+            valuePlaceholder={t('body.valueOrFile')}
             allowFiles
           />
           <p className="hint">
-            A field takes typed text or a file — use the paperclip to attach one. Files are kept for this session
-            rather than saved with the workspace, so a reload asks for them again: the whole workspace lives in
-            the browser&rsquo;s storage, and one attachment could evict everything else in it.
+            {t('body.multipartHint')}
           </p>
         </>
       ) : null}
@@ -133,24 +132,24 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
       {request.bodyType === 'graphql' ? (
         <>
           <div className="editor-fill">
-            <div className="section-label">Query</div>
+            <div className="section-label">{t('body.graphqlQuery')}</div>
             <CodeEditor
               variables={variableTable}
               value={request.graphql.query}
               onChange={(query) => onChange({ graphql: { ...request.graphql, query } })}
-              ariaLabel="GraphQL query"
+              ariaLabel={t('body.graphqlQueryAria')}
               testId="textarea-graphql-query"
             />
           </div>
           <div>
-            <div className="section-label">Variables (JSON)</div>
+            <div className="section-label">{t('body.graphqlVariables')}</div>
             <CodeEditor
               variables={variableTable}
               value={request.graphql.variables}
               onChange={(variables) => onChange({ graphql: { ...request.graphql, variables } })}
               language="json"
               style={{ minHeight: 110 }}
-              ariaLabel="GraphQL variables"
+              ariaLabel={t('body.graphqlVariablesAria')}
               testId="textarea-graphql-variables"
             />
           </div>
@@ -170,7 +169,7 @@ export function BodyEditor({ request, onChange }: BodyEditorProps) {
               : request.bodyType === 'xml' ? '<request>\n  <field>value</field>\n</request>'
               : 'Request payload'
             }
-            ariaLabel="Request body"
+            ariaLabel={t('body.aria')}
             testId="textarea-request-body"
           />
           {bodyError ? (

@@ -1,3 +1,4 @@
+import { useT } from '@/state/workspace-store';
 import { useRef } from 'react';
 import { clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_SIDEBAR_WIDTH } from '@/lib/sidebar';
 
@@ -19,6 +20,7 @@ type SidebarResizerProps = {
  * the cursor.
  */
 export function SidebarResizer({ width, onChange }: SidebarResizerProps) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
 
   const track = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -32,7 +34,7 @@ export function SidebarResizer({ width, onChange }: SidebarResizerProps) {
       className="sidebar-resizer"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize the sidebar"
+      aria-label={t('sidebar.resize')}
       aria-valuenow={width}
       aria-valuemin={MIN_SIDEBAR_WIDTH}
       aria-valuemax={MAX_SIDEBAR_WIDTH}
