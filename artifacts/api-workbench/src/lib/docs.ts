@@ -65,13 +65,55 @@ export function pathVariables(url: string): string[] {
   return [...new Set(names)];
 }
 
-/** Every key of a flat JSON object body, or nothing when the body is not one. */
+/**
+ * How deep into a body the seeder will walk.
+ *
+ * Four is past anything a hand-written request holds and short of turning a
+ * large nested payload into a table nobody can read.
+ */
+const MAX_BODY_DEPTH = 4;
+
+/**
+ * Every field of a JSON body, including the ones inside arrays and objects.
+ *
+ * Names carry the path: `total` for a key, `customer.email` for a key of a
+ * nested object, `items[].sku` for a key of the objects inside a list. That is
+ * the shape an OpenAPI schema needs, and `bodySchema` reads it back to rebuild
+ * the nesting on the way out.
+ *
+ * An array is described by its contents, not just by being an array. Its keys
+ * are the union over the elements — a list whose second entry carries a field
+ * the first one omitted still gets a row for it — and the example comes from
+ * the first element that has the key, because an example is only useful if
+ * something really looked like that.
+ */
+function flattenJson(value: unknown, prefix: string, depth: number): Array<{ name: string; value: unknown }> {
+  if (depth > MAX_BODY_DEPTH || value === null || typeof value !== 'object') return [];
+
+  if (Array.isArray(value)) {
+    const found: Array<{ name: string; value: unknown }> = [];
+    const seen = new Set<string>();
+    for (const element of value) {
+      for (const entry of flattenJson(element, `${prefix}[]`, depth)) {
+        if (seen.has(entry.name)) continue;
+        seen.add(entry.name);
+        found.push(entry);
+      }
+    }
+    return found;
+  }
+
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) => [
+    { name: prefix ? `${prefix}.${key}` : key, value: child },
+    ...flattenJson(child, prefix ? `${prefix}.${key}` : key, depth + 1),
+  ]);
+}
+
+/** Every field of a JSON body, or nothing when the body is not JSON. */
 function bodyKeys(request: RequestRecord): Array<{ name: string; value: unknown }> {
   if (request.bodyType !== 'json' || !request.body.trim()) return [];
   try {
-    const parsed = JSON.parse(request.body);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
-    return Object.entries(parsed as Record<string, unknown>).map(([name, value]) => ({ name, value }));
+    return flattenJson(JSON.parse(request.body), '', 1);
   } catch {
     // A body being edited is not valid JSON for most of the time it is open.
     return [];

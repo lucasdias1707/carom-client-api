@@ -121,7 +121,10 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
     const extension = parsed !== null ? 'json' : xml ? 'xml' : 'txt';
     const name = `response-${response.status}.${extension}`;
     try {
-      const message = saveMessage(await saveText(name, response.body, contentType ?? 'text/plain'), name, 'Saved');
+      // `prettyText`, not the raw body: what lands in the file is what the
+      // Pretty tab shows. A minified payload is what the wire carried, not
+      // something anyone opens a saved file to read.
+      const message = saveMessage(await saveText(name, prettyText, contentType ?? 'text/plain'), name, 'Saved');
       if (message) toast({ ...message, kind: 'success' });
     } catch (error) {
       toast({

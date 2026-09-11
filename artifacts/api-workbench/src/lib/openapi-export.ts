@@ -45,6 +45,79 @@ function schemaFor(field: DocField): Json {
   return schema;
 }
 
+/**
+ * One step of a field's path: the key, and how many lists it sits inside.
+ *
+ * `items[]` is the key `items` holding a list; `matrix[][]` a list of lists;
+ * a bare `[]` is the thing itself being a list, which is how a body that *is*
+ * an array names its fields.
+ */
+function segmentsOf(name: string): Array<{ key: string; arrays: number }> {
+  return name.split('.').map((part) => {
+    const brackets = part.match(/(\[\])*$/)?.[0] ?? '';
+    return { key: part.slice(0, part.length - brackets.length), arrays: brackets.length / 2 };
+  });
+}
+
+type SchemaNode = {
+  /** The described field that named this node exactly, if one did. */
+  field?: DocField;
+  children: Map<string, SchemaNode>;
+  /** How many lists wrap it. The deepest claim wins: `items` and `items[].sku`
+   *  describe the same property, and only the second one knows it is a list. */
+  arrays: number;
+};
+
+const emptyNode = (): SchemaNode => ({ children: new Map(), arrays: 0 });
+
+/**
+ * Rebuild the nesting the field names describe.
+ *
+ * The Docs table is flat because a table is flat, but the names carry the
+ * shape — `customer.email`, `items[].sku` — and a schema that pasted those in
+ * as literal property names would describe an object with a property called
+ * "items[].sku", which is not a thing. This walks them back into objects and
+ * arrays.
+ */
+function schemaFromFields(fields: DocField[]): Json {
+  const root = emptyNode();
+
+  for (const field of fields) {
+    let node = root;
+    for (const { key, arrays } of segmentsOf(field.name.trim())) {
+      // A segment with no key is the current node being a list, not a child.
+      if (key) {
+        if (!node.children.has(key)) node.children.set(key, emptyNode());
+        node = node.children.get(key) as SchemaNode;
+      }
+      node.arrays = Math.max(node.arrays, arrays);
+    }
+    node.field = field;
+  }
+
+  const emit = (node: SchemaNode): Json => {
+    let schema: Json;
+    if (node.children.size > 0) {
+      const properties: Json = {};
+      const required: string[] = [];
+      for (const [key, child] of node.children) {
+        properties[key] = emit(child);
+        if (child.field?.required) required.push(key);
+      }
+      // Having children is proof of an object, whatever the row's type says.
+      schema = { type: 'object', properties, ...(required.length > 0 ? { required } : {}) };
+    } else {
+      schema = node.field ? schemaFor(node.field) : { type: 'object' };
+    }
+    for (let level = 0; level < node.arrays; level += 1) schema = { type: 'array', items: schema };
+    // On the outside, so it describes the property and not the list's items.
+    if (node.field?.description) schema.description = node.field.description;
+    return schema;
+  };
+
+  return emit(root);
+}
+
 function parametersFor(request: RequestRecord): Json[] {
   const parameters: Json[] = [];
   for (const where of ['path', 'query', 'header'] as const) {
@@ -86,22 +159,9 @@ function requestBodyFor(request: RequestRecord): Json | null {
             : 'application/json';
 
   if (described.length > 0) {
-    const properties: Json = {};
-    const required: string[] = [];
-    for (const field of described) {
-      properties[field.name] = {
-        ...schemaFor(field),
-        ...(field.description ? { description: field.description } : {}),
-      };
-      if (field.required) required.push(field.name);
-    }
     return {
       required: described.some((field) => field.required),
-      content: {
-        [mediaType]: {
-          schema: { type: 'object', properties, ...(required.length > 0 ? { required } : {}) },
-        },
-      },
+      content: { [mediaType]: { schema: schemaFromFields(described) } },
     };
   }
 
