@@ -182,3 +182,15 @@ export function systemLanguage(): Language {
 export function resolveLanguage(chosen: Language | undefined): Language {
   return chosen ?? systemLanguage();
 }
+
+/**
+ * Which language the generated data speaks.
+ *
+ * Absent follows the interface, which is what almost everyone wants and what
+ * nobody should have to configure. Choosing one pins it, for the case the
+ * default cannot serve: an API that validates names or addresses against one
+ * language, read by someone who works in another.
+ */
+export function resolveDataLanguage(chosen: Language | undefined, interfaceLanguage: Language): Language {
+  return chosen ?? interfaceLanguage;
+}

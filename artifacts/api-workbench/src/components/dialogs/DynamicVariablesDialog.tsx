@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DYNAMIC_GROUPS, DYNAMIC_VARIABLES, type DynamicGroup } from '@/lib/dynamic';
 import { useWorkspace } from '@/state/workspace-store';
+import { LANGUAGE_NAMES } from '@/lib/i18n';
 import type { MessageKey } from '@/locales/en';
 
 const groupLabel = (group: DynamicGroup): MessageKey => `dynamic.group.${group}` as MessageKey;
@@ -23,7 +24,7 @@ const groupLabel = (group: DynamicGroup): MessageKey => `dynamic.group.${group}`
  * other end, every time.
  */
 export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
-  const { t, tNodes, language } = useWorkspace();
+  const { t, tNodes, dataLanguage } = useWorkspace();
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
   /*
@@ -35,9 +36,9 @@ export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
   const [seed, setSeed] = useState(0);
 
   const samples = useMemo(
-    () => new Map(DYNAMIC_VARIABLES.map((variable) => [variable.name, variable.generate(language)])),
+    () => new Map(DYNAMIC_VARIABLES.map((variable) => [variable.name, variable.generate(dataLanguage)])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [seed, language],
+    [seed, dataLanguage],
   );
 
   const needle = filter.trim().toLowerCase();
@@ -98,6 +99,7 @@ export function DynamicVariablesDialog({ onClose }: { onClose: () => void }) {
         <p className="hint" style={{ margin: 0 }} data-testid="text-dynamic-localised">
           {tNodes('dynamic.localisedNote', {
             mark: <span className="dynamic-mark">{t('dynamic.localised')}</span>,
+            language: <strong>{LANGUAGE_NAMES[dataLanguage]}</strong>,
           })}
         </p>
 

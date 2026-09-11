@@ -3,6 +3,7 @@ import { draftChanges, withDraft, type SectionId } from '@/lib/draft';
 import {
   format,
   messageParts,
+  resolveDataLanguage,
   resolveLanguage,
   systemLanguage,
   LANGUAGE_TAGS,
@@ -47,6 +48,13 @@ type StoreValue = {
   unsavedIn: (requestId: string) => SectionId[];
   /** The language on screen: the chosen one, or the system's until one is chosen. */
   language: Language;
+  /**
+   * The language the `{{$random...}}` generators invent data in. Separate from
+   * the one above because the interface and the system under test do not have
+   * to agree: reading the app in Portuguese while an API validates English
+   * names is a real combination, and it is the whole reason this exists.
+   */
+  dataLanguage: Language;
   t: Translate;
   tNodes: TranslateNodes;
   /** Values only, for building the outgoing request. */
@@ -134,6 +142,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   const language = resolveLanguage(state.settings.language);
+  const dataLanguage = resolveDataLanguage(state.settings.dataLanguage, language);
   const catalogue = useMemo<Catalogue>(() => catalogueFor(language), [language]);
 
   /*
@@ -186,6 +195,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return draft && saved ? draftChanges(saved, draft) : [];
       },
       language,
+      dataLanguage,
       t,
       tNodes,
       variables: valuesOf(variableTable),
@@ -193,7 +203,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       tableFor,
       responsesFor: (requestId: string) => state.responses.filter((response) => response.requestId === requestId),
     };
-  }, [state, catalogue, language]);
+  }, [state, catalogue, language, dataLanguage]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

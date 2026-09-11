@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Download, Keyboard, Languages, Upload } from 'lucide-react';
+import { Dices, Download, Keyboard, Languages, Upload } from 'lucide-react';
 import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
@@ -10,7 +10,14 @@ import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
 import { PaletteEditor } from '@/components/dialogs/PaletteEditor';
 import { isSubtreeExport } from '@/lib/export';
 import { isDesktop } from '@/lib/http';
-import { FOLLOW_SYSTEM, LANGUAGES, LANGUAGE_NAMES, systemLanguage, type Language } from '@/lib/i18n';
+import {
+  FOLLOW_SYSTEM,
+  LANGUAGES,
+  LANGUAGE_NAMES,
+  resolveLanguage,
+  systemLanguage,
+  type Language,
+} from '@/lib/i18n';
 import { createSeedState } from '@/lib/seed';
 import { JSON_THEME_PRESETS } from '@/lib/settings';
 import { useWorkspace } from '@/state/workspace-store';
@@ -57,7 +64,7 @@ export function SettingsDialog({
   /** Swaps this dialog for the shortcuts screen — they are one overlay, not two. */
   onOpenShortcuts: () => void;
 }) {
-  const { state, dispatch, t } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   // Two tabs rather than one long scroll: everything about how the app looks
@@ -154,6 +161,42 @@ export function SettingsDialog({
             block
           />
           <span className="hint">{t('settings.language.hint')}</span>
+        </div>
+
+        {/*
+          Directly under the interface language, because the two are read
+          together and the default is "the same as that one". Pinning it is for
+          the case the default cannot serve: an API that validates names or
+          addresses against a language other than the one you work in.
+        */}
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">
+            <Dices size={12} /> {t('settings.dataLanguage.label')}
+          </Label>
+          <SelectField
+            value={settings.dataLanguage ?? FOLLOW_SYSTEM}
+            onChange={(choice: Language | typeof FOLLOW_SYSTEM) =>
+              dispatch({
+                type: 'settings/update',
+                patch: { dataLanguage: choice === FOLLOW_SYSTEM ? undefined : choice },
+              })
+            }
+            options={[
+              {
+                value: FOLLOW_SYSTEM,
+                label: t('settings.dataLanguage.follow', {
+                  name: LANGUAGE_NAMES[resolveLanguage(settings.language)],
+                }),
+              },
+              ...LANGUAGES.map((language) => ({ value: language, label: LANGUAGE_NAMES[language] })),
+            ]}
+            ariaLabel={t('settings.dataLanguage.label')}
+            testId="select-data-language"
+            block
+          />
+          <span className="hint">
+            {tNodes('settings.dataLanguage.hint', { example: <code>{'{{$randomFirstName}}'}</code> })}
+          </span>
         </div>
 
         {/*

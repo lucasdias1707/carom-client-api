@@ -680,5 +680,10 @@ export const es: Catalogue = {
 
   // ── Datos generados, por idioma ──────────────────────────────────────
   'dynamic.localised': 'sigue el idioma',
-  'dynamic.localisedNote': 'Las marcadas con {mark} usan el idioma de la interfaz — nombres, ciudades y teléfonos en español mientras esto se lea así. Los identificadores, números y fechas no tienen idioma y no cambian.',
+  'dynamic.localisedNote': 'Las marcadas con {mark} se están generando en {language}, que sigue la interfaz hasta que la fijes en Datos generados, en los ajustes. Los identificadores, números y fechas no tienen idioma y no cambian.',
+
+  // ── El idioma de los datos generados ─────────────────────────────────
+  'settings.dataLanguage.label': 'Datos generados',
+  'settings.dataLanguage.follow': 'Igual que la interfaz — {name}',
+  'settings.dataLanguage.hint': 'En qué idioma {example} y las demás inventan sus valores. Sigue la interfaz salvo que la fijes — conviene fijarla cuando la API valida nombres o direcciones en un idioma distinto del que lees.',
 };

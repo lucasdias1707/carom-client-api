@@ -677,5 +677,10 @@ export const ptBR: Catalogue = {
 
   // ── Dados gerados, por idioma ────────────────────────────────────────
   'dynamic.localised': 'segue o idioma',
-  'dynamic.localisedNote': 'As marcadas com {mark} usam o idioma da interface — nomes, cidades e telefones brasileiros enquanto isto estiver em português. Identificadores, números e datas não têm idioma e não mudam.',
+  'dynamic.localisedNote': 'As marcadas com {mark} estão sendo geradas em {language}, que segue a interface até você fixar em Dados gerados, nas configurações. Identificadores, números e datas não têm idioma e não mudam.',
+
+  // ── O idioma dos dados gerados ───────────────────────────────────────
+  'settings.dataLanguage.label': 'Dados gerados',
+  'settings.dataLanguage.follow': 'Igual à interface — {name}',
+  'settings.dataLanguage.hint': 'Em que idioma {example} e as outras inventam os valores. Segue a interface, a menos que você fixe — vale fixar quando a API valida nomes ou endereços num idioma diferente do que você lê.',
 };

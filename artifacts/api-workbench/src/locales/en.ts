@@ -676,7 +676,12 @@ export const en = {
 
   // ── Generated data, per language ─────────────────────────────────────
   'dynamic.localised': 'follows the language',
-  'dynamic.localisedNote': 'The ones marked {mark} draw on the language the interface is in — Brazilian names, cities and phone numbers while this reads Portuguese. Identifiers, numbers and dates have no language and never change.',
+  'dynamic.localisedNote': 'The ones marked {mark} are being generated in {language}, which follows the interface until you pin it under Generated data in Settings. Identifiers, numbers and dates have no language and never change.',
+
+  // ── The language of the generated data ───────────────────────────────
+  'settings.dataLanguage.label': 'Generated data',
+  'settings.dataLanguage.follow': 'Same as the interface — {name}',
+  'settings.dataLanguage.hint': 'Which language {example} and the rest invent their values in. Follows the interface unless you pin it — worth pinning when the API validates names or addresses against a language that is not the one you read in.',
 };
 
 /** The shape every other language has to fill. */

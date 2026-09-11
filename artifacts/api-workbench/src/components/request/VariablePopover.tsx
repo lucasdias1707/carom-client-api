@@ -33,7 +33,7 @@ type VariablePopoverProps = {
  * somewhere else. Clicking into the value field is what hands focus over.
  */
 export function VariablePopover({ name, variable, anchor, onPointerEnter, onPointerLeave, onClose }: VariablePopoverProps) {
-  const { state, dispatch, activeRequest, t, tNodes, language } = useWorkspace();
+  const { state, dispatch, activeRequest, t, tNodes, dataLanguage } = useWorkspace();
   const [value, setValue] = useState(variable?.value ?? '');
 
   /*
@@ -43,7 +43,7 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
     time React repainted would be impossible to read.
   */
   const generator = variable ? null : dynamicVariable(name);
-  const [sample, setSample] = useState(() => (generator ? generator.generate(language) : ''));
+  const [sample, setSample] = useState(() => (generator ? generator.generate(dataLanguage) : ''));
 
   const environments = state.environments.filter(
     (environment) => environment.workspaceId === state.activeWorkspaceId,
@@ -165,7 +165,7 @@ export function VariablePopover({ name, variable, anchor, onPointerEnter, onPoin
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setSample(generateDynamic(name, language) ?? '')}
+              onClick={() => setSample(generateDynamic(name, dataLanguage) ?? '')}
               data-testid="button-dynamic-another"
             >
               <Dices size={12} /> {t('dynamic.another')}

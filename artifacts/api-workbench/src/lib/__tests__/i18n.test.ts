@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { detectLanguage, format, messageParts, resolveLanguage, LANGUAGES } from '@/lib/i18n';
+import {
+  detectLanguage,
+  format,
+  messageParts,
+  resolveDataLanguage,
+  resolveLanguage,
+  LANGUAGES,
+} from '@/lib/i18n';
 import { sectionId, SECTION_IDS } from '@/lib/draft';
 import { en } from '@/locales/en';
 import { ptBR } from '@/locales/pt-BR';
@@ -43,6 +50,20 @@ describe('picking a language from what the machine says', () => {
     // detector at all.
     expect(resolveLanguage('es')).toBe('es');
     expect(resolveLanguage('pt-BR')).toBe('pt-BR');
+  });
+});
+
+describe('which language the generated data speaks', () => {
+  it('follows the interface until someone pins it', () => {
+    expect(resolveDataLanguage(undefined, 'pt-BR')).toBe('pt-BR');
+    expect(resolveDataLanguage(undefined, 'es')).toBe('es');
+  });
+
+  it('stays pinned once chosen, whatever the interface does', () => {
+    // The case the setting exists for: an API that validates English names,
+    // read by someone working in Portuguese.
+    expect(resolveDataLanguage('en', 'pt-BR')).toBe('en');
+    expect(resolveDataLanguage('pt-BR', 'en')).toBe('pt-BR');
   });
 });
 

@@ -22,7 +22,7 @@ export type SendState = {
 
 /** Drive one in-flight request at a time, storing the result in the workspace. */
 export function useSendRequest(proxyStatus: ProxyStatus): SendState {
-  const { state, variables, dispatch, t, language } = useWorkspace();
+  const { state, variables, dispatch, t, dataLanguage } = useWorkspace();
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -130,7 +130,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         const resolved = { ...variables };
         for (const write of pre.variables) resolved[write.key] = write.value;
 
-        const prepared = prepareRequest(request, resolved, { folders: chain, extraHeaders: pre.headers, language });
+        const prepared = prepareRequest(request, resolved, { folders: chain, extraHeaders: pre.headers, language: dataLanguage });
         if (!prepared.url.trim()) throw new Error(t('send.noUrl'));
         sent = prepared;
 
@@ -178,7 +178,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
         setSending(false);
       }
     },
-    [dispatch, language, proxyStatus, state, t, toast, variables],
+    [dataLanguage, dispatch, proxyStatus, state, t, toast, variables],
   );
 
   return { sending, send, cancel, lastError, scriptLogs, scriptTests };

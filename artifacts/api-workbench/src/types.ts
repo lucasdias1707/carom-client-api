@@ -204,6 +204,14 @@ export type Settings = {
    * here pins it, and a later change of system language then leaves it alone.
    */
   language?: Language;
+  /**
+   * Which language the `{{$random...}}` generators invent data in. Absent
+   * means "follow the interface", which is right until it is not: testing an
+   * API that validates against English names while reading the app in
+   * Portuguese is a real combination, and it is the only reason this is a
+   * setting of its own rather than a consequence of the one above.
+   */
+  dataLanguage?: Language;
   layout: PaneLayout;
   sendMode: SendMode;
   /** Follow redirects when sending through the proxy. */
