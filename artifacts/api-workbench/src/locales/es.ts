@@ -752,5 +752,52 @@ export const es: Catalogue = {
   'drawer.precedence': 'Una carpeta le gana a un entorno, y una carpeta de dentro le gana a las que la rodean. Lo que edites aquí se guarda mientras escribes.',
   'drawer.open': 'Variables al alcance',
 
+  // ── Cuando una actualización sale mal ────────────────────────────────
+  'updates.error.check': 'No se pudo comprobar si hay actualizaciones. {detail}',
+  'updates.error.download': 'La actualización no se instaló. {detail}',
+  'updates.error.crossDevice': 'Carom no pudo reemplazarse donde está instalado. macOS prepara el cambio junto a la aplicación, y ahí no se pudo escribir — normalmente un disco de solo lectura, o un volumen en el que la aplicación no puede escribir. Descarga la versión nueva y arrástrala sobre esta copia.',
+  'updates.error.crossDeviceDetail': 'El sistema dijo: {detail}',
+
+  // ── El distintivo de actualización en la barra superior ──────────────
+  'updates.progress.unknown': '{received} descargados',
+  'updates.progress.known': '{received} de {total} · {percent}%',
+  'updates.badge.readyVersion': 'La versión {version} está instalada — haz clic para reiniciar y terminar',
+  'updates.badge.ready': 'Hay una actualización instalada — haz clic para reiniciar y terminar',
+  'updates.badge.downloading': 'Descargando — {received} de {total} · {percent}%',
+  'updates.badge.downloadingUnknown': 'Descargando — {received} hasta ahora',
+  'updates.badge.failedDownload': 'La actualización no se instaló. Haz clic para intentarlo de nuevo.',
+  'updates.badge.failedCrossDevice': 'Carom no pudo reemplazarse donde está instalado. Haz clic para intentarlo de nuevo.',
+  'updates.badge.available': 'La versión {version} está disponible — haz clic para descargarla e instalarla',
+  'updates.badge.availablePackage': 'La versión {version} está disponible — haz clic para abrir la página de la publicación. Esta copia se instaló desde un paquete, así que se actualiza con tu gestor de paquetes.',
+
+  // ── Convertir una selección en variable ──────────────────────────────
+  'selection.setExisting': 'Definir {name}',
+  'selection.createNew': 'Nueva variable…',
+  'selection.noEnvironment': 'No hay ningún entorno donde guardarla',
+  'selection.assigned': '{name} definida en {environment}',
+  'selection.newTitle': 'Nueva variable',
+  'selection.newDescription': 'Va a {environment}, y lo que seleccionaste se reemplaza por la referencia.',
+  'selection.nameAria': 'Nombre de la variable',
+
+  // ── Un espacio de trabajo guardado en un archivo ─────────────────────
+  'linked.link': 'Guardar en un archivo…',
+  'linked.unlink': 'Dejar de guardar en un archivo',
+  'linked.reload': 'Recargar desde {file}',
+  'linked.title': 'Guardar este espacio de trabajo en un archivo',
+  'linked.description': 'El archivo pasa a ser el registro: abrir este espacio de trabajo lo lee, y lo que cambies se escribe de vuelta. Ponlo en un proyecto y todo el que trabaje en él tendrá las mismas solicitudes.',
+  'linked.openExisting': 'Abrir un archivo existente',
+  'linked.openExistingHint': 'Para un archivo que alguien ya escribió. Lo que este espacio de trabajo tiene ahora se reemplaza por lo que haya en él.',
+  'linked.writeNew': 'Escribir un archivo nuevo',
+  'linked.writeNewHint': 'Para empezar uno. Este espacio de trabajo se escribe tal como está, y no se pierde nada.',
+  'linked.contentsNote': 'Las carpetas, las solicitudes y los entornos van al archivo. Las respuestas, los cambios sin guardar y las versiones guardadas se quedan en esta máquina — son tuyos, no del proyecto.',
+  'linked.secretsNote': 'Los entornos viajan con las solicitudes, porque una solicitud que usa {example} no sirve de mucho sin ellos. Un token que no subirías al repositorio no debería entrar en un archivo que vas a compartir.',
+  'linked.loaded': 'Cargado desde el archivo',
+  'linked.written': 'Escrito en el archivo',
+  'linked.unreadable': 'No se pudo leer ese archivo',
+  'linked.notJson': 'No es JSON válido.',
+  'linked.notAWorkspace': 'Es JSON, pero no es un archivo de espacio de trabajo. Una exportación de Postman o Insomnia entra por Importar.',
+  'linked.notWritten': 'No se pudo escribir el archivo',
+  'linked.pickFailed': 'No se pudo abrir el selector de archivos',
+
   'settings.dataLanguage.hint': 'En qué idioma {example} y las demás inventan sus valores. Sigue la interfaz salvo que la fijes — conviene fijarla cuando la API valida nombres o direcciones en un idioma distinto del que lees.',
 };

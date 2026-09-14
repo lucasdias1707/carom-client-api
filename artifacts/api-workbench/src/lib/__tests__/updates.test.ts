@@ -3,6 +3,7 @@ import {
   canSelfUpdate,
   describeDownload,
   describeUpdateBadge,
+  isCrossDeviceFailure,
   releasePageUrl,
   type InstallKind,
 } from '@/lib/updates';
@@ -39,22 +40,58 @@ describe('releasePageUrl', () => {
 
 describe('describeDownload', () => {
   it('reports progress against a known total', () => {
-    expect(describeDownload(512 * 1024, 1024 * 1024)).toBe('512.0 KB of 1.00 MB · 50%');
+    expect(describeDownload(512 * 1024, 1024 * 1024)).toEqual({
+      key: 'updates.progress.known',
+      vars: { received: '512.0 KB', total: '1.00 MB', percent: 50 },
+    });
   });
 
   it('reports what has arrived when the server sent no length', () => {
     // A proxy stripping content-length is not an error, and it must not read
-    // as "0%" or NaN.
-    expect(describeDownload(2 * 1024 * 1024, 0)).toBe('2.00 MB downloaded');
-    expect(describeDownload(1024, Number.NaN)).toBe('1.0 KB downloaded');
+    // as "0%" or NaN — so it picks the sentence with no percentage in it.
+    expect(describeDownload(2 * 1024 * 1024, 0)).toEqual({
+      key: 'updates.progress.unknown',
+      vars: { received: '2.00 MB' },
+    });
+    expect(describeDownload(1024, Number.NaN).key).toBe('updates.progress.unknown');
   });
 
   it('does not exceed 100% when the total was understated', () => {
-    expect(describeDownload(200, 100)).toBe('200 B of 100 B · 100%');
+    expect(describeDownload(200, 100).vars?.percent).toBe(100);
   });
 
   it('starts at zero rather than empty', () => {
-    expect(describeDownload(0, 1024)).toBe('0 B of 1.0 KB · 0%');
+    expect(describeDownload(0, 1024).vars).toEqual({ received: '0 B', total: '1.0 KB', percent: 0 });
+  });
+});
+
+/**
+ * The failure a copy of Carom on an external drive hits.
+ *
+ * macOS stages the swap in a temporary directory and renames the installed
+ * `.app` into it; a rename cannot cross a filesystem, so the app on one volume
+ * and the temp directory on another gives `EXDEV`. Worth recognising because
+ * the message it arrives as — "Cross-device link (os error 18)" — is accurate
+ * and tells the reader nothing.
+ */
+describe('isCrossDeviceFailure', () => {
+  it('recognises the message the plugin actually reports', () => {
+    expect(isCrossDeviceFailure('Cross-device link (os error 18)')).toBe(true);
+    expect(isCrossDeviceFailure('The download did not finish. Cross-device link (os error 18)')).toBe(true);
+  });
+
+  it('recognises the other spellings of the same errno', () => {
+    expect(isCrossDeviceFailure('EXDEV: cross-device link not permitted')).toBe(true);
+    expect(isCrossDeviceFailure('os error 18')).toBe(true);
+  });
+
+  it('leaves every other failure alone', () => {
+    // These have their own message; claiming the disk is at fault would send
+    // someone to check the wrong thing.
+    expect(isCrossDeviceFailure('Network unreachable')).toBe(false);
+    expect(isCrossDeviceFailure('signature verification failed')).toBe(false);
+    expect(isCrossDeviceFailure('Permission denied (os error 13)')).toBe(false);
+    expect(isCrossDeviceFailure('')).toBe(false);
   });
 });
 
@@ -80,7 +117,7 @@ describe('describeUpdateBadge', () => {
     expect(describeUpdateBadge('available', version, nothing)).toEqual({
       tone: 'available',
       action: 'download',
-      label: 'Version 0.4.0 is available — click to download and install it',
+      label: { key: 'updates.badge.available', vars: { version: '0.4.0' } },
     });
   });
 
@@ -92,14 +129,17 @@ describe('describeUpdateBadge', () => {
     const badge = describeUpdateBadge('downloading', version, { received: 512, total: 1024 });
     expect(badge?.tone).toBe('busy');
     expect(badge?.action).toBe('none');
-    expect(badge?.label).toContain('50%');
+    expect(badge?.label).toEqual({
+      key: 'updates.badge.downloading',
+      vars: { received: '512 B', total: '1.0 KB', percent: 50 },
+    });
   });
 
   it('restarts on click once the update is in place', () => {
     expect(describeUpdateBadge('ready', version, nothing)).toEqual({
       tone: 'ready',
       action: 'restart',
-      label: 'Version 0.4.0 is installed — click to restart and finish',
+      label: { key: 'updates.badge.readyVersion', vars: { version: '0.4.0' } },
     });
   });
 
@@ -114,14 +154,25 @@ describe('describeUpdateBadge', () => {
      * stay silent — now, staying silent would mean the button vanishes a
      * moment after being pressed.
      */
-    const failed = { downloadError: 'The download did not finish. Network unreachable.' };
+    const failed = { errorStage: 'download' } as const;
 
     it('stays put, in red, and offers another go', () => {
       expect(describeUpdateBadge('error', version, nothing, failed)).toEqual({
         tone: 'failed',
         action: 'download',
-        label: 'The download did not finish. Network unreachable. Click to try again.',
+        label: { key: 'updates.badge.failedDownload' },
       });
+    });
+
+    /**
+     * The macOS failure on an external drive. It gets its own sentence because
+     * it is the one a reader can do something about — the errno that describes
+     * it says nothing useful to anyone who has not met it before.
+     */
+    it('says so plainly when the app could not replace itself', () => {
+      const badge = describeUpdateBadge('error', version, nothing, { errorStage: 'cross-device' });
+      expect(badge?.label).toEqual({ key: 'updates.badge.failedCrossDevice' });
+      expect(badge?.tone).toBe('failed');
     });
 
     it('sends a package install to the release page instead of retrying', () => {
@@ -145,7 +196,7 @@ describe('describeUpdateBadge', () => {
 
     it('says why, since the button does something different from what it looks like', () => {
       const badge = describeUpdateBadge('available', version, nothing, { selfUpdating: false });
-      expect(badge?.label).toContain('package manager');
+      expect(badge?.label.key).toBe('updates.badge.availablePackage');
     });
 
     it('still restarts normally once something else installed the update', () => {

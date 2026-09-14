@@ -50,9 +50,28 @@ export function UpdatesSection() {
         {updates.phase === 'current' ? <p className="hint">{t('updates.current')}</p> : null}
 
         {updates.error ? (
-          <p className="hint" style={{ color: 'var(--red)' }}>
-            {updates.error.message}
-          </p>
+          /*
+            The sentence is built here, not in the hook: the hook says which
+            step failed and what the system said, and which language that is
+            read in belongs to the screen. A cross-device failure gets a
+            paragraph of its own because it is the one a reader can act on,
+            with the raw message kept underneath for whoever has to diagnose it.
+          */
+          <div className="stack" style={{ gap: 4 }} data-testid="text-update-error">
+            <p className="hint" style={{ color: 'var(--red)', margin: 0 }}>
+              {updates.error.stage === 'cross-device'
+                ? t('updates.error.crossDevice')
+                : t(
+                    updates.error.stage === 'check' ? 'updates.error.check' : 'updates.error.download',
+                    { detail: updates.error.detail },
+                  )}
+            </p>
+            {updates.error.stage === 'cross-device' ? (
+              <p className="hint" style={{ margin: 0 }}>
+                {t('updates.error.crossDeviceDetail', { detail: updates.error.detail })}
+              </p>
+            ) : null}
+          </div>
         ) : null}
 
         {updates.update && updates.phase !== 'ready' ? (
@@ -79,7 +98,10 @@ export function UpdatesSection() {
                 </Button>
                 {updates.phase === 'downloading' ? (
                   <span className="hint mono">
-                    {describeDownload(updates.progress.received, updates.progress.total)}
+                    {(() => {
+                      const progressed = describeDownload(updates.progress.received, updates.progress.total);
+                      return t(progressed.key, progressed.vars);
+                    })()}
                   </span>
                 ) : null}
               </div>

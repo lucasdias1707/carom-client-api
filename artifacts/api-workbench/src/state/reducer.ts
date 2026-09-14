@@ -3,7 +3,7 @@ import { dropVersions, recordVersion } from '@/lib/versions';
 import { cloneRequest } from '@/lib/factories';
 import { createId } from '@/lib/id';
 import type { Action } from '@/state/actions';
-import type { Environment, RequestRecord, WorkspaceState } from '@/types';
+import type { Environment, RequestRecord, Workspace, WorkspaceState } from '@/types';
 import { isDescendantFolder } from '@/state/selectors';
 
 /** Keep at most this many responses per request so history stays useful but bounded. */
@@ -59,6 +59,12 @@ function removeRequests(state: WorkspaceState, ids: Set<string>): WorkspaceState
     versions: dropVersions(state.versions, ids),
     responses: state.responses.filter((response) => !ids.has(response.requestId)),
   };
+}
+
+/** Unlinking drops the key, rather than leaving `undefined` in the JSON. */
+function stripFilePath(workspace: Workspace): Workspace {
+  const { filePath: _filePath, ...rest } = workspace;
+  return rest;
 }
 
 export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
@@ -369,6 +375,67 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           workspace.id === action.id ? { ...workspace, name: action.name } : workspace,
         ),
       };
+
+    case 'workspace/link':
+      return {
+        ...state,
+        workspaces: state.workspaces.map((workspace) =>
+          workspace.id === action.id
+            ? action.filePath === null
+              ? stripFilePath(workspace)
+              : { ...workspace, filePath: action.filePath }
+            : workspace,
+        ),
+      };
+
+    case 'workspace/adopt': {
+      /*
+        A replacement, not a merge. The file is the record for a linked
+        workspace, so a request a colleague deleted upstream has to go here
+        too — merging would resurrect it on every pull, and it would never be
+        possible to delete anything.
+
+        Tabs and the open request are cleared along with it: they point at
+        records that may not exist in what just arrived, and a tab bar holding
+        requests that are gone is worse than an empty one. Drafts, versions and
+        responses for this workspace go for the same reason.
+      */
+      const gone = new Set(
+        state.requests.filter((request) => request.workspaceId === action.id).map((request) => request.id),
+      );
+      const drafts = Object.fromEntries(
+        Object.entries(state.drafts).filter(([requestId]) => !gone.has(requestId)),
+      );
+      return {
+        ...state,
+        workspaces: state.workspaces.map((workspace) =>
+          workspace.id === action.id ? { ...workspace, name: action.name || workspace.name } : workspace,
+        ),
+        folders: [
+          ...state.folders.filter((folder) => folder.workspaceId !== action.id),
+          ...action.folders,
+        ],
+        requests: [
+          ...state.requests.filter((request) => request.workspaceId !== action.id),
+          ...action.requests,
+        ],
+        environments: [
+          ...state.environments.filter((environment) => environment.workspaceId !== action.id),
+          ...action.environments,
+        ],
+        responses: state.responses.filter((response) => !gone.has(response.requestId)),
+        versions: state.versions.filter((version) => !gone.has(version.requestId)),
+        drafts,
+        openTabIds: state.openTabIds.filter((id) => !gone.has(id)),
+        activeRequestId:
+          state.activeRequestId && gone.has(state.activeRequestId) ? null : state.activeRequestId,
+        activeFolderId: null,
+        activeEnvironmentId:
+          action.environments.some((environment) => environment.id === state.activeEnvironmentId)
+            ? state.activeEnvironmentId
+            : null,
+      };
+    }
 
     case 'workspace/delete': {
       // The last workspace stays: there is nowhere to send the user otherwise.

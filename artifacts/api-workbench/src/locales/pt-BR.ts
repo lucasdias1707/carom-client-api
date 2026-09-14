@@ -749,5 +749,52 @@ export const ptBR: Catalogue = {
   'drawer.precedence': 'Uma pasta ganha de um ambiente, e uma pasta de dentro ganha das que estão em volta. O que você edita aqui é salvo enquanto digita.',
   'drawer.open': 'Variáveis ao alcance',
 
+  // ── Quando uma atualização dá errado ─────────────────────────────────
+  'updates.error.check': 'Não deu para verificar se há atualizações. {detail}',
+  'updates.error.download': 'A atualização não foi instalada. {detail}',
+  'updates.error.crossDevice': 'O Carom não conseguiu se substituir onde está instalado. O macOS prepara a troca ao lado do aplicativo, e não deu para escrever ali — normalmente um disco somente leitura, ou um volume onde o aplicativo não pode escrever. Baixe a versão nova e arraste por cima desta cópia.',
+  'updates.error.crossDeviceDetail': 'O sistema disse: {detail}',
+
+  // ── O selo de atualização na barra de cima ───────────────────────────
+  'updates.progress.unknown': '{received} baixados',
+  'updates.progress.known': '{received} de {total} · {percent}%',
+  'updates.badge.readyVersion': 'A versão {version} está instalada — clique para reiniciar e concluir',
+  'updates.badge.ready': 'Uma atualização está instalada — clique para reiniciar e concluir',
+  'updates.badge.downloading': 'Baixando — {received} de {total} · {percent}%',
+  'updates.badge.downloadingUnknown': 'Baixando — {received} até agora',
+  'updates.badge.failedDownload': 'A atualização não foi instalada. Clique para tentar de novo.',
+  'updates.badge.failedCrossDevice': 'O Carom não conseguiu se substituir onde está instalado. Clique para tentar de novo.',
+  'updates.badge.available': 'A versão {version} está disponível — clique para baixar e instalar',
+  'updates.badge.availablePackage': 'A versão {version} está disponível — clique para abrir a página do lançamento. Esta cópia foi instalada por um pacote, então ela se atualiza pelo seu gerenciador de pacotes.',
+
+  // ── Transformar uma seleção em variável ──────────────────────────────
+  'selection.setExisting': 'Definir {name}',
+  'selection.createNew': 'Nova variável…',
+  'selection.noEnvironment': 'Nenhum ambiente para guardar',
+  'selection.assigned': '{name} definida em {environment}',
+  'selection.newTitle': 'Nova variável',
+  'selection.newDescription': 'Ela vai para {environment}, e o que você selecionou é substituído pela referência.',
+  'selection.nameAria': 'Nome da variável',
+
+  // ── Um workspace guardado num arquivo ────────────────────────────────
+  'linked.link': 'Guardar num arquivo…',
+  'linked.unlink': 'Parar de guardar num arquivo',
+  'linked.reload': 'Recarregar de {file}',
+  'linked.title': 'Guardar este workspace num arquivo',
+  'linked.description': 'O arquivo passa a ser o registro: abrir este workspace lê ele, e o que você mudar é gravado de volta. Coloque num projeto e todo mundo que trabalha nele tem as mesmas requisições.',
+  'linked.openExisting': 'Abrir um arquivo existente',
+  'linked.openExistingHint': 'Para um arquivo que alguém já escreveu. O que este workspace tem agora é substituído pelo que estiver nele.',
+  'linked.writeNew': 'Escrever um arquivo novo',
+  'linked.writeNewHint': 'Para começar um. Este workspace é gravado como está, e nada se perde.',
+  'linked.contentsNote': 'Pastas, requisições e ambientes vão para o arquivo. Respostas, edições não salvas e versões salvas ficam nesta máquina — elas são suas, não do projeto.',
+  'linked.secretsNote': 'Os ambientes vão junto com as requisições, porque uma requisição que usa {example} não serve para muita coisa sem eles. Um token que você não commitaria não deve entrar num arquivo que você vai compartilhar.',
+  'linked.loaded': 'Carregado do arquivo',
+  'linked.written': 'Gravado no arquivo',
+  'linked.unreadable': 'Não deu para ler esse arquivo',
+  'linked.notJson': 'Não é um JSON válido.',
+  'linked.notAWorkspace': 'É JSON, mas não é um arquivo de workspace. Uma exportação do Postman ou do Insomnia entra pelo Importar.',
+  'linked.notWritten': 'Não deu para gravar o arquivo',
+  'linked.pickFailed': 'Não deu para abrir o seletor de arquivos',
+
   'settings.dataLanguage.hint': 'Em que idioma {example} e as outras inventam os valores. Segue a interface, a menos que você fixe — vale fixar quando a API valida nomes ou endereços num idioma diferente do que você lê.',
 };

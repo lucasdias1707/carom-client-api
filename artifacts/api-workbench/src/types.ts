@@ -145,6 +145,19 @@ export type Workspace = {
   id: string;
   name: string;
   createdAt: string;
+  /**
+   * A JSON file this workspace is kept in, instead of only in this browser.
+   *
+   * Set means the file is the record: opening the workspace reads it, and
+   * changing anything writes it back. That is what lets a project keep its
+   * requests in its own repository and everyone working on it share them.
+   *
+   * Absent on every workspace that is not linked, which is all of them until
+   * someone links one, and on every workspace written before this existed —
+   * so `hydrate` needs no migration for it. Desktop only: a browser tab has no
+   * file to keep.
+   */
+  filePath?: string;
 };
 
 export type Environment = {

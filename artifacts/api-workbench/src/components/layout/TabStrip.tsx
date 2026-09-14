@@ -130,6 +130,7 @@ export function TabStrip({ onLocate, onClose, onNew, onSearch, newHint, searchHi
   return (
     <div
       className="tabstrip-bar"
+      data-own-context-menu
       onContextMenu={(event) => {
         event.preventDefault();
         setMenu({ x: event.clientX, y: event.clientY, entries: stripMenu() });

@@ -1,5 +1,7 @@
 import { formatBytes } from '@/lib/format';
 import { isDesktop } from '@/lib/http';
+import type { MessageKey } from '@/locales/en';
+import type { Vars } from '@/lib/i18n';
 
 /**
  * Self-updating from the GitHub releases.
@@ -31,16 +33,57 @@ export function releasePageUrl(version?: string): string {
 }
 
 /**
+ * A sentence the catalogue owns, and what to fill into it.
+ *
+ * This module decides *what* is being said — which is logic, and testable —
+ * while the wording and the language belong to `locales`. Returning a finished
+ * English string from here is how the whole updater stayed monolingual through
+ * a translation pass that covered the rest of the app.
+ */
+export type Message = { key: MessageKey; vars?: Vars };
+
+/**
  * Progress text for the download.
  *
  * A server is free to answer without a `content-length`, and it does happen
- * behind proxies, so a total of zero has to read as honest progress rather than
- * "0%" or `NaN`.
+ * behind proxies, so a total of zero has to pick the sentence that does not
+ * promise a percentage, rather than saying "0%" or `NaN`.
  */
-export function describeDownload(received: number, total: number): string {
-  if (!Number.isFinite(total) || total <= 0) return `${formatBytes(received)} downloaded`;
-  const percent = Math.min(100, Math.round((received / total) * 100));
-  return `${formatBytes(received)} of ${formatBytes(total)} · ${percent}%`;
+export function describeDownload(received: number, total: number): Message {
+  if (!Number.isFinite(total) || total <= 0) {
+    return { key: 'updates.progress.unknown', vars: { received: formatBytes(received) } };
+  }
+  return {
+    key: 'updates.progress.known',
+    vars: {
+      received: formatBytes(received),
+      total: formatBytes(total),
+      percent: Math.min(100, Math.round((received / total) * 100)),
+    },
+  };
+}
+
+/**
+ * Whether an install failed because the swap could not cross a filesystem.
+ *
+ * macOS stages the swap in a temporary directory and renames the installed
+ * `.app` into it. `rename` cannot cross a filesystem, so an app on a mounted
+ * drive and a temp directory on the boot volume fail with `EXDEV`, which
+ * reaches the reader as "Cross-device link (os error 18)" — true, and useless
+ * unless you already know what it is about.
+ *
+ * `begin_update_staging` moves the scratch space onto the app's own volume
+ * before the install, so this should no longer happen. It is still recognised
+ * here because the move can fail — a read-only mount, a directory the reader
+ * cannot write — and a raw errno is the worst possible thing to show when it
+ * does.
+ */
+export function isCrossDeviceFailure(message: string): boolean {
+  return /cross-device|os error 18|EXDEV/i.test(message);
+}
+
+export function installErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** What the UI needs to know about an update that is waiting. */
@@ -76,17 +119,31 @@ export async function checkForUpdate(): Promise<AvailableUpdate | null> {
     install: async (onProgress) => {
       let received = 0;
       let total = 0;
-      await update.downloadAndInstall((event) => {
-        if (event.event === 'Started') {
-          total = event.data.contentLength ?? 0;
-          onProgress(0, total);
-        } else if (event.event === 'Progress') {
-          received += event.data.chunkLength;
-          onProgress(received, total);
-        } else if (event.event === 'Finished') {
-          onProgress(total || received, total);
-        }
-      });
+      const { invoke } = await import('@tauri-apps/api/core');
+      /*
+        Put the updater's scratch space on the same volume as the app, for the
+        length of the install only. Without this, a copy of Carom on an
+        external drive cannot replace itself: the swap is two renames through
+        a temporary directory, and a rename cannot cross a filesystem.
+      */
+      await invoke<string | null>('begin_update_staging').catch(() => null);
+      try {
+        await update.downloadAndInstall((event) => {
+          if (event.event === 'Started') {
+            total = event.data.contentLength ?? 0;
+            onProgress(0, total);
+          } else if (event.event === 'Progress') {
+            received += event.data.chunkLength;
+            onProgress(received, total);
+          } else if (event.event === 'Finished') {
+            onProgress(total || received, total);
+          }
+        });
+      } finally {
+        // In `finally` because leaving TMPDIR pointing at a removable disk is
+        // worse than the failure that got us here.
+        await invoke('end_update_staging').catch(() => undefined);
+      }
     },
   };
 }
@@ -102,7 +159,7 @@ export type UpdateBadgeView = {
   /** Drives the colour: blue waiting, grey busy, green installed, red failed. */
   tone: 'available' | 'busy' | 'ready' | 'failed';
   /** The hover text. It has to say what clicking does, since the icon cannot. */
-  label: string;
+  label: Message;
   /**
    * What the click does. The badge acts on the update itself rather than
    * sending anyone to Settings for a second click — Settings is still there,
@@ -118,8 +175,14 @@ export type UpdateBadgeInput = {
    * download that the installer would refuse.
    */
   selfUpdating?: boolean;
-  /** Set when a *download* failed, so the button that started it can say so. */
-  downloadError?: string;
+  /**
+   * Set when an install failed, so the button that started it can say so.
+   *
+   * The stage rather than the message: each one has a sentence of its own in
+   * the catalogue, and gluing a reason onto "Click to try again" would hand
+   * the word order of two languages to whoever wrote the first half.
+   */
+  errorStage?: 'download' | 'cross-device';
 };
 
 /**
@@ -149,25 +212,39 @@ export function describeUpdateBadge(
       tone: 'ready',
       action: 'restart',
       label: update
-        ? `Version ${update.version} is installed — click to restart and finish`
-        : 'An update is installed — click to restart and finish',
+        ? { key: 'updates.badge.readyVersion', vars: { version: update.version } }
+        : { key: 'updates.badge.ready' },
     };
   }
 
   if (phase === 'downloading') {
+    const progressed = describeDownload(progress.received, progress.total);
     return {
       tone: 'busy',
       action: 'none',
-      label: `Downloading — ${describeDownload(progress.received, progress.total)}`,
+      // The whole sentence, not "Downloading — " with the progress appended:
+      // the two halves are one sentence and one language decides its order.
+      label: {
+        key:
+          progressed.key === 'updates.progress.unknown'
+            ? 'updates.badge.downloadingUnknown'
+            : 'updates.badge.downloading',
+        vars: progressed.vars,
+      },
     };
   }
 
-  if (phase === 'error' && input.downloadError) {
+  if (phase === 'error' && input.errorStage) {
     return {
       tone: 'failed',
       // Retrying is the only useful thing left, and it is one click away.
       action: selfUpdating ? 'download' : 'release-page',
-      label: `${input.downloadError} Click to try again.`,
+      label: {
+        key:
+          input.errorStage === 'cross-device'
+            ? 'updates.badge.failedCrossDevice'
+            : 'updates.badge.failedDownload',
+      },
     };
   }
 
@@ -176,13 +253,13 @@ export function describeUpdateBadge(
       return {
         tone: 'available',
         action: 'release-page',
-        label: `Version ${update.version} is available — click to open the release page. This copy was installed from a package, so it updates through your package manager.`,
+        label: { key: 'updates.badge.availablePackage', vars: { version: update.version } },
       };
     }
     return {
       tone: 'available',
       action: 'download',
-      label: `Version ${update.version} is available — click to download and install it`,
+      label: { key: 'updates.badge.available', vars: { version: update.version } },
     };
   }
 

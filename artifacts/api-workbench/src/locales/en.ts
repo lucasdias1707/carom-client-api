@@ -748,6 +748,53 @@ export const en = {
   'drawer.precedence': 'A folder wins over an environment, and an inner folder wins over the folders around it. Edits here are saved as you type.',
   'drawer.open': 'Variables in reach',
 
+  // ── When an update goes wrong ────────────────────────────────────────
+  'updates.error.check': 'Could not check for updates. {detail}',
+  'updates.error.download': 'The update did not install. {detail}',
+  'updates.error.crossDevice': 'Carom could not replace itself where it is installed. macOS stages an update next to the app, and that could not be written here — usually a read-only disk, or a volume the app cannot write to. Download the new version and drag it over this copy.',
+  'updates.error.crossDeviceDetail': 'The system said: {detail}',
+
+  // ── The update badge in the top bar ──────────────────────────────────
+  'updates.progress.unknown': '{received} downloaded',
+  'updates.progress.known': '{received} of {total} · {percent}%',
+  'updates.badge.readyVersion': 'Version {version} is installed — click to restart and finish',
+  'updates.badge.ready': 'An update is installed — click to restart and finish',
+  'updates.badge.downloading': 'Downloading — {received} of {total} · {percent}%',
+  'updates.badge.downloadingUnknown': 'Downloading — {received} so far',
+  'updates.badge.failedDownload': 'The update did not install. Click to try again.',
+  'updates.badge.failedCrossDevice': 'Carom could not replace itself where it is installed. Click to try again.',
+  'updates.badge.available': 'Version {version} is available — click to download and install it',
+  'updates.badge.availablePackage': 'Version {version} is available — click to open the release page. This copy was installed from a package, so it updates through your package manager.',
+
+  // ── Turning a selection into a variable ──────────────────────────────
+  'selection.setExisting': 'Set {name}',
+  'selection.createNew': 'New variable…',
+  'selection.noEnvironment': 'No environment to put it in',
+  'selection.assigned': '{name} set in {environment}',
+  'selection.newTitle': 'New variable',
+  'selection.newDescription': 'It goes into {environment}, and what you selected is replaced by the reference.',
+  'selection.nameAria': 'Variable name',
+
+  // ── A workspace kept in a file ───────────────────────────────────────
+  'linked.link': 'Keep in a file…',
+  'linked.unlink': 'Stop keeping in a file',
+  'linked.reload': 'Reload from {file}',
+  'linked.title': 'Keep this workspace in a file',
+  'linked.description': 'The file becomes the record: opening this workspace reads it, and anything you change is written back. Put it in a project and everyone working on that project has the same requests.',
+  'linked.openExisting': 'Open an existing file',
+  'linked.openExistingHint': 'For a file a colleague already wrote. What this workspace holds now is replaced by what is in it.',
+  'linked.writeNew': 'Write a new file',
+  'linked.writeNewHint': 'For starting one. This workspace is written out as it stands, and nothing is lost.',
+  'linked.contentsNote': 'Folders, requests and environments go in the file. Responses, unsaved edits and saved versions stay on this machine — they are yours, not the project’s.',
+  'linked.secretsNote': 'Environments travel with the requests, because a request using {example} is not much use without them. A token you would not commit does not belong in a file you are about to share.',
+  'linked.loaded': 'Loaded from the file',
+  'linked.written': 'Written to the file',
+  'linked.unreadable': 'Could not read that file',
+  'linked.notJson': 'It is not valid JSON.',
+  'linked.notAWorkspace': 'It is JSON, but not a workspace file. A Postman or Insomnia export goes through Import instead.',
+  'linked.notWritten': 'Could not write the file',
+  'linked.pickFailed': 'Could not open the file picker',
+
   'settings.dataLanguage.hint': 'Which language {example} and the rest invent their values in. Follows the interface unless you pin it — worth pinning when the API validates names or addresses against a language that is not the one you read in.',
 };
 

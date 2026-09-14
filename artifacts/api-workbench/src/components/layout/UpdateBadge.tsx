@@ -1,6 +1,7 @@
 import { AlertTriangle, Download, RotateCw } from 'lucide-react';
 import { canSelfUpdate, describeUpdateBadge, releasePageUrl, restartApp } from '@/lib/updates';
 import { useUpdates } from '@/state/update-store';
+import { useT } from '@/state/workspace-store';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
@@ -20,12 +21,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
  */
 export function UpdateBadge() {
   const updates = useUpdates();
+  const t = useT();
 
   const badge = describeUpdateBadge(updates.phase, updates.update, updates.progress, {
     selfUpdating: updates.installKind ? canSelfUpdate(updates.installKind) : true,
-    downloadError: updates.error?.stage === 'download' ? updates.error.message : undefined,
+    errorStage:
+      updates.error?.stage === 'download' || updates.error?.stage === 'cross-device'
+        ? updates.error.stage
+        : undefined,
   });
   if (!badge) return null;
+
+  // The catalogue owns the sentence; `describeUpdateBadge` only chose which.
+  const label = t(badge.label.key, badge.label.vars);
 
   const icon =
     badge.tone === 'ready' ? <RotateCw size={15} /> : badge.tone === 'failed' ? <AlertTriangle size={15} /> : <Download size={15} />;
@@ -41,14 +49,14 @@ export function UpdateBadge() {
             href={releasePageUrl(updates.update?.version)}
             target="_blank"
             rel="noreferrer"
-            aria-label={badge.label}
+            aria-label={label}
             data-testid="button-update-badge"
           >
             {icon}
             <span className="update-dot" />
           </a>
         </TooltipTrigger>
-        <TooltipContent>{badge.label}</TooltipContent>
+        <TooltipContent>{label}</TooltipContent>
       </Tooltip>
     );
   }
@@ -63,7 +71,7 @@ export function UpdateBadge() {
             else if (badge.action === 'restart') void restartApp();
           }}
           disabled={badge.action === 'none'}
-          aria-label={badge.label}
+          aria-label={label}
           data-testid="button-update-badge"
         >
           {icon}
@@ -71,7 +79,7 @@ export function UpdateBadge() {
           {badge.tone === 'busy' ? null : <span className="update-dot" />}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{badge.label}</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }

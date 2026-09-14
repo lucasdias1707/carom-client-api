@@ -49,6 +49,23 @@ export type Action =
   | { type: 'workspace/activate'; id: string }
   | { type: 'workspace/rename'; id: string; name: string }
   | { type: 'workspace/delete'; id: string }
+  /** Point a workspace at a file, or stop pointing it at one with `null`. */
+  | { type: 'workspace/link'; id: string; filePath: string | null }
+  /**
+   * Replace a workspace's contents with what its file holds.
+   *
+   * Everything of that workspace goes and the file's takes its place, which is
+   * what "the file is the record" means: a request someone deleted upstream
+   * has to disappear here too, and a merge would quietly resurrect it.
+   */
+  | {
+      type: 'workspace/adopt';
+      id: string;
+      name: string;
+      folders: Folder[];
+      requests: RequestRecord[];
+      environments: Environment[];
+    }
   | { type: 'environment/activate'; id: string | null }
   | { type: 'environment/create'; environment: Environment }
   | { type: 'environment/update'; id: string; patch: Partial<Environment> }

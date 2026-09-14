@@ -24,3 +24,25 @@ jobs:
 
       # Typecheck across every package, then the unit tests.
       - run: pnpm run check
+
+  # The Rust half: the updater's staging fix and the linked-file allowlist are
+  # the two things no browser test can reach, so the tests that cover them have
+  # to run somewhere. Without this job they are decoration.
+  rust:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: artifacts/api-workbench/src-tauri
+
+      - run: cargo test --lib
+        working-directory: artifacts/api-workbench/src-tauri
