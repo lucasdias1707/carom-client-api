@@ -40,11 +40,25 @@ at least one lowercase word among them, which is what tells `Read from the
 request` apart from `Authorization: Bearer` and `console.log` without a list of
 exceptions.
 
+**The modules behind the screens count too.** `.tsx` was not the whole of it:
+the updater built finished English sentences in a hook and in a lib, and both
+stayed monolingual through a pass that covered every screen. The same test now
+reads `.ts` as well, with a list of what is still outstanding — request and
+import failures, mostly — that exists so it can only shrink. Adding to that
+list is not a way to pass the test; translating the string and removing it is.
+
 **A key is written for one place.** `environments.base` is the lowercase tag
 beside a name in the environments tree; using it as a section heading gave the
 drawer a title reading "base". Reusing a string because the English happens to
 match is how a translation ends up in the wrong register somewhere it was never
 read.
+
+**A shared workspace is a directory, and its file names are not translated.**
+`lib/workspace-dir.ts` turns a request's name into a file name. Those land in
+somebody's repository and are reviewed there, so they are the name as it was
+typed — accents and all — and never a translation of it. Two people reading
+the app in different languages have to produce the same file for the same
+request, or every pull is a pile of renames.
 
 ## What stays in English
 

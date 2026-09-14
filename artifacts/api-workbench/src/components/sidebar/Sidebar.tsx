@@ -367,7 +367,7 @@ export function Sidebar({
     });
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" data-own-context-menu>
       <div className="sidebar-head">
         <WorkspaceMenu />
         {/*

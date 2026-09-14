@@ -765,3 +765,167 @@ describe('selectors', () => {
     expect(tree.some((node) => node.kind === 'folder' && node.folder.name === 'Elsewhere')).toBe(false);
   });
 });
+
+describe('a workspace kept in a directory', () => {
+  it('remembers the directory it was pointed at', () => {
+    const state = seed();
+    const next = reducer(state, {
+      type: 'workspace/link',
+      id: state.activeWorkspaceId,
+      linkedPath: '/projects/pokeapi/carom',
+    });
+    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.linkedPath).toBe(
+      '/projects/pokeapi/carom',
+    );
+  });
+
+  it('drops the keys entirely when unlinked', () => {
+    // Not `undefined`, which survives a JSON round trip as a key with no
+    // value and reads back as a link to nowhere.
+    const state = seed();
+    const linked = reducer(state, {
+      type: 'workspace/link',
+      id: state.activeWorkspaceId,
+      linkedPath: '/a',
+    });
+    const unlinked = reducer(linked, {
+      type: 'workspace/link',
+      id: state.activeWorkspaceId,
+      linkedPath: null,
+    });
+    const workspace = unlinked.workspaces.find((w) => w.id === state.activeWorkspaceId)!;
+    expect('linkedPath' in workspace).toBe(false);
+  });
+
+  it('leaves other workspaces alone', () => {
+    const state = seed();
+    const other = createWorkspace('Other');
+    const two = reducer(state, {
+      type: 'workspace/create',
+      workspace: other,
+      environment: createEnvironment(other.id, 'Base', true, []),
+    });
+    const next = reducer(two, { type: 'workspace/link', id: other.id, linkedPath: '/a' });
+    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.linkedPath).toBeUndefined();
+    expect(next.workspaces.find((w) => w.id === other.id)?.linkedPath).toBe('/a');
+  });
+
+  describe('adopting what the file holds', () => {
+    function adopted(state: WorkspaceState) {
+      const workspaceId = state.activeWorkspaceId;
+      const folder = createFolder(workspaceId, 'From the file', null, 0);
+      const request = createRequest({ workspaceId, folderId: folder.id, name: 'Catch' });
+      return reducer(state, {
+        type: 'workspace/adopt',
+        id: workspaceId,
+        name: 'PokeAPI',
+        folders: [folder],
+        requests: [request],
+        environments: [createEnvironment(workspaceId, 'Base', true, [row('baseUrl', 'https://pokeapi.co')])],
+      });
+    }
+
+    it('replaces what the workspace held, rather than merging', () => {
+      // The file is the record. Merging would resurrect a request a colleague
+      // deleted upstream, on every single pull, and nothing could ever be
+      // deleted from a shared workspace again.
+      const state = seed();
+      const before = state.requests.filter((r) => r.workspaceId === state.activeWorkspaceId);
+      expect(before.length).toBeGreaterThan(1);
+
+      const next = adopted(state);
+      const after = next.requests.filter((r) => r.workspaceId === state.activeWorkspaceId);
+      expect(after).toHaveLength(1);
+      expect(after[0].name).toBe('Catch');
+    });
+
+    it('takes the name the file carries', () => {
+      const state = seed();
+      expect(adopted(state).workspaces.find((w) => w.id === state.activeWorkspaceId)?.name).toBe('PokeAPI');
+    });
+
+    it('keeps the workspace name when the file has none', () => {
+      const state = seed();
+      const before = state.workspaces.find((w) => w.id === state.activeWorkspaceId)!.name;
+      const next = reducer(state, {
+        type: 'workspace/adopt',
+        id: state.activeWorkspaceId,
+        name: '',
+        folders: [],
+        requests: [],
+        environments: [],
+      });
+      expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.name).toBe(before);
+    });
+
+    it('touches nothing in another workspace', () => {
+      const state = seed();
+      const other = createWorkspace('Other');
+      const withOther = reducer(state, {
+        type: 'workspace/create',
+        workspace: other,
+        environment: createEnvironment(other.id, 'Base', true, []),
+      });
+      const kept = createRequest({ workspaceId: other.id, name: 'Theirs' });
+      const seeded = { ...withOther, requests: [...withOther.requests, kept] };
+
+      const next = reducer(seeded, {
+        type: 'workspace/adopt',
+        id: state.activeWorkspaceId,
+        name: 'x',
+        folders: [],
+        requests: [],
+        environments: [],
+      });
+      expect(next.requests.filter((r) => r.workspaceId === other.id)).toHaveLength(1);
+    });
+
+    it('closes tabs pointing at requests that are gone', () => {
+      // A tab bar holding requests that no longer exist is worse than an empty
+      // one: every one of them opens nothing.
+      const state = seed();
+      const open = state.requests.find((r) => r.workspaceId === state.activeWorkspaceId)!;
+      const withTab = reducer(state, { type: 'request/open', id: open.id });
+      expect(withTab.openTabIds).toContain(open.id);
+
+      const next = adopted(withTab);
+      expect(next.openTabIds).not.toContain(open.id);
+      expect(next.activeRequestId).toBeNull();
+    });
+
+    it('drops the responses, drafts and versions of requests that are gone', () => {
+      const state = seed();
+      const target = state.requests.find((r) => r.workspaceId === state.activeWorkspaceId)!;
+      const withResponse = reducer(state, { type: 'response/add', response: response(target.id) });
+      expect(withResponse.responses).toHaveLength(1);
+
+      expect(adopted(withResponse).responses).toHaveLength(0);
+    });
+
+    /** The seed ships a base environment only, so an overlay is made here. */
+    function withOverlay(state: WorkspaceState) {
+      const environment = createEnvironment(state.activeWorkspaceId, 'Production', false, []);
+      const created = reducer(state, { type: 'environment/create', environment });
+      return { state: reducer(created, { type: 'environment/activate', id: environment.id }), environment };
+    }
+
+    it('clears an active environment the file does not define', () => {
+      const { state: active } = withOverlay(seed());
+      expect(adopted(active).activeEnvironmentId).toBeNull();
+    });
+
+    it('keeps an active environment the file still defines', () => {
+      const state = seed();
+      const { state: active, environment } = withOverlay(state);
+      const next = reducer(active, {
+        type: 'workspace/adopt',
+        id: state.activeWorkspaceId,
+        name: 'x',
+        folders: [],
+        requests: [],
+        environments: [environment],
+      });
+      expect(next.activeEnvironmentId).toBe(environment.id);
+    });
+  });
+});

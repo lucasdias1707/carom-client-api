@@ -752,5 +752,55 @@ export const es: Catalogue = {
   'drawer.precedence': 'Una carpeta le gana a un entorno, y una carpeta de dentro le gana a las que la rodean. Lo que edites aquí se guarda mientras escribes.',
   'drawer.open': 'Variables al alcance',
 
+  // ── Cuando una actualización sale mal ────────────────────────────────
+  'updates.error.check': 'No se pudo comprobar si hay actualizaciones. {detail}',
+  'updates.error.download': 'La actualización no se instaló. {detail}',
+  'updates.error.crossDevice': 'Carom no pudo reemplazarse donde está instalado. macOS prepara el cambio junto a la aplicación, y ahí no se pudo escribir — normalmente un disco de solo lectura, o un volumen en el que la aplicación no puede escribir. Descarga la versión nueva y arrástrala sobre esta copia.',
+  'updates.error.crossDeviceDetail': 'El sistema dijo: {detail}',
+
+  // ── El distintivo de actualización en la barra superior ──────────────
+  'updates.progress.unknown': '{received} descargados',
+  'updates.progress.known': '{received} de {total} · {percent}%',
+  'updates.badge.readyVersion': 'La versión {version} está instalada — haz clic para reiniciar y terminar',
+  'updates.badge.ready': 'Hay una actualización instalada — haz clic para reiniciar y terminar',
+  'updates.badge.downloading': 'Descargando — {received} de {total} · {percent}%',
+  'updates.badge.downloadingUnknown': 'Descargando — {received} hasta ahora',
+  'updates.badge.failedDownload': 'La actualización no se instaló. Haz clic para intentarlo de nuevo.',
+  'updates.badge.failedCrossDevice': 'Carom no pudo reemplazarse donde está instalado. Haz clic para intentarlo de nuevo.',
+  'updates.badge.available': 'La versión {version} está disponible — haz clic para descargarla e instalarla',
+  'updates.badge.availablePackage': 'La versión {version} está disponible — haz clic para abrir la página de la publicación. Esta copia se instaló desde un paquete, así que se actualiza con tu gestor de paquetes.',
+
+  // ── Convertir una selección en variable ──────────────────────────────
+  'selection.setExisting': 'Definir {name}',
+  'selection.createNew': 'Nueva variable…',
+  'selection.noEnvironment': 'No hay ningún entorno donde guardarla',
+  'selection.assigned': '{name} definida en {environment}',
+  'selection.newTitle': 'Nueva variable',
+  'selection.newDescription': 'Va a {environment}, y lo que seleccionaste se reemplaza por la referencia.',
+  'selection.nameAria': 'Nombre de la variable',
+
+  // ── Un espacio de trabajo guardado en un archivo ─────────────────────
+  'linked.link': 'Guardar en una carpeta…',
+  'linked.unlink': 'Dejar de guardar en una carpeta',
+  'linked.reload': 'Recargar desde {file}',
+  'linked.title': 'Guardar este espacio de trabajo en una carpeta',
+  'linked.description': 'La carpeta pasa a ser el registro: abrir este espacio de trabajo la lee, y lo que cambies se escribe de vuelta. Ponla en un proyecto y todo el que trabaje en él tendrá las mismas solicitudes.',
+  'linked.choose': 'Elegir una carpeta…',
+  'linked.chooseHint': 'Una carpeta vacía recibe este espacio de trabajo tal como está. Una que ya tenga uno reemplaza este espacio de trabajo por lo que haya en ella.',
+  'linked.whyFolder': 'Por qué una carpeta y no un solo archivo',
+  'linked.whyFolderHint': 'Una solicitud por archivo. Así dos personas que añaden solicitudes distintas tocan archivos distintos, y git las junta sin preguntar nada — donde un solo archivo habría dado conflicto siempre.',
+  'linked.contentsNote': 'Las carpetas, las solicitudes y los entornos van a la carpeta. Las respuestas, los cambios sin guardar y las versiones guardadas se quedan en esta máquina — son tuyos, no del proyecto.',
+  'linked.secretsNote': 'Los nombres de las variables siempre viajan, porque una solicitud que usa {example} no sirve de mucho sin saber que eso existe. Los valores viajan solo si tú lo dices — la siguiente pantalla lo pregunta, y lo que parece una credencial empieza apagado.',
+  'linked.loaded': 'Cargado desde la carpeta',
+  'linked.written': 'Escrito en la carpeta',
+  'linked.unreadable': 'No se pudo leer esa carpeta',
+  'linked.unreadableFile': '{file} no es JSON válido.',
+  'linked.notOurs': 'Esa carpeta contiene otra cosa',
+  'linked.notOursDetail': 'Tiene archivos JSON que esta aplicación no escribió. Elige una carpeta vacía, o una que ya contenga un espacio de trabajo de Carom.',
+  'linked.changedOnDisk': 'La carpeta cambió mientras trabajabas',
+  'linked.changedOnDiskDetail': 'Otra cosa escribió en ella — un pull, probablemente. Nada de aquí se ha escrito encima. Recarga desde la carpeta para tomar lo que llegó.',
+  'linked.notWritten': 'No se pudo escribir en la carpeta',
+  'linked.pickFailed': 'No se pudo abrir el selector de carpetas',
+
   'settings.dataLanguage.hint': 'En qué idioma {example} y las demás inventan sus valores. Sigue la interfaz salvo que la fijes — conviene fijarla cuando la API valida nombres o direcciones en un idioma distinto del que lees.',
 };

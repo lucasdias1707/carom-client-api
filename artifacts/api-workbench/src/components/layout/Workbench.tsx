@@ -27,6 +27,7 @@ import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
 import { VariablesDialog } from '@/components/dialogs/VariablesDialog';
 import { EnvironmentDrawer } from '@/components/layout/EnvironmentDrawer';
+import { SelectionMenu } from '@/components/request/SelectionMenu';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
 import { FolderPane } from '@/components/layout/FolderPane';
 import { SidebarResizer } from '@/components/layout/SidebarResizer';
@@ -368,6 +369,9 @@ export function Workbench() {
           onClose={() => setOverlay(null)}
         />
       ) : null}
+      {/* Listens on the window, so it is mounted once rather than wrapped
+          around anything. */}
+      <SelectionMenu />
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
       {overlay === 'env-drawer' ? (
         <EnvironmentDrawer onClose={() => setOverlay(null)} onManage={() => setOverlay('environments')} />

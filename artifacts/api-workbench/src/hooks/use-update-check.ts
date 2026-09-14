@@ -3,6 +3,7 @@ import { isDesktop } from '@/lib/http';
 import {
   canSelfUpdate,
   checkForUpdate,
+  isCrossDeviceFailure,
   readInstallKind,
   type AvailableUpdate,
   type InstallKind,
@@ -25,15 +26,28 @@ export type UpdateState = {
   /** Bytes so far and the total, both zero until a download starts. */
   progress: { received: number; total: number };
   /**
-   * Which step failed, and why.
+   * Which step failed, and what it said.
    *
-   * The stage matters because the two failures deserve different treatment: a
+   * The stage matters because the failures deserve different treatment: a
    * check that could not reach the release feed is worth mentioning in
-   * Settings and nowhere else, while a download that died was started by
+   * Settings and nowhere else, while one that died mid-install was started by
    * someone pressing a button and has to be reported on that button.
+   *
+   * A stage rather than a finished sentence, because the sentence belongs to
+   * whichever language is on screen. This hook held English ones until the
+   * first reader outside English hit an update failure and got half a screen
+   * in the wrong language.
    */
-  error: { stage: 'check' | 'download'; message: string } | null;
+  error: { stage: UpdateErrorStage; detail: string } | null;
 };
+
+/**
+ * `cross-device` is its own stage rather than a download failure carrying a
+ * confusing message. It is the one failure a reader can act on — the app is
+ * somewhere its own installer cannot stage a swap — and saying so is worth
+ * more than the errno that describes it.
+ */
+export type UpdateErrorStage = 'check' | 'download' | 'cross-device';
 
 export type UpdateApi = UpdateState & {
   check: () => void;
@@ -112,9 +126,7 @@ export function useUpdateCheck(autoCheck: boolean): UpdateApi {
         setState({
           ...IDLE,
           phase: 'error',
-          // Framed rather than raw: the underlying message is worth keeping for
-          // anyone diagnosing this, but on its own it reads like a crash.
-          error: { stage: 'check', message: `Could not check for updates. ${detail(error)}` },
+                  error: { stage: 'check', detail: detail(error) },
         });
       }
     })();
@@ -137,10 +149,14 @@ export function useUpdateCheck(autoCheck: boolean): UpdateApi {
           setState((inner) => ({ ...inner, phase: 'ready' }));
         } catch (error) {
           if (!alive.current) return;
+          const message = detail(error);
           setState((inner) => ({
             ...inner,
             phase: 'error',
-            error: { stage: 'download', message: `The download did not finish. ${detail(error)}` },
+            error: {
+              stage: isCrossDeviceFailure(message) ? 'cross-device' : 'download',
+              detail: message,
+            },
           }));
         }
       })();

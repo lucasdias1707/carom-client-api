@@ -749,5 +749,55 @@ export const ptBR: Catalogue = {
   'drawer.precedence': 'Uma pasta ganha de um ambiente, e uma pasta de dentro ganha das que estão em volta. O que você edita aqui é salvo enquanto digita.',
   'drawer.open': 'Variáveis ao alcance',
 
+  // ── Quando uma atualização dá errado ─────────────────────────────────
+  'updates.error.check': 'Não deu para verificar se há atualizações. {detail}',
+  'updates.error.download': 'A atualização não foi instalada. {detail}',
+  'updates.error.crossDevice': 'O Carom não conseguiu se substituir onde está instalado. O macOS prepara a troca ao lado do aplicativo, e não deu para escrever ali — normalmente um disco somente leitura, ou um volume onde o aplicativo não pode escrever. Baixe a versão nova e arraste por cima desta cópia.',
+  'updates.error.crossDeviceDetail': 'O sistema disse: {detail}',
+
+  // ── O selo de atualização na barra de cima ───────────────────────────
+  'updates.progress.unknown': '{received} baixados',
+  'updates.progress.known': '{received} de {total} · {percent}%',
+  'updates.badge.readyVersion': 'A versão {version} está instalada — clique para reiniciar e concluir',
+  'updates.badge.ready': 'Uma atualização está instalada — clique para reiniciar e concluir',
+  'updates.badge.downloading': 'Baixando — {received} de {total} · {percent}%',
+  'updates.badge.downloadingUnknown': 'Baixando — {received} até agora',
+  'updates.badge.failedDownload': 'A atualização não foi instalada. Clique para tentar de novo.',
+  'updates.badge.failedCrossDevice': 'O Carom não conseguiu se substituir onde está instalado. Clique para tentar de novo.',
+  'updates.badge.available': 'A versão {version} está disponível — clique para baixar e instalar',
+  'updates.badge.availablePackage': 'A versão {version} está disponível — clique para abrir a página do lançamento. Esta cópia foi instalada por um pacote, então ela se atualiza pelo seu gerenciador de pacotes.',
+
+  // ── Transformar uma seleção em variável ──────────────────────────────
+  'selection.setExisting': 'Definir {name}',
+  'selection.createNew': 'Nova variável…',
+  'selection.noEnvironment': 'Nenhum ambiente para guardar',
+  'selection.assigned': '{name} definida em {environment}',
+  'selection.newTitle': 'Nova variável',
+  'selection.newDescription': 'Ela vai para {environment}, e o que você selecionou é substituído pela referência.',
+  'selection.nameAria': 'Nome da variável',
+
+  // ── Um workspace guardado num arquivo ────────────────────────────────
+  'linked.link': 'Guardar numa pasta…',
+  'linked.unlink': 'Parar de guardar numa pasta',
+  'linked.reload': 'Recarregar de {file}',
+  'linked.title': 'Guardar este workspace numa pasta',
+  'linked.description': 'A pasta passa a ser o registro: abrir este workspace lê ela, e o que você mudar é gravado de volta. Coloque num projeto e todo mundo que trabalha nele tem as mesmas requisições.',
+  'linked.choose': 'Escolher uma pasta…',
+  'linked.chooseHint': 'Uma pasta vazia recebe este workspace como ele está. Uma pasta que já tem um substitui este workspace pelo que estiver nela.',
+  'linked.whyFolder': 'Por que uma pasta e não um arquivo só',
+  'linked.whyFolderHint': 'Uma requisição por arquivo. Aí duas pessoas que adicionam requisições diferentes mexem em arquivos diferentes, e o git junta sem perguntar nada — onde um arquivo só daria conflito toda vez.',
+  'linked.contentsNote': 'Pastas, requisições e ambientes vão para a pasta. Respostas, edições não salvas e versões salvas ficam nesta máquina — elas são suas, não do projeto.',
+  'linked.secretsNote': 'Os nomes das variáveis sempre vão junto, porque uma requisição que usa {example} não serve para muita coisa sem saber que aquilo existe. Os valores só vão se você mandar — a próxima tela pergunta, e o que parece credencial já começa desligado.',
+  'linked.loaded': 'Carregado da pasta',
+  'linked.written': 'Gravado na pasta',
+  'linked.unreadable': 'Não deu para ler essa pasta',
+  'linked.unreadableFile': '{file} não é um JSON válido.',
+  'linked.notOurs': 'Essa pasta tem outra coisa dentro',
+  'linked.notOursDetail': 'Ela tem arquivos JSON que não foram escritos por este app. Escolha uma pasta vazia, ou uma que já tenha um workspace do Carom.',
+  'linked.changedOnDisk': 'A pasta mudou enquanto você trabalhava',
+  'linked.changedOnDiskDetail': 'Outra coisa escreveu nela — um pull, provavelmente. Nada daqui foi gravado por cima. Recarregue da pasta para pegar o que chegou.',
+  'linked.notWritten': 'Não deu para gravar na pasta',
+  'linked.pickFailed': 'Não deu para abrir o seletor de pastas',
+
   'settings.dataLanguage.hint': 'Em que idioma {example} e as outras inventam os valores. Segue a interface, a menos que você fixe — vale fixar quando a API valida nomes ou endereços num idioma diferente do que você lê.',
 };
