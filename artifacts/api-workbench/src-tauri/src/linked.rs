@@ -15,12 +15,30 @@
 //! worth anything. Keeping the list in the webview's storage instead would put
 //! it exactly where the code it is defending against can write.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-/// The authorised paths, loaded once and written back on every change.
-static ALLOWED: Mutex<Option<BTreeSet<PathBuf>>> = Mutex::new(None);
+/// The authorised paths, by the config directory they were read from.
+///
+/// Keyed, not a single set. The app only ever has one config directory, so
+/// this looks like ceremony — but a cache that does not remember where its
+/// contents came from will happily answer a question about one directory with
+/// the contents of another, and that is exactly what it did: the tests run in
+/// parallel, each with its own directory, and one of them read another's set
+/// and reported a path as unauthorised that it had just authorised.
+static ALLOWED: Mutex<Option<HashMap<PathBuf, BTreeSet<PathBuf>>>> = Mutex::new(None);
+
+/// The set for one directory, read from disk the first time it is asked for.
+fn entry<'a>(
+    cache: &'a mut Option<HashMap<PathBuf, BTreeSet<PathBuf>>>,
+    config_dir: &Path,
+) -> &'a mut BTreeSet<PathBuf> {
+    cache
+        .get_or_insert_with(HashMap::new)
+        .entry(config_dir.to_path_buf())
+        .or_insert_with(|| load(config_dir))
+}
 
 fn store_path(config_dir: &Path) -> PathBuf {
     config_dir.join("linked-workspaces.json")
@@ -49,7 +67,7 @@ pub fn allow(config_dir: &Path, path: &Path) {
     let Ok(mut guard) = ALLOWED.lock() else {
         return;
     };
-    let allowed = guard.get_or_insert_with(|| load(config_dir));
+    let allowed = entry(&mut guard, config_dir);
     allowed.insert(path.to_path_buf());
     save(config_dir, allowed);
 }
@@ -59,7 +77,7 @@ pub fn forget(config_dir: &Path, path: &Path) {
     let Ok(mut guard) = ALLOWED.lock() else {
         return;
     };
-    let allowed = guard.get_or_insert_with(|| load(config_dir));
+    let allowed = entry(&mut guard, config_dir);
     allowed.remove(path);
     save(config_dir, allowed);
 }
@@ -69,8 +87,7 @@ pub fn is_allowed(config_dir: &Path, path: &Path) -> bool {
     let Ok(mut guard) = ALLOWED.lock() else {
         return false;
     };
-    let allowed = guard.get_or_insert_with(|| load(config_dir));
-    allowed.contains(path)
+    entry(&mut guard, config_dir).contains(path)
 }
 
 /// Whether a relative path stays inside the directory it is relative to.
@@ -200,7 +217,7 @@ mod tests {
         let dir = tempdir();
         let file = dir.join("pokeapi.json");
         allow(&dir, &file);
-        reset();
+        restart(&dir);
         assert!(is_allowed(&dir, &file));
     }
 
@@ -210,7 +227,7 @@ mod tests {
         let file = dir.join("pokeapi.json");
         allow(&dir, &file);
         forget(&dir, &file);
-        reset();
+        restart(&dir);
         assert!(!is_allowed(&dir, &file));
     }
 
@@ -225,6 +242,49 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "{\"a\":2}");
         // The scratch file does not survive a successful write.
         assert!(!dir.join("workspace.carom-tmp").exists());
+    }
+
+    /// The failure that got through CI once, made deterministic.
+    ///
+    /// Two directories, interleaved. The cache used to be one set with no
+    /// memory of where it came from, so the second `allow` repopulated it and
+    /// the first directory's `is_allowed` answered out of the second
+    /// directory's contents — reporting a path as unauthorised moments after
+    /// authorising it. Running the suite ten times and seeing green proves
+    /// nothing about a race; this does.
+    #[test]
+    fn answers_about_the_directory_it_was_asked_about() {
+        let one = tempdir();
+        let two = tempdir();
+        let file_one = one.join("first.json");
+        let file_two = two.join("second.json");
+
+        allow(&one, &file_one);
+        // The step that used to poison the answer below.
+        allow(&two, &file_two);
+
+        assert!(is_allowed(&one, &file_one), "the first directory forgot its own file");
+        assert!(is_allowed(&two, &file_two));
+        // And neither directory has taken on the other's.
+        assert!(!is_allowed(&one, &file_two));
+        assert!(!is_allowed(&two, &file_one));
+    }
+
+    /// The same, across the restart that reads the file back.
+    #[test]
+    fn keeps_two_directories_apart_across_a_restart() {
+        let one = tempdir();
+        let two = tempdir();
+        let file_one = one.join("first.json");
+        let file_two = two.join("second.json");
+
+        allow(&one, &file_one);
+        allow(&two, &file_two);
+        restart(&one);
+        restart(&two);
+
+        assert!(is_allowed(&one, &file_one));
+        assert!(!is_allowed(&one, &file_two));
     }
 
     #[test]
@@ -313,14 +373,19 @@ mod tests {
                 .as_nanos()
         ));
         std::fs::create_dir_all(&dir).unwrap();
-        reset();
         dir
     }
 
-    /// Drop the in-memory copy, so the next call reads the file again.
-    fn reset() {
+    /// Forget one directory's copy, so the next call reads its file again.
+    ///
+    /// One directory, not the whole cache: these tests run in parallel, and
+    /// wiping everything is how this test suite spent a CI run reporting a
+    /// path as unauthorised that the same test had just authorised.
+    fn restart(dir: &Path) {
         if let Ok(mut guard) = ALLOWED.lock() {
-            *guard = None;
+            if let Some(cache) = guard.as_mut() {
+                cache.remove(dir);
+            }
         }
     }
 }
