@@ -146,18 +146,35 @@ export type Workspace = {
   name: string;
   createdAt: string;
   /**
-   * A JSON file this workspace is kept in, instead of only in this browser.
+   * A directory this workspace is kept in, instead of only in this browser.
    *
-   * Set means the file is the record: opening the workspace reads it, and
+   * Set means the directory is the record: opening the workspace reads it, and
    * changing anything writes it back. That is what lets a project keep its
    * requests in its own repository and everyone working on it share them.
    *
-   * Absent on every workspace that is not linked, which is all of them until
-   * someone links one, and on every workspace written before this existed —
-   * so `hydrate` needs no migration for it. Desktop only: a browser tab has no
-   * file to keep.
+   * A directory rather than a file because several people edit it through git.
+   * One file makes two people who added different requests conflict on
+   * adjacent lines of the same array, for a change with no disagreement in it;
+   * a file per request makes that merge without anyone being asked. See
+   * `lib/workspace-dir.ts`.
+   *
+   * Absent on every workspace that is not linked, and on every workspace
+   * written before this existed — so `hydrate` needs no migration for it.
+   * Desktop only: a browser tab has no directory to keep.
    */
-  filePath?: string;
+  linkedPath?: string;
+  /**
+   * Values the shared directory deliberately does not carry.
+   *
+   * `baseUrl` is `localhost:3000` for me and `localhost:8080` for you, and the
+   * token is mine: those are not disagreements to resolve, so they are not in
+   * the shared files at all. Reading the directory blanks them, and these are
+   * what puts them back — without which "your token stays yours" would survive
+   * exactly one pull.
+   *
+   * Keyed `environmentId::name`. Never written to the directory.
+   */
+  localValues?: Record<string, string>;
 };
 
 export type Environment = {

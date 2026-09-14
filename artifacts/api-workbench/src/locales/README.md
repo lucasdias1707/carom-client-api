@@ -53,6 +53,13 @@ drawer a title reading "base". Reusing a string because the English happens to
 match is how a translation ends up in the wrong register somewhere it was never
 read.
 
+**A shared workspace is a directory, and its file names are not translated.**
+`lib/workspace-dir.ts` turns a request's name into a file name. Those land in
+somebody's repository and are reviewed there, so they are the name as it was
+typed — accents and all — and never a translation of it. Two people reading
+the app in different languages have to produce the same file for the same
+request, or every pull is a pile of renames.
+
 ## What stays in English
 
 HTTP methods and header names. `JSON`, `XML`, `GraphQL`, `curl`, `OpenAPI`,

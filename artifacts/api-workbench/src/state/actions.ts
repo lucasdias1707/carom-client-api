@@ -49,8 +49,10 @@ export type Action =
   | { type: 'workspace/activate'; id: string }
   | { type: 'workspace/rename'; id: string; name: string }
   | { type: 'workspace/delete'; id: string }
-  /** Point a workspace at a file, or stop pointing it at one with `null`. */
-  | { type: 'workspace/link'; id: string; filePath: string | null }
+  /** Point a workspace at a directory, or stop pointing it at one with `null`. */
+  | { type: 'workspace/link'; id: string; linkedPath: string | null }
+  /** The values the shared directory does not carry, kept for this machine. */
+  | { type: 'workspace/local-values'; id: string; values: Record<string, string> }
   /**
    * Replace a workspace's contents with what its file holds.
    *

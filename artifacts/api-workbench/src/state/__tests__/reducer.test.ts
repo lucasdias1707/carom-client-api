@@ -766,35 +766,35 @@ describe('selectors', () => {
   });
 });
 
-describe('a workspace kept in a file', () => {
-  it('remembers the path it was pointed at', () => {
+describe('a workspace kept in a directory', () => {
+  it('remembers the directory it was pointed at', () => {
     const state = seed();
     const next = reducer(state, {
       type: 'workspace/link',
       id: state.activeWorkspaceId,
-      filePath: '/projects/pokeapi/carom.json',
+      linkedPath: '/projects/pokeapi/carom',
     });
-    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.filePath).toBe(
-      '/projects/pokeapi/carom.json',
+    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.linkedPath).toBe(
+      '/projects/pokeapi/carom',
     );
   });
 
-  it('drops the key entirely when unlinked', () => {
+  it('drops the keys entirely when unlinked', () => {
     // Not `undefined`, which survives a JSON round trip as a key with no
     // value and reads back as a link to nowhere.
     const state = seed();
     const linked = reducer(state, {
       type: 'workspace/link',
       id: state.activeWorkspaceId,
-      filePath: '/a.json',
+      linkedPath: '/a',
     });
     const unlinked = reducer(linked, {
       type: 'workspace/link',
       id: state.activeWorkspaceId,
-      filePath: null,
+      linkedPath: null,
     });
     const workspace = unlinked.workspaces.find((w) => w.id === state.activeWorkspaceId)!;
-    expect('filePath' in workspace).toBe(false);
+    expect('linkedPath' in workspace).toBe(false);
   });
 
   it('leaves other workspaces alone', () => {
@@ -805,9 +805,9 @@ describe('a workspace kept in a file', () => {
       workspace: other,
       environment: createEnvironment(other.id, 'Base', true, []),
     });
-    const next = reducer(two, { type: 'workspace/link', id: other.id, filePath: '/a.json' });
-    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.filePath).toBeUndefined();
-    expect(next.workspaces.find((w) => w.id === other.id)?.filePath).toBe('/a.json');
+    const next = reducer(two, { type: 'workspace/link', id: other.id, linkedPath: '/a' });
+    expect(next.workspaces.find((w) => w.id === state.activeWorkspaceId)?.linkedPath).toBeUndefined();
+    expect(next.workspaces.find((w) => w.id === other.id)?.linkedPath).toBe('/a');
   });
 
   describe('adopting what the file holds', () => {

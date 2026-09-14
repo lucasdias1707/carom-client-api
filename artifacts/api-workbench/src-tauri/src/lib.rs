@@ -54,26 +54,19 @@ fn config_dir(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_config_dir().ok()
 }
 
-/// Ask for a workspace file, and remember that this one was chosen.
+/// Ask for the directory a workspace lives in, and remember that it was chosen.
 ///
-/// The only way a path becomes usable by the two commands below. It opens a
-/// native dialog, so it cannot be used quietly: anything calling it puts a
-/// file picker in front of the reader.
+/// The only way a path becomes usable by the commands below. It opens a native
+/// dialog, so it cannot be used quietly: anything calling it puts a folder
+/// picker in front of the reader.
 #[tauri::command]
-async fn pick_workspace_file(app: tauri::AppHandle, save: bool) -> Option<String> {
+async fn pick_workspace_dir(app: tauri::AppHandle) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
 
     let (tx, rx) = std::sync::mpsc::channel();
-    let builder = app.dialog().file().add_filter("JSON", &["json"]);
-    if save {
-        builder.save_file(move |path| {
-            tx.send(path).ok();
-        });
-    } else {
-        builder.pick_file(move |path| {
-            tx.send(path).ok();
-        });
-    }
+    app.dialog().file().pick_folder(move |path| {
+        tx.send(path).ok();
+    });
     let picked = rx.recv().ok().flatten()?;
 
     let path = picked.into_path().ok()?;
@@ -82,39 +75,67 @@ async fn pick_workspace_file(app: tauri::AppHandle, save: bool) -> Option<String
     Some(path.display().to_string())
 }
 
-/// Stop treating a path as authorised, when a workspace is unlinked from it.
+/// Stop treating a directory as authorised, when a workspace is unlinked.
 #[tauri::command]
-fn forget_workspace_file(app: tauri::AppHandle, path: String) {
+fn forget_workspace_dir(app: tauri::AppHandle, path: String) {
     if let Some(dir) = config_dir(&app) {
         linked::forget(&dir, std::path::Path::new(&path));
     }
 }
 
-/// Read a linked workspace file. `None` means the file is not there yet.
+/// Every `.json` file in a linked directory, by its path within it.
 #[tauri::command]
-fn read_workspace_file(app: tauri::AppHandle, path: String) -> Result<Option<String>, String> {
-    let dir = config_dir(&app).ok_or("no config directory")?;
-    let path = std::path::Path::new(&path);
-    if !linked::is_allowed(&dir, path) {
-        return Err("that file has not been chosen in this app".into());
+fn read_workspace_dir(app: tauri::AppHandle, path: String) -> Result<Vec<(String, String)>, String> {
+    let config = config_dir(&app).ok_or("no config directory")?;
+    let root = std::path::Path::new(&path);
+    if !linked::is_allowed(&config, root) {
+        return Err("that folder has not been chosen in this app".into());
     }
-    match std::fs::read_to_string(path) {
-        Ok(text) => Ok(Some(text)),
-        // A link pointing at a file that does not exist yet is how a workspace
-        // is written out for the first time, not a failure.
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(error.to_string()),
-    }
+    linked::read_tree(root).map_err(|error| error.to_string())
 }
 
+/// Write the files that changed, and remove the ones that are gone.
+///
+/// Every relative path is checked for staying inside the directory before it
+/// is touched. They arrive from the webview, which runs scripts that are not
+/// sandboxed, and `../../.ssh/id_rsa` is a relative path too.
 #[tauri::command]
-fn write_workspace_file(app: tauri::AppHandle, path: String, contents: String) -> Result<(), String> {
-    let dir = config_dir(&app).ok_or("no config directory")?;
-    let path = std::path::Path::new(&path);
-    if !linked::is_allowed(&dir, path) {
-        return Err("that file has not been chosen in this app".into());
+fn write_workspace_dir(
+    app: tauri::AppHandle,
+    path: String,
+    files: Vec<(String, String)>,
+    remove: Vec<String>,
+) -> Result<(), String> {
+    let config = config_dir(&app).ok_or("no config directory")?;
+    let root = std::path::Path::new(&path);
+    if !linked::is_allowed(&config, root) {
+        return Err("that folder has not been chosen in this app".into());
     }
-    linked::write_atomically(path, &contents).map_err(|error| error.to_string())
+
+    // Checked before anything is written, so a bad path in the middle of a
+    // batch cannot leave the directory half updated.
+    for (relative, _) in &files {
+        if !linked::is_contained(relative) {
+            return Err(format!("refusing to write outside the folder: {relative}"));
+        }
+    }
+    for relative in &remove {
+        if !linked::is_contained(relative) {
+            return Err(format!("refusing to remove outside the folder: {relative}"));
+        }
+    }
+
+    for (relative, contents) in &files {
+        let target = root.join(relative);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        linked::write_atomically(&target, contents).map_err(|error| error.to_string())?;
+    }
+    for relative in &remove {
+        linked::remove_file_and_empty_parents(root, &root.join(relative));
+    }
+    Ok(())
 }
 
 /// How this copy was installed, which decides whether it can replace itself.
@@ -157,10 +178,10 @@ pub fn run() {
             install_kind,
             begin_update_staging,
             end_update_staging,
-            pick_workspace_file,
-            forget_workspace_file,
-            read_workspace_file,
-            write_workspace_file
+            pick_workspace_dir,
+            forget_workspace_dir,
+            read_workspace_dir,
+            write_workspace_dir
         ]);
 
     // Updating means replacing the installed files and starting the new binary,

@@ -6,11 +6,16 @@ import { ContextMenu, type MenuEntry } from '@/components/common/ContextMenu';
 import { PromptDialog } from '@/components/common/PromptDialog';
 import { LinkWorkspaceDialog } from '@/components/sidebar/LinkWorkspaceDialog';
 import { createEnvironment, createWorkspace } from '@/lib/factories';
-import { fileName } from '@/lib/workspace-file';
-import { canLinkFiles, forgetWorkspaceFile } from '@/lib/workspace-store-file';
+import { canLinkFiles, forgetWorkspaceDir } from '@/lib/workspace-store-file';
 import { useDeleteWithUndo } from '@/hooks/use-delete-with-undo';
 import { useLinkedWorkspace } from '@/hooks/use-linked-workspace';
 import { useWorkspace } from '@/state/workspace-store';
+
+/** The last segment of a path, for showing one that would otherwise be long. */
+function folderName(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
 
 /** Workspace identity in the sidebar header, doubling as the switcher. */
 export function WorkspaceMenu() {
@@ -48,7 +53,7 @@ export function WorkspaceMenu() {
     if (linked.path) {
       entries.push({
         kind: 'item',
-        label: t('linked.reload', { file: fileName(linked.path) }),
+        label: t('linked.reload', { file: folderName(linked.path) }),
         icon: <RefreshCw size={13} />,
         onSelect: () => linked.reload(),
       });
@@ -58,10 +63,10 @@ export function WorkspaceMenu() {
         icon: <Unlink size={13} />,
         onSelect: () => {
           const previous = linked.path;
-          dispatch({ type: 'workspace/link', id: state.activeWorkspaceId, filePath: null });
+          dispatch({ type: 'workspace/link', id: state.activeWorkspaceId, linkedPath: null });
           // The workspace keeps what it has; only the file stops being the
           // record for it. Authorisation goes with the link.
-          if (previous) void forgetWorkspaceFile(previous);
+          if (previous) void forgetWorkspaceDir(previous);
         },
       });
     } else {
@@ -106,7 +111,7 @@ export function WorkspaceMenu() {
               <>
                 {' · '}
                 <span className="brand-file" title={linked.path} data-testid="text-linked-file">
-                  {fileName(linked.path)}
+                  {folderName(linked.path)}
                 </span>
               </>
             ) : null}
@@ -165,7 +170,7 @@ export function WorkspaceMenu() {
           onClose={() => setLinking(false)}
           onPicked={(path) => {
             linked.forget(path);
-            dispatch({ type: 'workspace/link', id: state.activeWorkspaceId, filePath: path });
+            dispatch({ type: 'workspace/link', id: state.activeWorkspaceId, linkedPath: path });
             setLinking(false);
           }}
         />

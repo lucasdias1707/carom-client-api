@@ -1,17 +1,19 @@
 import { isDesktop } from '@/lib/http';
+import type { DirectoryFiles } from '@/lib/workspace-dir';
 
 /**
  * The desktop side of a linked workspace.
  *
- * Four commands, each lazily imported the way the rest of the desktop-only
- * code is, so a web build never pulls in something it cannot use. Everything
- * that knows these commands exist is in here.
+ * Four commands, lazily imported the way the rest of the desktop-only code is,
+ * so a web build never pulls in something it cannot use. Everything that knows
+ * these commands exist is in here.
  *
- * The path is checked in Rust, not here: a path becomes usable only by being
- * chosen in the native dialog, and the list of chosen paths is kept in the
- * app's own config directory. That matters because scripts in this app run
- * through `new Function` and can reach anything the webview can — so a check
- * living in the webview would be a check the thing it guards against can skip.
+ * The path is checked in Rust, not here, and twice over: a directory becomes
+ * usable only by being chosen in the native dialog, and every relative path
+ * within it is checked for staying inside before anything is written. That
+ * matters because scripts in this app run through `new Function` and can reach
+ * anything the webview can — so a check living in the webview would be a check
+ * the thing it guards against can skip.
  */
 
 async function invoker() {
@@ -19,39 +21,40 @@ async function invoker() {
   return invoke;
 }
 
-/** Whether a workspace can be linked to a file at all. */
+/** Whether a workspace can be kept in a directory at all. */
 export function canLinkFiles(): boolean {
   return isDesktop();
 }
 
-/**
- * Ask for the file, and authorise it.
- *
- * `save` picks the save dialog, for choosing where a workspace should be
- * written for the first time; otherwise it opens an existing one.
- */
-export async function pickWorkspaceFile(save: boolean): Promise<string | null> {
+/** Ask for the directory, and authorise it. */
+export async function pickWorkspaceDir(): Promise<string | null> {
   if (!isDesktop()) return null;
   const invoke = await invoker();
-  return (await invoke<string | null>('pick_workspace_file', { save })) ?? null;
+  return (await invoke<string | null>('pick_workspace_dir')) ?? null;
 }
 
-/** `null` means the file is not there yet, which is not an error. */
-export async function readWorkspaceFile(path: string): Promise<string | null> {
-  if (!isDesktop()) return null;
+/** Every `.json` under the directory, by its path within it. */
+export async function readWorkspaceDir(path: string): Promise<DirectoryFiles> {
+  if (!isDesktop()) return new Map();
   const invoke = await invoker();
-  return (await invoke<string | null>('read_workspace_file', { path })) ?? null;
+  const entries = await invoke<Array<[string, string]>>('read_workspace_dir', { path });
+  return new Map(entries);
 }
 
-export async function writeWorkspaceFile(path: string, contents: string): Promise<void> {
+export async function writeWorkspaceDir(
+  path: string,
+  files: DirectoryFiles,
+  remove: string[],
+): Promise<void> {
+  if (!isDesktop()) return;
+  if (files.size === 0 && remove.length === 0) return;
+  const invoke = await invoker();
+  await invoke('write_workspace_dir', { path, files: [...files.entries()], remove });
+}
+
+/** Drop a directory's authorisation, when a workspace stops being linked. */
+export async function forgetWorkspaceDir(path: string): Promise<void> {
   if (!isDesktop()) return;
   const invoke = await invoker();
-  await invoke('write_workspace_file', { path, contents });
-}
-
-/** Drop a path's authorisation, when a workspace stops being linked to it. */
-export async function forgetWorkspaceFile(path: string): Promise<void> {
-  if (!isDesktop()) return;
-  const invoke = await invoker();
-  await invoke('forget_workspace_file', { path }).catch(() => undefined);
+  await invoke('forget_workspace_dir', { path }).catch(() => undefined);
 }

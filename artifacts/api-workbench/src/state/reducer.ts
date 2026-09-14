@@ -61,9 +61,15 @@ function removeRequests(state: WorkspaceState, ids: Set<string>): WorkspaceState
   };
 }
 
-/** Unlinking drops the key, rather than leaving `undefined` in the JSON. */
-function stripFilePath(workspace: Workspace): Workspace {
-  const { filePath: _filePath, ...rest } = workspace;
+/**
+ * Unlinking drops the keys, rather than leaving `undefined` in the JSON.
+ *
+ * The remembered values go with the link: they are the half of a shared
+ * directory that was never in it, and keeping them around for a directory this
+ * workspace is no longer pointed at is keeping somebody's token for no reason.
+ */
+function unlink(workspace: Workspace): Workspace {
+  const { linkedPath: _linkedPath, localValues: _localValues, ...rest } = workspace;
   return rest;
 }
 
@@ -381,12 +387,25 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         workspaces: state.workspaces.map((workspace) =>
           workspace.id === action.id
-            ? action.filePath === null
-              ? stripFilePath(workspace)
-              : { ...workspace, filePath: action.filePath }
+            ? action.linkedPath === null
+              ? unlink(workspace)
+              : { ...workspace, linkedPath: action.linkedPath }
             : workspace,
         ),
       };
+
+    case 'workspace/local-values': {
+      const workspace = state.workspaces.find((item) => item.id === action.id);
+      // Nothing moved: returning the same state keeps this out of the effect
+      // that writes the directory, which this action is a consequence of.
+      if (JSON.stringify(workspace?.localValues ?? {}) === JSON.stringify(action.values)) return state;
+      return {
+        ...state,
+        workspaces: state.workspaces.map((item) =>
+          item.id === action.id ? { ...item, localValues: action.values } : item,
+        ),
+      };
+    }
 
     case 'workspace/adopt': {
       /*
