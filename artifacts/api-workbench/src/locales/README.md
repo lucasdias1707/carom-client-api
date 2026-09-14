@@ -28,6 +28,24 @@ forms cover all three. A language that disagrees needs `pluralForm` in
 bodies, scripts and variable values are theirs. Switching language changes the
 interface around their work, not their work.
 
+**Nothing visible is written in a component.** The typed catalogue guarantees
+that a key present in English is present in the other two; it cannot guarantee
+that a sentence was given a key at all, and a sentence typed straight into JSX
+reads as English in every language forever. Three passes over this app each
+left some behind, and each time they were found by someone reading the screen.
+`lib/__tests__/translated.test.ts` is that same sweep, run automatically: it
+reads every `.tsx`, strips the comments, and fails on prose left between the
+tags or in a prop someone reads. Its rule for "prose" is two or more words with
+at least one lowercase word among them, which is what tells `Read from the
+request` apart from `Authorization: Bearer` and `console.log` without a list of
+exceptions.
+
+**A key is written for one place.** `environments.base` is the lowercase tag
+beside a name in the environments tree; using it as a section heading gave the
+drawer a title reading "base". Reusing a string because the English happens to
+match is how a translation ends up in the wrong register somewhere it was never
+read.
+
 ## What stays in English
 
 HTTP methods and header names. `JSON`, `XML`, `GraphQL`, `curl`, `OpenAPI`,

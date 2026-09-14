@@ -682,5 +682,72 @@ export const ptBR: Catalogue = {
   // ── O idioma dos dados gerados ───────────────────────────────────────
   'settings.dataLanguage.label': 'Dados gerados',
   'settings.dataLanguage.follow': 'Igual à interface — {name}',
+  // ── O que a primeira passagem deixou em inglês ───────────────────────
+  'commandPalette.title': 'Paleta de comandos',
+  'commandPalette.description': 'Busque requisições e ações',
+  'commandPalette.noMatches': 'Nada corresponde a isso.',
+  'commandPalette.group.requests': 'Requisições',
+  'commandPalette.group.workspaces': 'Workspaces',
+  'commandPalette.group.tabs': 'Abas abertas',
+  'curl.carried': 'Cabeçalhos, parâmetros de consulta, corpos em JSON e em formulário, e a autenticação básica do {flag} vêm todos junto.',
+  'import.variablesWord': 'variáveis',
+  'import.variablesNote': 'As {variables} dela vão para o ambiente base, não para a pasta. O Postman resolve o ambiente antes da coleção, e aqui as variáveis de pasta ganham dos ambientes — então colocá-las na pasta deixaria um valor padrão em branco da coleção encobrir o valor real do ambiente que você selecionou. Um nome que a base já define fica como está.',
+  'palette.draftPending': '{name} foi gerada e nunca salva.',
+  'palette.resume': 'Voltar para ela',
+  'palette.draftHint': 'Nada é guardado até você apertar Salvar. Sortear de novo substitui esta, em vez de acrescentar outra.',
+  'palette.surprise': 'Me surpreenda',
+  'palette.undo': 'Voltar para a anterior',
+  'docs.fields': 'Campos',
+  'docs.read': 'Ler da requisição',
+  'console.empty': 'Nada foi impresso. O que os scripts desta requisição, e os das pastas em volta, mandarem por {log} e {test} aparece aqui depois de um envio.',
+
+  // ── A referência de variáveis ────────────────────────────────────────
+  'vars.title': 'Variáveis',
+  'vars.description': 'O que vai entre as chaves, de onde vem o valor, e tudo o que o app sabe inventar para você.',
+  'vars.tab.guide': 'Como funcionam',
+  'vars.tab.generated': 'Geradas',
+  'vars.open': 'Como as variáveis funcionam',
+  'vars.settingsLabel': 'Variáveis',
+  'vars.settingsHint': 'A sintaxe das chaves, de onde vem o valor quando dois escopos definem o mesmo nome, e a lista completa de geradores com um exemplo vivo de cada um.',
+
+  'vars.write.title': 'Como escrever uma',
+  'vars.write.body': 'Duas chaves em volta de um nome. Funciona na URL, nos parâmetros e cabeçalhos, na autenticação, e em qualquer lugar do corpo.',
+  'vars.write.json': 'Dentro de um JSON ela pode ficar sozinha, sem aspas, que é como um número ou um booleano entra:',
+  'vars.write.spaces': 'Espaços dentro das chaves são ignorados, então {loose} e {tight} são o mesmo nome.',
+
+  'vars.scope.title': 'De onde vem o valor',
+  'vars.scope.body': 'A mais próxima ganha. As variáveis de uma pasta ganham do ambiente ativo, o ambiente ativo ganha da base, e uma pasta de dentro ganha das que estão em volta dela.',
+  'vars.scope.folder': 'Pasta',
+  'vars.scope.folderNote': 'Definida numa pasta, e lida por tudo que está dentro dela. Sempre desenhada em azul.',
+  'vars.scope.environment': 'Ambiente ativo',
+  'vars.scope.environmentNote': 'O que está escolhido na barra de cima. Desenhada na cor que você deu a ele, para homologação nunca parecer produção.',
+  'vars.scope.base': 'Ambiente base',
+  'vars.scope.baseNote': 'Sempre aplicado, por baixo de qualquer ambiente ativo. É onde ficam os valores que não mudam de um para o outro.',
+  'vars.scope.hover': 'Passe o mouse sobre um chip para ver em que valor ele deu, de qual escopo veio, e o que ele encobriu.',
+
+  'vars.missing.title': 'Quando nada define ela',
+  'vars.missing.body': 'O chip fica vermelho e o nome é enviado exatamente como você digitou, chaves e tudo, em vez de virar uma string vazia. Assim um erro de digitação aparece na requisição em vez de virar nada caladamente.',
+  'vars.missing.define': 'Clicar num chip vermelho oferece defini-la no ambiente ativo, sem sair da requisição.',
+
+  'vars.generated.title': 'Valores que o app inventa',
+  'vars.generated.body': 'Um nome que começa com {dollar} é inventado na hora em que a requisição é enviada. Os nomes são os mesmos do Postman, então uma coleção que já os usava continua funcionando.',
+  'vars.generated.each': 'Cada ocorrência ganha o próprio valor — duas delas num corpo são duas pessoas diferentes. É isso que separa um gerador de uma variável, que é o mesmo valor em todo lugar onde aparece.',
+  'vars.generated.wins': 'Defina uma variável com um desses nomes e o que é enviado é o seu. O que você escreveu ganha do que o app inventaria.',
+  'vars.generated.see': 'Ver os {count}',
+
+  'vars.scripts.title': 'Escrever uma a partir de um script',
+  'vars.scripts.body': 'Um script de pós-resposta pode deixar um valor onde a próxima requisição vai encontrar. É assim que o token de um login chega nas requisições seguintes:',
+  'vars.scripts.note': 'Ele escreve no ambiente ativo, então o valor fica ao lado das variáveis que você digitou lá e sobrevive a um recarregamento.',
+
+  // ── A gaveta de ambientes ────────────────────────────────────────────
+  'drawer.title': 'Variáveis ao alcance',
+  'drawer.base': 'Ambiente base',
+  'drawer.global': 'Globais',
+  'drawer.local': 'Locais',
+  'drawer.noEnvironment': 'Nenhum ambiente está selecionado, então só a base se aplica. Escolha um no botão à esquerda deste.',
+  'drawer.noFolder': 'Esta requisição está na raiz do workspace, então nenhuma pasta define nada para ela.',
+  'drawer.precedence': 'Uma pasta ganha de um ambiente, e uma pasta de dentro ganha das que estão em volta. O que você edita aqui é salvo enquanto digita.',
+  'drawer.open': 'Variáveis ao alcance',
+
   'settings.dataLanguage.hint': 'Em que idioma {example} e as outras inventam os valores. Segue a interface, a menos que você fixe — vale fixar quando a API valida nomes ou endereços num idioma diferente do que você lê.',
 };

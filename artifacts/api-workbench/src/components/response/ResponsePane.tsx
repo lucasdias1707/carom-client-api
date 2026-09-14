@@ -56,7 +56,7 @@ function parseCookie(raw: string): { name: string; value: string; attributes: st
 }
 
 export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests = [] }: ResponsePaneProps) {
-  const { responsesFor, dispatch, t, language } = useWorkspace();
+  const { responsesFor, dispatch, t, tNodes, language } = useWorkspace();
   const { toast } = useToast();
   const [tab, setTab] = useState<ResponseTab>('pretty');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -284,8 +284,10 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
           <div className="pane-pad stack" data-testid="script-console">
             {scriptTests.length === 0 && scriptLogs.length === 0 ? (
               <p className="hint">
-                Nothing was printed. <code>console.log</code> and <code>pm.test</code> from this request&rsquo;s scripts,
-                and from the folders around it, show up here after a send.
+                {tNodes('console.empty', {
+                  log: <code>console.log</code>,
+                  test: <code>pm.test</code>,
+                })}
               </p>
             ) : null}
             {scriptTests.map((test, index) => (
