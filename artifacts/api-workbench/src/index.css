@@ -1261,6 +1261,118 @@
   .dynamic-name { color: var(--purple); }
   .dynamic-sample { color: var(--text-dim); min-width: 0; }
 
+  /* The variables guide. Prose, with the composer's own chips inlined into the
+     examples rather than pictures of them — a screenshot of a chip drifts the
+     first time the palette changes, and this cannot. The chips are inert here,
+     so the pointer they carry in the composer is taken back off. */
+  .vars-guide {
+    display: grid;
+    gap: 18px;
+    font-size: var(--fs-12-5);
+    line-height: 1.55;
+  }
+  .vars-guide section { display: grid; gap: 7px; justify-items: start; }
+  .vars-guide h3 {
+    margin: 0;
+    font-size: var(--fs-11);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .vars-guide p { margin: 0; color: var(--text); }
+  .vars-guide p.hint { color: var(--text-dim); }
+  .vars-example {
+    width: 100%;
+    margin: 2px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    font-size: var(--fs-12);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .vars-example .var-chip { cursor: default; pointer-events: none; }
+  .vars-plain { color: var(--text-dim); }
+
+  /* Listed in the order they are resolved, each dotted in the colour that
+     scope's chips are drawn in — so the list is also the legend for them. */
+  .vars-scopes {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .vars-scopes li {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  /* The environments drawer: the variables a request can see, beside it rather
+     than over it. A modal would hide the request the values are for, which is
+     the one thing you need to look at while changing them. */
+  .drawer-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    /* No wash: nothing behind is disabled, and dimming the request would say
+       it was. This only exists to catch the click that dismisses. */
+    background: transparent;
+  }
+  .env-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 41;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: min(460px, 92vw);
+    border-left: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-pop);
+    animation: drawer-in 140ms ease-out;
+  }
+  @keyframes drawer-in {
+    from { transform: translateX(12px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .env-drawer { animation: none; }
+  }
+  .env-drawer > header,
+  .env-drawer > footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .env-drawer > header { border-bottom: 1px solid var(--border); }
+  .env-drawer > footer { border-top: 1px solid var(--border); }
+  .drawer-title { font-size: var(--fs-12-5); font-weight: 600; color: var(--text-strong); }
+  .drawer-body {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+    padding: 12px 10px;
+    overflow-y: auto;
+  }
+  .drawer-body > section { display: grid; gap: 8px; }
+  .drawer-scope { display: grid; gap: 5px; }
+  .drawer-scope-name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--fs-11);
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+
   .var-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 
   /* Only the layout lives here now. The frame — position, border, radius,

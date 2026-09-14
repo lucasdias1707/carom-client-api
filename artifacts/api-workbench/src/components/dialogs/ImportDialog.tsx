@@ -290,10 +290,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             {t('import.collectionNote')}
           </p>
           <p className="hint">
-            Its <strong>variables</strong> go into the base environment, not the folder. Postman resolves an
-            environment before a collection, and folder variables here win over environments — so putting them on the
-            folder would let a blank collection default shadow the real value in your selected environment. A name the
-            base already defines is left alone.
+            {tNodes('import.variablesNote', { variables: <strong>{t('import.variablesWord')}</strong> })}
           </p>
         </div>
       )}

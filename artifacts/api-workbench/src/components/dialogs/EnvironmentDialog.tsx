@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowDownToLine, Dices, Plus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CopyVariablesDialog } from '@/components/dialogs/CopyVariablesDialog';
-import { DynamicVariablesDialog } from '@/components/dialogs/DynamicVariablesDialog';
+import { VariablesDialog } from '@/components/dialogs/VariablesDialog';
 import { Dialog } from '@/components/common/Dialog';
 import { KeyValueTable } from '@/components/request/KeyValueTable';
 import { createEnvironment, ENVIRONMENT_COLORS } from '@/lib/factories';
@@ -185,7 +185,7 @@ export function EnvironmentDialog({ onClose }: { onClose: () => void }) {
         />
       ) : null}
 
-      {showingDynamic ? <DynamicVariablesDialog onClose={() => setShowingDynamic(false)} /> : null}
+      {showingDynamic ? <VariablesDialog tab="generated" onClose={() => setShowingDynamic(false)} /> : null}
 
       {copying ? (
         <CopyVariablesDialog

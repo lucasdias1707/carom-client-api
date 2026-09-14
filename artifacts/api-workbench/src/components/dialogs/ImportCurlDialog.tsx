@@ -10,7 +10,7 @@ const SAMPLE = `curl https://api.github.com/repos/mountain-loop/yaak \\
   -H 'Accept: application/vnd.github+json'`;
 
 export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
-  const { state, dispatch, t } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const [command, setCommand] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export function ImportCurlDialog({ onClose }: { onClose: () => void }) {
         </div>
       ) : null}
       <p className="hint" style={{ marginTop: 8 }}>
-        Headers, query parameters, JSON and form bodies, and <code>-u</code> basic auth are all carried over.
+        {tNodes('curl.carried', { flag: <code>-u</code> })}
       </p>
     </Dialog>
   );

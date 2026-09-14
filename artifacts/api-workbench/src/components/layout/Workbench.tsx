@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Columns2,
+  Braces,
   Dices,
   Download,
   FilePlus2,
@@ -24,7 +25,8 @@ import { ImportCurlDialog } from '@/components/dialogs/ImportCurlDialog';
 import { ImportDialog } from '@/components/dialogs/ImportDialog';
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog';
 import { ShortcutsDialog } from '@/components/dialogs/ShortcutsDialog';
-import { DynamicVariablesDialog } from '@/components/dialogs/DynamicVariablesDialog';
+import { VariablesDialog } from '@/components/dialogs/VariablesDialog';
+import { EnvironmentDrawer } from '@/components/layout/EnvironmentDrawer';
 import { EnvironmentPicker } from '@/components/layout/EnvironmentPicker';
 import { FolderPane } from '@/components/layout/FolderPane';
 import { SidebarResizer } from '@/components/layout/SidebarResizer';
@@ -55,12 +57,14 @@ type Overlay =
   | 'palette.commands'
   | 'palette.tabs'
   | 'environments'
+  | 'env-drawer'
   | 'settings'
   | 'curl'
   | 'import'
   | 'export'
   | 'shortcuts'
-  | 'dynamic'
+  | 'variables'
+  | 'variables.generated'
   | null;
 
 export function Workbench() {
@@ -179,7 +183,7 @@ export function Workbench() {
     bind('palette.commands', () => setOverlay('palette.commands')),
     bind('send', sendActive),
     bind('newRequest', newRequest),
-    bind('environments', () => setOverlay('environments')),
+    bind('environments', () => setOverlay('env-drawer')),
     bind('toggleSidebar', () => setSidebarVisible(!sidebarVisible)),
     bind('settings', () => setOverlay('settings')),
     bind('saveRequest', saveActive),
@@ -200,7 +204,14 @@ export function Workbench() {
     { id: 'export', label: t('workbench.export'), icon: <Download size={13} />, run: () => openExport() },
     { id: 'settings', label: t('settings.title'), icon: <Settings size={13} />, hint: formatBinding(bindings.settings), run: () => setOverlay('settings') },
     { id: 'shortcuts', label: t('workbench.shortcuts'), icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
-    { id: 'dynamic', label: t('dynamic.open'), icon: <Dices size={13} />, run: () => setOverlay('dynamic') },
+    { id: 'variables', label: t('vars.open'), icon: <Braces size={13} />, run: () => setOverlay('variables') },
+    /*
+      A second entry rather than one: the guide and the list are two places to
+      end up, and "generated" is the word someone arriving from Postman
+      searches for. Folding both behind a single "Variables" made the list
+      unfindable by the only name its user knows it by.
+    */
+    { id: 'generated', label: t('dynamic.open'), icon: <Dices size={13} />, run: () => setOverlay('variables.generated') },
     {
       id: 'layout',
       label: t(state.settings.layout === 'horizontal' ? 'workbench.stackPanes' : 'workbench.sideBySide'),
@@ -270,8 +281,8 @@ export function Workbench() {
 
           <div className="topbar-actions">
             <EnvironmentPicker onManage={() => setOverlay('environments')} />
-            <IconButton label={t('workbench.environmentsShort')}
-              onClick={() => setOverlay('environments')}
+            <IconButton label={t('drawer.open')}
+              onClick={() => setOverlay('env-drawer')}
               hint={formatBinding(bindings.environments)}
               testId="button-environments"
             >
@@ -358,6 +369,9 @@ export function Workbench() {
         />
       ) : null}
       {overlay === 'environments' ? <EnvironmentDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'env-drawer' ? (
+        <EnvironmentDrawer onClose={() => setOverlay(null)} onManage={() => setOverlay('environments')} />
+      ) : null}
       {overlay === 'settings' ? (
         <SettingsDialog
           onClose={() => setOverlay(null)}
@@ -371,7 +385,10 @@ export function Workbench() {
         <ExportDialog initialSelection={exporting} onClose={() => setOverlay(null)} />
       ) : null}
       {overlay === 'shortcuts' ? <ShortcutsDialog onClose={() => setOverlay(null)} /> : null}
-      {overlay === 'dynamic' ? <DynamicVariablesDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'variables' ? <VariablesDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay === 'variables.generated' ? (
+        <VariablesDialog tab="generated" onClose={() => setOverlay(null)} />
+      ) : null}
       {closing ? (
         <ConfirmDialog
           title={t(closing.length === 1 ? 'workbench.closeOneTitle' : 'workbench.closeManyTitle')}

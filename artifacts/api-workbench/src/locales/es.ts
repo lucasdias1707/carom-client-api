@@ -685,5 +685,72 @@ export const es: Catalogue = {
   // ── El idioma de los datos generados ─────────────────────────────────
   'settings.dataLanguage.label': 'Datos generados',
   'settings.dataLanguage.follow': 'Igual que la interfaz — {name}',
+  // ── Lo que la primera pasada dejó en inglés ──────────────────────────
+  'commandPalette.title': 'Paleta de comandos',
+  'commandPalette.description': 'Busca solicitudes y acciones',
+  'commandPalette.noMatches': 'Nada coincide con eso.',
+  'commandPalette.group.requests': 'Solicitudes',
+  'commandPalette.group.workspaces': 'Espacios de trabajo',
+  'commandPalette.group.tabs': 'Pestañas abiertas',
+  'curl.carried': 'Las cabeceras, los parámetros de consulta, los cuerpos en JSON y en formulario, y la autenticación básica de {flag} pasan todos.',
+  'import.variablesWord': 'variables',
+  'import.variablesNote': 'Sus {variables} van al entorno base, no a la carpeta. Postman resuelve el entorno antes que la colección, y aquí las variables de carpeta le ganan a los entornos — así que ponerlas en la carpeta dejaría que un valor por defecto vacío de la colección tapara el valor real del entorno que elegiste. Un nombre que la base ya define se deja como está.',
+  'palette.draftPending': '{name} se generó y nunca se guardó.',
+  'palette.resume': 'Volver a ella',
+  'palette.draftHint': 'No se guarda nada hasta que pulses Guardar. Volver a barajar reemplaza esta en vez de añadir otra.',
+  'palette.surprise': 'Sorpréndeme',
+  'palette.undo': 'Volver a la anterior',
+  'docs.fields': 'Campos',
+  'docs.read': 'Leer de la solicitud',
+  'console.empty': 'No se imprimió nada. Lo que los scripts de esta solicitud, y los de las carpetas que la rodean, manden por {log} y {test} aparece aquí después de un envío.',
+
+  // ── La referencia de variables ───────────────────────────────────────
+  'vars.title': 'Variables',
+  'vars.description': 'Qué va entre las llaves, de dónde sale el valor, y todo lo que la app sabe inventar por ti.',
+  'vars.tab.guide': 'Cómo funcionan',
+  'vars.tab.generated': 'Generadas',
+  'vars.open': 'Cómo funcionan las variables',
+  'vars.settingsLabel': 'Variables',
+  'vars.settingsHint': 'La sintaxis de las llaves, de dónde sale el valor cuando dos ámbitos definen el mismo nombre, y la lista completa de generadores con un ejemplo vivo de cada uno.',
+
+  'vars.write.title': 'Cómo escribir una',
+  'vars.write.body': 'Dos llaves alrededor de un nombre. Funciona en la URL, en los parámetros y las cabeceras, en la autenticación, y en cualquier parte del cuerpo.',
+  'vars.write.json': 'Dentro de un JSON puede ir sola, sin comillas, que es como entra un número o un booleano:',
+  'vars.write.spaces': 'Los espacios dentro de las llaves se ignoran, así que {loose} y {tight} son el mismo nombre.',
+
+  'vars.scope.title': 'De dónde sale el valor',
+  'vars.scope.body': 'Gana la más cercana. Las variables de una carpeta le ganan al entorno activo, el entorno activo le gana a la base, y una carpeta de dentro le gana a las que la rodean.',
+  'vars.scope.folder': 'Carpeta',
+  'vars.scope.folderNote': 'Definida en una carpeta, y leída por todo lo que hay dentro. Siempre se dibuja en azul.',
+  'vars.scope.environment': 'Entorno activo',
+  'vars.scope.environmentNote': 'El que está elegido en la barra de arriba. Se dibuja en el color que le diste, para que preproducción nunca se lea como producción.',
+  'vars.scope.base': 'Entorno base',
+  'vars.scope.baseNote': 'Siempre se aplica, por debajo del entorno que esté activo. Ahí van los valores que no cambian de uno a otro.',
+  'vars.scope.hover': 'Pasa el puntero por un chip para ver en qué valor quedó, de qué ámbito vino, y qué tapó.',
+
+  'vars.missing.title': 'Cuando nada la define',
+  'vars.missing.body': 'El chip se pone rojo y el nombre se envía tal como lo escribiste, llaves incluidas, en vez de convertirse en una cadena vacía. Así una errata aparece en la solicitud en lugar de volverse nada en silencio.',
+  'vars.missing.define': 'Al hacer clic en un chip rojo se ofrece definirla en el entorno activo, sin salir de la solicitud.',
+
+  'vars.generated.title': 'Valores que la app inventa',
+  'vars.generated.body': 'Un nombre que empieza por {dollar} se inventa en el momento en que se envía la solicitud. Los nombres son los mismos de Postman, así que una colección que ya los usaba sigue funcionando.',
+  'vars.generated.each': 'Cada aparición recibe su propio valor — dos de estas en un cuerpo son dos personas distintas. Eso es lo que separa un generador de una variable, que es el mismo valor en todas partes donde aparece.',
+  'vars.generated.wins': 'Define una variable con uno de estos nombres y lo que se envía es la tuya. Lo que escribiste le gana a lo que la app habría inventado.',
+  'vars.generated.see': 'Ver las {count}',
+
+  'vars.scripts.title': 'Escribir una desde un script',
+  'vars.scripts.body': 'Un script de post-respuesta puede dejar un valor donde la siguiente solicitud lo encuentre. Así es como el token de un inicio de sesión llega a las solicitudes que vienen después:',
+  'vars.scripts.note': 'Escribe en el entorno activo, así que queda junto a las variables que escribiste ahí y sobrevive a una recarga.',
+
+  // ── El cajón de entornos ─────────────────────────────────────────────
+  'drawer.title': 'Variables al alcance',
+  'drawer.base': 'Entorno base',
+  'drawer.global': 'Globales',
+  'drawer.local': 'Locales',
+  'drawer.noEnvironment': 'No hay ningún entorno seleccionado, así que solo se aplica la base. Elige uno en el botón que está a la izquierda de este.',
+  'drawer.noFolder': 'Esta solicitud está en la raíz del espacio de trabajo, así que ninguna carpeta define nada para ella.',
+  'drawer.precedence': 'Una carpeta le gana a un entorno, y una carpeta de dentro le gana a las que la rodean. Lo que edites aquí se guarda mientras escribes.',
+  'drawer.open': 'Variables al alcance',
+
   'settings.dataLanguage.hint': 'En qué idioma {example} y las demás inventan sus valores. Sigue la interfaz salvo que la fijes — conviene fijarla cuando la API valida nombres o direcciones en un idioma distinto del que lees.',
 };

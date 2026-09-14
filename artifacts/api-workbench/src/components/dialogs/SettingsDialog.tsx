@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { Dices, Download, Keyboard, Languages, Upload } from 'lucide-react';
+import { Braces, Dices, Download, Keyboard, Languages, Upload } from 'lucide-react';
 import { AppMark } from '@/components/common/AppMark';
 import { Dialog } from '@/components/common/Dialog';
 import { useToast } from '@/components/common/Toaster';
 import { UpdatesSection } from '@/components/dialogs/UpdatesSection';
+import { VariablesDialog } from '@/components/dialogs/VariablesDialog';
 import { saveJson, saveMessage } from '@/lib/save';
 import { formatBinding, resolveBindings } from '@/lib/shortcuts';
 import { FontThemeEditor } from '@/components/dialogs/FontThemeEditor';
@@ -70,6 +71,7 @@ export function SettingsDialog({
   // Two tabs rather than one long scroll: everything about how the app looks
   // was scattered between the top of the list and the bottom of it.
   const [tab, setTab] = useState('general');
+  const [showingVariables, setShowingVariables] = useState(false);
   const settings = state.settings;
 
   // Everything, settings included, so it restores rather than merges. On the
@@ -197,6 +199,29 @@ export function SettingsDialog({
           <span className="hint">
             {tNodes('settings.dataLanguage.hint', { example: <code>{'{{$randomFirstName}}'}</code> })}
           </span>
+        </div>
+
+        {/*
+          Directly after the two language selects because the one above it
+          names a generator, and "what else can I write in there" is the next
+          question. It is a way in rather than a setting: the reference is
+          reachable from the palette and from Environments too, but neither of
+          those is where someone goes when they are looking for how something
+          works.
+        */}
+        <div className="stack" style={{ gap: 6 }}>
+          <Label className="section-label m-0">
+            <Braces size={12} /> {t('vars.settingsLabel')}
+          </Label>
+          <Button
+            variant="secondary"
+            className="justify-self-start"
+            onClick={() => setShowingVariables(true)}
+            data-testid="button-open-variables"
+          >
+            <Braces /> {t('vars.open')}
+          </Button>
+          <span className="hint">{t('vars.settingsHint')}</span>
         </div>
 
         {/*
@@ -402,6 +427,10 @@ export function SettingsDialog({
         </div>
         </TabsContent>
       </Tabs>
+
+      {/* Stacked over Settings rather than replacing it: it is something you
+          consult, and closing it should put you back where you were. */}
+      {showingVariables ? <VariablesDialog onClose={() => setShowingVariables(false)} /> : null}
     </Dialog>
   );
 }

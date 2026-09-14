@@ -151,8 +151,8 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
         className="top-[12vh] max-w-[620px] translate-y-0 gap-0 overflow-hidden rounded-[10px] border-[var(--border-strong)] bg-[var(--bg-surface)] p-0 shadow-[var(--shadow-pop)] [&>button]:hidden"
         data-testid="dialog-command-palette"
       >
-        <DialogTitle className="sr-only">Command palette</DialogTitle>
-        <DialogDescription className="sr-only">Search requests and actions</DialogDescription>
+        <DialogTitle className="sr-only">{t('commandPalette.title')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('commandPalette.description')}</DialogDescription>
         <CommandRoot loop className="bg-transparent">
           <CommandInput
             placeholder={t(PLACEHOLDERS[mode])}
@@ -160,15 +160,15 @@ export function CommandPalette({ commands, mode = 'all', onClose }: CommandPalet
             data-testid="input-command-palette"
           />
           <CommandList className="max-h-[52vh]">
-            <CommandEmpty className="tree-empty py-6">No matches.</CommandEmpty>
+            <CommandEmpty className="tree-empty py-6">{t('commandPalette.noMatches')}</CommandEmpty>
             {mode === 'all' || mode === 'commands' ? <CommandGroup>{commands.map(row)}</CommandGroup> : null}
             {mode === 'all' || mode === 'requests' ? (
-              <CommandGroup heading="Requests">{requestCommands.map(row)}</CommandGroup>
+              <CommandGroup heading={t('commandPalette.group.requests')}>{requestCommands.map(row)}</CommandGroup>
             ) : null}
             {mode === 'workspaces' ? (
-              <CommandGroup heading="Workspaces">{workspaceCommands.map(row)}</CommandGroup>
+              <CommandGroup heading={t('commandPalette.group.workspaces')}>{workspaceCommands.map(row)}</CommandGroup>
             ) : null}
-            {mode === 'tabs' ? <CommandGroup heading="Open tabs">{tabCommands.map(row)}</CommandGroup> : null}
+            {mode === 'tabs' ? <CommandGroup heading={t('commandPalette.group.tabs')}>{tabCommands.map(row)}</CommandGroup> : null}
           </CommandList>
         </CommandRoot>
       </DialogContent>

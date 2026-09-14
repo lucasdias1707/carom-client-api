@@ -47,10 +47,10 @@ export function DocFieldsTable({
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="section-label" style={{ flexWrap: 'wrap' }}>
-        Fields
+        {t('docs.fields')}
         <span className="spacer" />
         <Button variant="ghost" size="sm" onClick={read} data-testid="button-read-fields">
-          <Wand2 /> Read from the request
+          <Wand2 /> {t('docs.read')}
         </Button>
         <Button
           variant="ghost"

@@ -681,6 +681,73 @@ export const en = {
   // ── The language of the generated data ───────────────────────────────
   'settings.dataLanguage.label': 'Generated data',
   'settings.dataLanguage.follow': 'Same as the interface — {name}',
+  // ── Strings the first pass left in English ───────────────────────────
+  'commandPalette.title': 'Command palette',
+  'commandPalette.description': 'Search requests and actions',
+  'commandPalette.noMatches': 'Nothing matches that.',
+  'commandPalette.group.requests': 'Requests',
+  'commandPalette.group.workspaces': 'Workspaces',
+  'commandPalette.group.tabs': 'Open tabs',
+  'curl.carried': 'Headers, query parameters, JSON and form bodies, and {flag} basic auth are all carried over.',
+  'import.variablesWord': 'variables',
+  'import.variablesNote': 'Its {variables} go into the base environment, not the folder. Postman resolves an environment before a collection, and folder variables here win over environments — so putting them on the folder would let a blank collection default shadow the real value in your selected environment. A name the base already defines is left alone.',
+  'palette.draftPending': '{name} was generated and never saved.',
+  'palette.resume': 'Back to it',
+  'palette.draftHint': 'Nothing is kept until you press Save. Shuffling again replaces this one rather than adding another.',
+  'palette.surprise': 'Surprise me',
+  'palette.undo': 'Back to the last one',
+  'docs.fields': 'Fields',
+  'docs.read': 'Read from the request',
+  'console.empty': 'Nothing was printed. {log} and {test} from this request’s scripts, and from the folders around it, show up here after a send.',
+
+  // ── The variables reference ──────────────────────────────────────────
+  'vars.title': 'Variables',
+  'vars.description': 'What goes between the braces, where the value comes from, and everything the app can make up for you.',
+  'vars.tab.guide': 'How they work',
+  'vars.tab.generated': 'Generated',
+  'vars.open': 'How variables work',
+  'vars.settingsLabel': 'Variables',
+  'vars.settingsHint': 'The braces syntax, where a value comes from when two scopes define the same name, and the full list of generators with a live example of each.',
+
+  'vars.write.title': 'Writing one',
+  'vars.write.body': 'Two braces around a name. It works in the URL, in query parameters and headers, in auth, and anywhere in the body.',
+  'vars.write.json': 'Inside JSON it can stand on its own, without quotes, which is how a number or a boolean gets in:',
+  'vars.write.spaces': 'Spaces inside the braces are ignored, so {loose} and {tight} are the same name.',
+
+  'vars.scope.title': 'Where the value comes from',
+  'vars.scope.body': 'Nearest wins. A folder’s variables beat the active environment, the active environment beats the base, and an inner folder beats the folders around it.',
+  'vars.scope.folder': 'Folder',
+  'vars.scope.folderNote': 'Set on a folder, and read by everything inside it. Always drawn in blue.',
+  'vars.scope.environment': 'Active environment',
+  'vars.scope.environmentNote': 'The one picked in the top bar. Drawn in the colour you gave it, so staging never reads as production.',
+  'vars.scope.base': 'Base environment',
+  'vars.scope.baseNote': 'Always applied, underneath whichever environment is active. Where the values that do not change between them belong.',
+  'vars.scope.hover': 'Hover a chip to see what it resolved to, which scope it came from, and what it overrode.',
+
+  'vars.missing.title': 'When nothing defines it',
+  'vars.missing.body': 'The chip turns red and the name is sent exactly as you typed it, braces and all, rather than as an empty string. A typo then shows up in the request instead of quietly becoming nothing.',
+  'vars.missing.define': 'Clicking a red chip offers to define it in the active environment, without leaving the request.',
+
+  'vars.generated.title': 'Values the app makes up',
+  'vars.generated.body': 'A name starting with {dollar} is invented at the moment the request is sent. The names match Postman’s, so a collection that already used them keeps working.',
+  'vars.generated.each': 'Each occurrence gets its own value — two of these in one body are two different people. That is what separates a generator from a variable, which is the same value everywhere it appears.',
+  'vars.generated.wins': 'Define a variable with one of these names and yours is what gets sent. What you wrote down beats what the app would have invented.',
+  'vars.generated.see': 'See all {count} of them',
+
+  'vars.scripts.title': 'Writing one from a script',
+  'vars.scripts.body': 'A post-response script can put a value where the next request will find it. This is how a token from a login reaches the requests after it:',
+  'vars.scripts.note': 'It writes into the active environment, so it lands beside the variables you typed there and survives a reload.',
+
+  // ── The environments drawer ──────────────────────────────────────────
+  'drawer.title': 'Variables in reach',
+  'drawer.base': 'Base environment',
+  'drawer.global': 'Global',
+  'drawer.local': 'Local',
+  'drawer.noEnvironment': 'No environment is selected, so only the base applies. Pick one from the button to the left of this.',
+  'drawer.noFolder': 'This request sits at the root of the workspace, so no folder defines anything for it.',
+  'drawer.precedence': 'A folder wins over an environment, and an inner folder wins over the folders around it. Edits here are saved as you type.',
+  'drawer.open': 'Variables in reach',
+
   'settings.dataLanguage.hint': 'Which language {example} and the rest invent their values in. Follows the interface unless you pin it — worth pinning when the API validates names or addresses against a language that is not the one you read in.',
 };
 

@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useVariableHover } from '@/hooks/use-variable-hover';
 import { LOCAL_VARIABLE_COLOR, tokenize } from '@/lib/template';
 import { VariablePopover } from '@/components/request/VariablePopover';
 import type { ResolvedVariable, VariableTable } from '@/types';
@@ -13,13 +14,6 @@ type TemplateFieldProps = {
   testId?: string;
   className?: string;
 };
-
-/** How long the pointer has to rest on a chip before the popover appears. */
-const OPEN_DELAY = 420;
-/** Grace period to cross the gap between the chip and the popover. */
-const CLOSE_DELAY = 220;
-
-type Editing = { variable: ResolvedVariable | null; name: string; anchor: DOMRect };
 
 /**
  * The character the pointer is over, within the clicked chip's own text.
@@ -69,32 +63,10 @@ export function TemplateField({
 }: TemplateFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
-  const [editing, setEditing] = useState<Editing | null>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const timer = useRef<number | null>(null);
-  /** Set once the pointer is inside the popover, so it stops chasing the mouse. */
-  const held = useRef(false);
+  const { editing, open, openAfterDelay, scheduleClose, close, clearTimer, popoverProps } = useVariableHover();
 
   const tokens = tokenize(value, table);
-
-  const clearTimer = () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = null;
-  };
-  useEffect(() => clearTimer, []);
-
-  const open = (target: HTMLElement, name: string, variable: ResolvedVariable | null) => {
-    clearTimer();
-    held.current = false;
-    setEditing({ variable, name, anchor: target.getBoundingClientRect() });
-  };
-
-  const scheduleClose = () => {
-    clearTimer();
-    timer.current = window.setTimeout(() => {
-      if (!held.current) setEditing(null);
-    }, CLOSE_DELAY);
-  };
 
   useLayoutEffect(() => {
     if (mirrorRef.current) mirrorRef.current.scrollLeft = scrollLeft;
@@ -127,8 +99,7 @@ export function TemplateField({
                 // The chip must not take focus or swallow the click: this is a
                 // click in a text field, and it belongs to the caret.
                 event.preventDefault();
-                clearTimer();
-                setEditing(null);
+                close();
                 const within = offsetWithinChip(event.clientX, event.clientY);
                 const caret = within === null ? token.end : token.start + within;
                 const input = inputRef.current;
@@ -136,11 +107,10 @@ export function TemplateField({
                 input.focus();
                 input.setSelectionRange(caret, caret);
               }}
-              onDoubleClick={(event) => open(event.currentTarget, token.name, resolved)}
+              onDoubleClick={(event) => open(event.currentTarget.getBoundingClientRect(), token.name, resolved)}
               onMouseEnter={(event) => {
                 const chip = event.currentTarget;
-                clearTimer();
-                timer.current = window.setTimeout(() => open(chip, token.name, resolved), OPEN_DELAY);
+                openAfterDelay(() => chip.getBoundingClientRect(), token.name, resolved);
               }}
               onMouseLeave={() => (editing ? scheduleClose() : clearTimer())}
               data-testid={`var-chip-${token.name}`}
@@ -172,19 +142,7 @@ export function TemplateField({
           name={editing.name}
           variable={editing.variable}
           anchor={editing.anchor}
-          onPointerEnter={() => {
-            held.current = true;
-            clearTimer();
-          }}
-          onPointerLeave={() => {
-            held.current = false;
-            scheduleClose();
-          }}
-          onClose={() => {
-            clearTimer();
-            held.current = false;
-            setEditing(null);
-          }}
+          {...popoverProps}
         />
       ) : null}
     </div>

@@ -42,7 +42,7 @@ import { useWorkspace } from '@/state/workspace-store';
  * and only Save keeps it.
  */
 export function PaletteEditor() {
-  const { state, dispatch, t } = useWorkspace();
+  const { state, dispatch, t, tNodes } = useWorkspace();
   const settings = state.settings;
   const palettes = allPalettes(settings);
   const current = paletteById(settings, settings.palette ?? DEFAULT_PALETTE);
@@ -206,12 +206,10 @@ export function PaletteEditor() {
 
       {draft && !drafting ? (
         <div className="palette-notice" data-testid="notice-palette-draft">
-          <span>
-            <strong>{draft.name}</strong> was generated and never saved.
-          </span>
+          <span>{tNodes('palette.draftPending', { name: <strong>{draft.name}</strong> })}</span>
           <span className="spacer" />
           <Button variant="ghost" size="sm" onClick={resumeDraft} data-testid="button-resume-palette">
-            Back to it
+            {t('palette.resume')}
           </Button>
           <Button variant="ghost" size="sm" onClick={discardDraft} data-testid="button-drop-palette">
             {t('palette.discard')}
@@ -317,18 +315,16 @@ export function PaletteEditor() {
               <Check size={12} /> {t('common.save')}
             </Button>
           </div>
-          <p className="hint">
-            Nothing is kept until you press Save. Shuffling again replaces this one rather than adding another.
-          </p>
+          <p className="hint">{t('palette.draftHint')}</p>
         </div>
       ) : (
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={surprise} data-testid="button-random-palette">
-            <Shuffle size={12} /> Surprise me
+            <Shuffle size={12} /> {t('palette.surprise')}
           </Button>
           {undoable ? (
             <Button variant="ghost" size="sm" onClick={undo} data-testid="button-undo-palette">
-              <Undo2 size={12} /> Back to the last one
+              <Undo2 size={12} /> {t('palette.undo')}
             </Button>
           ) : null}
         </div>
