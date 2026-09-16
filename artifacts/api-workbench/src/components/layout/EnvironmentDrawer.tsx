@@ -40,9 +40,28 @@ export function EnvironmentDrawer({ onClose, onManage }: { onClose: () => void; 
     (environment) => environment.workspaceId === state.activeWorkspaceId,
   );
   const base = environments.find((environment) => environment.isBase) ?? null;
-  const active = environments.find(
-    (environment) => environment.id === state.activeEnvironmentId && !environment.isBase,
-  ) ?? null;
+  const overlays = environments.filter((environment) => !environment.isBase);
+  const activeId = state.activeEnvironmentId;
+
+  /*
+    Every environment, not only the one that is applied.
+
+    It used to show the active one and the base, on the reasoning that those
+    are what the request can actually see. That reading was too narrow: an
+    environment created from the manage screen is not activated, so it did not
+    appear here at all — you would add one and find the drawer showing no sign
+    of it. "Quick editing" has to mean the thing you just made is there.
+
+    Active first, then the rest in the order they were created, then the base,
+    which is last because it is the one underneath. The ones that are not
+    applied say so and switch to on a click, which is the other half of what
+    this panel is for.
+  */
+  const ordered = [...overlays].sort((a, b) => {
+    if (a.id === activeId) return -1;
+    if (b.id === activeId) return 1;
+    return 0;
+  });
 
   /*
     Whichever pane the drawer was opened over, tested in the order the pane
@@ -78,25 +97,51 @@ export function EnvironmentDrawer({ onClose, onManage }: { onClose: () => void; 
         <div className="drawer-body">
           <section data-testid="drawer-global">
             <div className="section-label">
-              {active ? (
-                <span className="var-dot" style={{ background: active.color }} />
-              ) : (
-                <Layers size={12} style={{ color: 'var(--text-faint)' }} />
-              )}
+              <Layers size={12} style={{ color: 'var(--text-faint)' }} />
               {t('drawer.global')}
             </div>
 
-            {active ? (
-              <div className="drawer-scope" data-testid={`drawer-environment-${active.id}`}>
-                <div className="drawer-scope-name" style={{ color: active.color }}>{active.name}</div>
-                <KeyValueTable
-                  items={active.variables}
-                  onChange={(variables) => setEnvironment(active.id, variables)}
-                  testPrefix={`drawer-env-${active.id}`}
-                />
-              </div>
-            ) : (
+            {overlays.length === 0 ? (
               <p className="hint" data-testid="text-drawer-no-environment">{t('drawer.noEnvironment')}</p>
+            ) : (
+              ordered.map((environment) => {
+                const applied = environment.id === activeId;
+                return (
+                  <div
+                    key={environment.id}
+                    className="drawer-scope"
+                    data-testid={`drawer-environment-${environment.id}`}
+                  >
+                    <div className="drawer-scope-name" style={{ color: environment.color }}>
+                      <span className="var-dot" style={{ background: environment.color }} />
+                      {environment.name}
+                      <span className="spacer" />
+                      {applied ? (
+                        <span className="drawer-applied" data-testid="text-drawer-applied">
+                          {t('drawer.applied')}
+                        </span>
+                      ) : (
+                        /* Switching from here rather than going back to the
+                           picker: you are already looking at the values, and
+                           the question "which of these is on" is the one being
+                           asked when they are side by side. */
+                        <button
+                          className="drawer-use"
+                          onClick={() => dispatch({ type: 'environment/activate', id: environment.id })}
+                          data-testid={`button-drawer-use-${environment.id}`}
+                        >
+                          {t('drawer.use')}
+                        </button>
+                      )}
+                    </div>
+                    <KeyValueTable
+                      items={environment.variables}
+                      onChange={(variables) => setEnvironment(environment.id, variables)}
+                      testPrefix={`drawer-env-${environment.id}`}
+                    />
+                  </div>
+                );
+              })
             )}
 
             {base ? (
