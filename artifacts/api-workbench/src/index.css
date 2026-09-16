@@ -1372,6 +1372,25 @@
     font-weight: 600;
     color: var(--text-dim);
   }
+  /* Which of the listed environments is the one actually being applied. The
+     rest are editable all the same — seeing them is the point — so the mark
+     has to be quiet enough not to read as "these others are disabled". */
+  .drawer-applied {
+    font-weight: 400;
+    font-size: var(--fs-10);
+    color: var(--text-faint);
+  }
+  .drawer-use {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 400;
+    font-size: var(--fs-10);
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+  .drawer-use:hover { color: var(--accent); text-decoration: underline; }
 
   /* The file a workspace is kept in, beside the request count. Truncated
      rather than wrapped: the whole path is in the title attribute, and the

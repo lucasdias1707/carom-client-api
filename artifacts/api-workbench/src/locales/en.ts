@@ -741,9 +741,11 @@ export const en = {
   // ── The environments drawer ──────────────────────────────────────────
   'drawer.title': 'Variables in reach',
   'drawer.base': 'Base environment',
+  'drawer.applied': 'applied',
+  'drawer.use': 'Use this one',
   'drawer.global': 'Global',
   'drawer.local': 'Local',
-  'drawer.noEnvironment': 'No environment is selected, so only the base applies. Pick one from the button to the left of this.',
+  'drawer.noEnvironment': 'There are no environments yet, so only the base applies. Add one from the picker to the left of this.',
   'drawer.noFolder': 'This request sits at the root of the workspace, so no folder defines anything for it.',
   'drawer.precedence': 'A folder wins over an environment, and an inner folder wins over the folders around it. Edits here are saved as you type.',
   'drawer.open': 'Variables in reach',

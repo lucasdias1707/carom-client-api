@@ -745,9 +745,11 @@ export const es: Catalogue = {
   // ── El cajón de entornos ─────────────────────────────────────────────
   'drawer.title': 'Variables al alcance',
   'drawer.base': 'Entorno base',
+  'drawer.applied': 'en uso',
+  'drawer.use': 'Usar este',
   'drawer.global': 'Globales',
   'drawer.local': 'Locales',
-  'drawer.noEnvironment': 'No hay ningún entorno seleccionado, así que solo se aplica la base. Elige uno en el botón que está a la izquierda de este.',
+  'drawer.noEnvironment': 'Todavía no hay entornos, así que solo se aplica la base. Añade uno desde el selector que está a la izquierda de este.',
   'drawer.noFolder': 'Esta solicitud está en la raíz del espacio de trabajo, así que ninguna carpeta define nada para ella.',
   'drawer.precedence': 'Una carpeta le gana a un entorno, y una carpeta de dentro le gana a las que la rodean. Lo que edites aquí se guarda mientras escribes.',
   'drawer.open': 'Variables al alcance',

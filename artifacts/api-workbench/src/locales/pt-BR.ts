@@ -742,9 +742,11 @@ export const ptBR: Catalogue = {
   // ── A gaveta de ambientes ────────────────────────────────────────────
   'drawer.title': 'Variáveis ao alcance',
   'drawer.base': 'Ambiente base',
+  'drawer.applied': 'em uso',
+  'drawer.use': 'Usar este',
   'drawer.global': 'Globais',
   'drawer.local': 'Locais',
-  'drawer.noEnvironment': 'Nenhum ambiente está selecionado, então só a base se aplica. Escolha um no botão à esquerda deste.',
+  'drawer.noEnvironment': 'Ainda não há ambientes, então só a base se aplica. Adicione um pelo seletor à esquerda deste.',
   'drawer.noFolder': 'Esta requisição está na raiz do workspace, então nenhuma pasta define nada para ela.',
   'drawer.precedence': 'Uma pasta ganha de um ambiente, e uma pasta de dentro ganha das que estão em volta. O que você edita aqui é salvo enquanto digita.',
   'drawer.open': 'Variáveis ao alcance',
