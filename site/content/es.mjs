@@ -33,6 +33,7 @@ export default {
       label: 'Pie de página',
       releases: 'Versiones',
       issues: 'Informar de un problema',
+      license: 'Licencia',
     },
   },
 
@@ -227,6 +228,7 @@ export default {
     faq: {
       title: 'Preguntas',
       items: [
+        { q: '¿Carom es gratis?', a: 'Sí, es gratis de usar, por ahora. El código es público para que cualquiera pueda leerlo y auditarlo, pero Carom no es de código abierto: leerlo no da derecho a copiarlo, modificarlo ni redistribuirlo. Los términos pueden cambiar en versiones futuras; una versión que ya tienes conserva los términos con los que se publicó. Lee la [licencia](https://github.com/lucasdias1707/carom-client-api/blob/main/LICENSE).' },
         { q: '¿Hay versión web?', a: 'Hay una versión para el navegador, pero un navegador no puede hacer lo que un cliente necesita: el CORS limita a qué APIs llama y una página nunca llega a `localhost` ni a tu red. La app de escritorio es la forma recomendada de usar Carom.' },
         { q: '¿Funciona con colecciones de Postman?', a: 'Sí. Importa colecciones y entornos de Postman eligiendo qué traer y adónde. Los scripts escritos con `pm.*` siguen funcionando, y los nombres de las variables generadas son los de Postman.' },
         { q: '¿Se puede exportar a Postman?', a: 'No directamente. Puedes exportar al formato propio de Carom o a OpenAPI 3.1, y copiar cualquier solicitud como curl.' },

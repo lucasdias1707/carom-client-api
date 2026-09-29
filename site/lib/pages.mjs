@@ -119,6 +119,7 @@ function footer(page, c) {
       <a href="${link(page, guide)}">${esc(c.ui.nav.guide)}</a>
       <a href="${REPO}/releases" rel="noopener" target="_blank">${esc(c.ui.footer.releases)}</a>
       <a href="${REPO}/issues" rel="noopener" target="_blank">${esc(c.ui.footer.issues)}</a>
+      <a href="${REPO}/blob/main/LICENSE" rel="noopener" target="_blank">${esc(c.ui.footer.license)}</a>
       <a href="${REPO}" rel="noopener" target="_blank">GitHub</a>
     </nav>
   </div>
