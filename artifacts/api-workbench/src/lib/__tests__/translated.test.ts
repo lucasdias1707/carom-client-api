@@ -131,10 +131,8 @@ const KNOWN_UNTRANSLATED = new Set([
   'Sent from the browser, so a missing CORS header on the endpoint looks exactly like an unreachable host. The desktop app sends natively; the companion server does the same for a tab.',
   // lib/import-formats.ts, lib/postman.ts, lib/carom.ts — why a file would not open.
   'That is not a Carom export.',
-  'That file is not valid JSON. Carom, Postman, Insomnia v4, OpenAPI and HAR files all are.',
   'This file is not a Postman collection or environment export.',
-  'That is an Insomnia v5 export, which is YAML. Export again choosing “Insomnia v4 (JSON)”, and this will read it.',
-  'That JSON is not a format this understands. It reads its own exports, Postman collections and environments, Insomnia v4 exports, OpenAPI or Swagger descriptions, and HAR logs.',
+  'That file is not a format this understands. It reads its own exports, Postman collections and environments, Insomnia v4 and v5 exports, OpenAPI or Swagger descriptions, and HAR logs.',
   'That file is not valid JSON. Export from Postman with “Collection v2.1”.',
   // hooks/use-update-check.ts
   'No further detail was given.',

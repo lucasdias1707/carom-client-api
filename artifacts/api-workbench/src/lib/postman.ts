@@ -109,7 +109,22 @@ export type ParsedImport = {
    * environment, so it is where they belong.
    */
   variables: KeyValue[];
+  /**
+   * What the file had that did not come across as it was, and how many of each.
+   * An importer that drops things quietly is one whose output cannot be trusted,
+   * so the dialog says so instead.
+   */
+  notes?: Partial<Record<ImportNote, number>>;
 };
+
+/**
+ * The kinds of loss worth telling someone about.
+ *  - `otherProtocols`: gRPC, WebSocket and Socket.IO requests — Carom sends HTTP.
+ *  - `authentication`: a scheme Carom has no equivalent for (digest, NTLM, AWS…).
+ *  - `scripts`: brought in switched off, because they call an API Carom lacks.
+ *  - `folderHeaders`: headers set on a folder, which a folder here cannot hold.
+ */
+export type ImportNote = 'otherProtocols' | 'authentication' | 'scripts' | 'folderHeaders';
 
 /** The name this shape was introduced under, kept for the Postman module. */
 export type PostmanImport = ParsedImport;

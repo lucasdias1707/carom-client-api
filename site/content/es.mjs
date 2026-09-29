@@ -157,7 +157,7 @@ export default {
       title: 'Llega como estás, vete como quieras',
       lead: 'Mudarte a Carom no debería significar empezar de cero, e irte no debería significar reescribirlo todo.',
       importTitle: 'Importar',
-      importItems: ['Carom', 'Colecciones y entornos de Postman', 'Insomnia (v4)', 'OpenAPI / Swagger', 'HAR', 'Comandos curl'],
+      importItems: ['Carom', 'Colecciones y entornos de Postman', 'Insomnia (v4 y v5)', 'OpenAPI / Swagger', 'HAR', 'Comandos curl'],
       exportTitle: 'Exportar',
       exportItems: ['Espacio de trabajo, carpeta o solicitud de Carom', 'OpenAPI 3.1', 'curl (copiar)'],
       note: 'Elige qué traer y adónde va — entornos incluidos. Las variables generadas conservan los nombres de Postman, así que las colecciones que las usaban siguen funcionando.',
@@ -401,7 +401,7 @@ export default {
         title: 'Importar y exportar',
         blocks: [
           { h3: 'Importar', id: 'import' },
-          { p: 'Usa **Importar** al final de la barra lateral. Carom lee exportaciones de Carom, colecciones y entornos de **Postman**, **Insomnia** v4, **OpenAPI / Swagger**, archivos **HAR** y comandos **curl** pegados. En Postman eliges qué traer y adónde va, entornos incluidos.' },
+          { p: 'Usa **Importar** al final de la barra lateral. Carom lee exportaciones de Carom, colecciones y entornos de **Postman**, **Insomnia** v4 y v5, **OpenAPI / Swagger**, archivos **HAR** y comandos **curl** pegados. En Postman eliges qué traer y adónde va, entornos incluidos. Lo que no llega — por ejemplo, una solicitud gRPC de Insomnia — se lista antes de que confirmes.' },
           { h3: 'Exportar', id: 'export' },
           { p: 'Usa **Exportar** para un espacio de trabajo, una carpeta (con sus subcarpetas y solicitudes) o una sola solicitud, en el formato de Carom o como **OpenAPI 3.1**. Elige el recorte — entornos incluidos — y dónde guardarlo.' },
           { note: 'No hay exportación a Postman. El formato de Carom y OpenAPI 3.1 son las salidas, además de copiar una solicitud como curl.', kind: 'info' },

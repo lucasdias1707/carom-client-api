@@ -4,7 +4,7 @@ import { Dialog } from '@/components/common/Dialog';
 import { TreePicker } from '@/components/common/TreePicker';
 import { useToast } from '@/components/common/Toaster';
 import { createEnvironment, createWorkspace } from '@/lib/factories';
-import { retargetImport, type ParsedImport } from '@/lib/postman';
+import { retargetImport, type ImportNote, type ParsedImport } from '@/lib/postman';
 import { allIds, buildTree, pruneTree } from '@/lib/tree';
 import { FORMAT_LABELS, readImport, type ImportFormat } from '@/lib/import-formats';
 import { useWorkspace } from '@/state/workspace-store';
@@ -21,6 +21,9 @@ const SAMPLE = `{
 
 /** The value the destination picker uses for "somewhere that does not exist yet". */
 const NEW_WORKSPACE = 'new';
+
+/** The order the "did not come across" notes are listed in. */
+const NOTE_KINDS: ImportNote[] = ['otherProtocols', 'authentication', 'scripts', 'folderHeaders'];
 
 /**
  * Import from another tool.
@@ -49,9 +52,9 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
   const tree = useMemo(() => (preview ? buildTree(preview) : []), [preview]);
 
-  const read = (contents: string) => {
+  const read = async (contents: string) => {
     try {
-      const { format: detected, imported: parsed } = readImport(
+      const { format: detected, imported: parsed } = await readImport(
         contents,
         state.activeWorkspaceId,
         state.requests.length,
@@ -73,7 +76,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
     try {
-      read(await file.text());
+      void read(await file.text());
     } catch {
       setError(t('import.fileUnreadable'));
     }
@@ -158,7 +161,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             </Button>
           ) : (
             <Button
-              onClick={() => read(raw)}
+              onClick={() => void read(raw)}
               disabled={!raw.trim()}
               data-testid="button-read-postman"
             >
@@ -210,6 +213,12 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             </p>
           ) : null}
 
+          {NOTE_KINDS.filter((kind) => preview.notes?.[kind]).map((kind) => (
+            <p className="hint" key={kind} data-testid={`text-import-note-${kind}`}>
+              {t(`import.note.${kind}`, { count: preview.notes?.[kind] ?? 0 })}
+            </p>
+          ))}
+
           <div className="section-label">{t('import.whereItGoes')}</div>
           <SelectField
             value={destination}
@@ -260,7 +269,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           <input
             ref={fileRef}
             type="file"
-            accept="application/json,.json"
+            accept="application/json,.json,.yaml,.yml,text/yaml"
             hidden
             onChange={(event) => void pickFile(event.target.files?.[0])}
             data-testid="input-postman-file"

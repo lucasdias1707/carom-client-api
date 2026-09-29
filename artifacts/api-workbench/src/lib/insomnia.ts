@@ -7,22 +7,22 @@ import type { Auth, Folder, HttpMethod, KeyValue, RequestRecord } from '@/types'
  *
  * The file is a flat list of resources — workspaces, folders, requests,
  * environments — wired together by `parentId`, so the tree is rebuilt rather
- * than read. Insomnia v5 is YAML and would need a parser this app does not
- * carry; `looksLikeInsomniaV5` exists so the dialog can say that plainly
- * instead of failing on a file that is obviously an Insomnia export.
+ * than read. Insomnia v5 is a different shape altogether — a nested YAML
+ * document — and lives in `insomnia-v5.ts`; the small helpers both share are
+ * exported from here.
  */
 
 type Resource = Record<string, unknown>;
 
-function asObject(value: unknown): Resource {
+export function asObject(value: unknown): Resource {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Resource) : {};
 }
 
-function asArray(value: unknown): unknown[] {
+export function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function text(value: unknown): string {
+export function text(value: unknown): string {
   return typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value);
 }
 
@@ -39,12 +39,12 @@ export function toTemplate(value: string): string {
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
-function methodOf(value: unknown): HttpMethod {
+export function methodOf(value: unknown): HttpMethod {
   const upper = text(value).toUpperCase() as HttpMethod;
   return METHODS.includes(upper) ? upper : 'GET';
 }
 
-function rows(list: unknown): KeyValue[] {
+export function rows(list: unknown): KeyValue[] {
   return asArray(list)
     .map(asObject)
     .filter((item) => text(item.name))
@@ -79,7 +79,7 @@ function authOf(resource: Resource): Auth {
 }
 
 /** Returns a patch rather than a fixed shape, so GraphQL can bring its own field. */
-function bodyOf(resource: Resource): Partial<RequestRecord> {
+export function bodyOf(resource: Resource): Partial<RequestRecord> {
   const body = asObject(resource.body);
   const mime = text(body.mimeType).toLowerCase();
   if (!mime && !body.text) return { bodyType: 'none' };
@@ -117,6 +117,13 @@ function bodyOf(resource: Resource): Partial<RequestRecord> {
     return { bodyType: 'multipart', multipart: parts };
   }
   return { bodyType: 'text', body: toTemplate(text(body.text)) };
+}
+
+/** An environment's `data` object as variables; anything that is not a string is written as JSON. */
+export function dataRows(data: unknown): KeyValue[] {
+  return Object.entries(asObject(data)).map(([key, value]) =>
+    row(key, typeof value === 'string' ? toTemplate(value) : JSON.stringify(value)),
+  );
 }
 
 export function importInsomnia(payload: unknown, workspaceId: string, startIndex = 0): ParsedImport {
@@ -173,16 +180,11 @@ export function importInsomnia(payload: unknown, workspaceId: string, startIndex
   const base = environments.find((item) => text(item.parentId) === text(workspace?._id));
   const sub = environments.find((item) => base && text(item.parentId) === text(base._id));
 
-  const asRows = (data: unknown) =>
-    Object.entries(asObject(data)).map(([key, value]) =>
-      row(key, typeof value === 'string' ? toTemplate(value) : JSON.stringify(value)),
-    );
-
-  const environment = sub ? createEnvironment(workspaceId, text(sub.name) || 'Insomnia', false, asRows(sub.data)) : null;
+  const environment = sub ? createEnvironment(workspaceId, text(sub.name) || 'Insomnia', false, dataRows(sub.data)) : null;
   // The base's variables go to *this* app's base environment, for the same
   // reason the Postman importer does it: a folder-scoped copy would outrank the
   // selected environment and shadow the real value.
-  const variables = base ? asRows(base.data) : [];
+  const variables = base ? dataRows(base.data) : [];
 
   return { name, folders, requests, environment, variables };
 }
@@ -192,7 +194,13 @@ export function looksLikeInsomnia(payload: unknown): boolean {
   return text(doc._type) === 'export' && Array.isArray(doc.resources);
 }
 
-/** v5 is YAML, which this app has no parser for. Detected only to say so. */
-export function looksLikeInsomniaV5(raw: string): boolean {
-  return /^\s*type:\s*collection\.insomnia\.rest/m.test(raw) || /insomnia\.rest\/schema/.test(raw);
+/**
+ * A v5 file says what it is in a top-level `type`: `collection.insomnia.rest/5.0`,
+ * `spec.…`, `environment.…`, `mock.…`, or `mcpClient.insomnia/5.0` for the one
+ * that does not follow the pattern.
+ */
+export function looksLikeInsomniaV5(payload: unknown): boolean {
+  return /^(?:(?:collection|spec|environment|mock)\.insomnia\.rest\/|mcpClient\.insomnia\/)5/.test(
+    text(asObject(payload).type),
+  );
 }

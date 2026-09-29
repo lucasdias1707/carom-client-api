@@ -269,10 +269,10 @@ describe('importSubtree', () => {
     expect(imported.environment).toBeNull();
   });
 
-  it('is what detectFormat picks, ahead of every other reader', () => {
+  it('is what detectFormat picks, ahead of every other reader', async () => {
     const { file } = roundTrip();
     expect(detectFormat(JSON.parse(JSON.stringify(file)))).toBe('carom');
-    expect(readImport(JSON.stringify(file), 'ws2').format).toBe('carom');
+    expect((await readImport(JSON.stringify(file), 'ws2')).format).toBe('carom');
   });
 
   it('lands a folder whose parent was left out at the top rather than nowhere', () => {

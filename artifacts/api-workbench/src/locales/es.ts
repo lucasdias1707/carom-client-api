@@ -296,7 +296,7 @@ export const es: Catalogue = {
   'export.untickedNote': 'Una carpeta que dejaste sin marcar viene igualmente cuando algo dentro de ella está marcado — si no, esa solicitud no tendría dónde ir.',
   'import.title': 'Importar',
   'import.readAs': 'Leído como {format}.',
-  'import.description': 'Una exportación de Carom, Postman, Insomnia v4, OpenAPI o Swagger, o un HAR del navegador. El formato se deduce del archivo.',
+  'import.description': 'Una exportación de Carom, Postman, Insomnia (v4 o v5), OpenAPI o Swagger, o un HAR del navegador. El formato se deduce del archivo.',
   'import.continue': 'Continuar',
   'import.readFailed': 'No se pudo leer ese archivo.',
   'import.fileUnreadable': 'Ese archivo no se pudo leer.',
@@ -311,7 +311,7 @@ export const es: Catalogue = {
   'import.scriptsWarning': 'Los scripts vienen tal como se escribieron y se ejecutan contra un shim de {shim}. {notSandboxed} — léelos antes de enviar nada de una colección que no escribiste tú.',
   'import.notSandboxed': 'no se ejecutan en un sandbox',
   'import.chooseFile': 'Elegir un archivo',
-  'import.orPaste': 'O pega el JSON',
+  'import.orPaste': 'O pega el JSON o YAML',
   'import.pasteAria': 'Exportación pegada',
   'import.collectionNote': 'La colección se convierte en una carpeta, conservando su autenticación y sus scripts, así que todo lo de dentro sigue heredando como lo hacía en Postman. Las solicitudes con su propia autenticación la conservan.',
   'import.baseEnvironment': 'Base',
@@ -336,6 +336,10 @@ export const es: Catalogue = {
   'format.carom': 'una exportación de Carom',
   'import.environmentNote': '{name} — {count} variables. Un entorno pertenece a un solo espacio de trabajo, así que aterriza en el que elijas abajo.',
   'import.alsoCarries': 'También trae {names}. Vienen enteros — un entorno es un puñado de nombres, y escoger entre ellos es para lo que sirve la pantalla de entornos.',
+  'import.note.otherProtocols': { one: 'Se dejó fuera {count} solicitud gRPC, WebSocket o Socket.IO — Carom envía HTTP.', other: 'Se dejaron fuera {count} solicitudes gRPC, WebSocket o Socket.IO — Carom envía HTTP.' },
+  'import.note.authentication': { one: '{count} solicitud o carpeta usa un esquema de autenticación que Carom no tiene, como digest, NTLM o AWS. Hereda de su carpeta.', other: '{count} solicitudes o carpetas usan esquemas de autenticación que Carom no tiene, como digest, NTLM o AWS. Heredan de su carpeta.' },
+  'import.note.scripts': { one: '{count} script usa la API insomnia.*, que Carom no ofrece. Entró como comentarios, así que no impide el envío de las solicitudes.', other: '{count} scripts usan la API insomnia.*, que Carom no ofrece. Entraron como comentarios, así que no impiden el envío de las solicitudes.' },
+  'import.note.folderHeaders': { one: '{count} carpeta define cabeceras. Una carpeta aquí no guarda cabeceras, así que se dejaron fuera.', other: '{count} carpetas definen cabeceras. Una carpeta aquí no guarda cabeceras, así que se dejaron fuera.' },
   'import.whereItGoes': 'Adónde va',
 
   // ── Importar desde curl, continuación ────────────────────────────────

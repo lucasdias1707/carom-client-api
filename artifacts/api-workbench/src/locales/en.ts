@@ -292,7 +292,7 @@ export const en = {
   'export.untickedNote': 'A folder you left unticked still comes along when something inside it is ticked — otherwise that request would have nowhere to sit.',
   'import.title': 'Import',
   'import.readAs': 'Read as {format}.',
-  'import.description': 'A Carom export, Postman, Insomnia v4, OpenAPI or Swagger, or a HAR from a browser. The format is worked out from the file.',
+  'import.description': 'A Carom export, Postman, Insomnia (v4 or v5), OpenAPI or Swagger, or a HAR from a browser. The format is worked out from the file.',
   'import.continue': 'Continue',
   'import.readFailed': 'Could not read that file.',
   'import.fileUnreadable': 'That file could not be read.',
@@ -307,7 +307,7 @@ export const en = {
   'import.scriptsWarning': 'Scripts come across as written and run against a {shim} shim. They are {notSandboxed} — read them before sending anything from a collection you did not write.',
   'import.notSandboxed': 'not sandboxed',
   'import.chooseFile': 'Choose a file',
-  'import.orPaste': 'Or paste the JSON',
+  'import.orPaste': 'Or paste the JSON or YAML',
   'import.pasteAria': 'Pasted export',
   'import.collectionNote': 'The collection becomes a folder, keeping its auth and its scripts, so everything inside it still inherits the way it did in Postman. Requests that set their own auth keep it.',
   'import.baseEnvironment': 'Base',
@@ -332,6 +332,10 @@ export const en = {
   'format.carom': 'a Carom export',
   'import.environmentNote': '{name} — {count} variables. An environment belongs to one workspace, so it lands in whichever you pick below.',
   'import.alsoCarries': 'Also carries {names}. They come across whole — an environment is a handful of names, and picking through them is what the environments screen is for.',
+  'import.note.otherProtocols': { one: '{count} gRPC, WebSocket or Socket.IO request was left out — Carom sends HTTP.', other: '{count} gRPC, WebSocket or Socket.IO requests were left out — Carom sends HTTP.' },
+  'import.note.authentication': { one: '{count} request or folder uses an authentication scheme Carom does not have, such as digest, NTLM or AWS. It inherits from its folder instead.', other: '{count} requests or folders use authentication schemes Carom does not have, such as digest, NTLM or AWS. They inherit from their folders instead.' },
+  'import.note.scripts': { one: '{count} script uses the insomnia.* API, which Carom does not provide. It came in as comments, so it does not stop requests from being sent.', other: '{count} scripts use the insomnia.* API, which Carom does not provide. They came in as comments, so they do not stop requests from being sent.' },
+  'import.note.folderHeaders': { one: '{count} folder sets headers. A folder here cannot hold headers, so they were left out.', other: '{count} folders set headers. A folder here cannot hold headers, so they were left out.' },
   'import.whereItGoes': 'Where it goes',
 
   // ── curl import, continued ───────────────────────────────────────────
