@@ -199,6 +199,10 @@ Para compilar o desktop no Linux é preciso Rust e as libs de sistema:
 Detalhes de arquitetura, variáveis de ambiente e decisões de projeto estão em
 [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
+O site (landing page e guia, em três idiomas) fica em [`site/`](./site) e é publicado no
+GitHub Pages; como construir e como atualizar as capturas de tela está em
+[`site/README.md`](./site/README.md).
+
 ## Publicar uma versão
 
 Instaladores só são publicados a partir de uma tag, e **só com a chave de assinatura do

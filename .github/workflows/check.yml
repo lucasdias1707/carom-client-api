@@ -25,6 +25,21 @@ jobs:
       # Typecheck across every package, then the unit tests.
       - run: pnpm run check
 
+  # The site is plain Node with no install step, so this is cheap enough to run on
+  # every pull request: it builds all three languages and fails on a broken link,
+  # a missing anchor, an undescribed image or a language that fell out of step.
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: node site/build.mjs
+      - run: node site/check.mjs
+
   # The Rust half: the updater's staging fix and the linked-file allowlist are
   # the two things no browser test can reach, so the tests that cover them have
   # to run somewhere. Without this job they are decoration.
