@@ -163,7 +163,7 @@ export default {
       title: 'Come as you are, leave as you like',
       lead: 'Moving in should not mean starting over, and moving out should not mean a rewrite.',
       importTitle: 'Import',
-      importItems: ['Carom', 'Postman collections and environments', 'Insomnia (v4)', 'OpenAPI / Swagger', 'HAR', 'curl commands'],
+      importItems: ['Carom', 'Postman collections and environments', 'Insomnia (v4 and v5)', 'OpenAPI / Swagger', 'HAR', 'curl commands'],
       exportTitle: 'Export',
       exportItems: ['Carom workspace, folder or request', 'OpenAPI 3.1', 'curl (copy)'],
       note: 'Choose what to bring in and where it goes — including environments. Generated variables keep the Postman names, so collections that used them keep working.',
@@ -407,7 +407,7 @@ export default {
         title: 'Importing and exporting',
         blocks: [
           { h3: 'Import', id: 'import' },
-          { p: 'Use **Import** at the bottom of the sidebar. Carom reads Carom exports, **Postman** collections and environments, **Insomnia** v4, **OpenAPI / Swagger**, **HAR** files and pasted **curl** commands. For Postman you choose what to bring in and where it goes, environments included.' },
+          { p: 'Use **Import** at the bottom of the sidebar. Carom reads Carom exports, **Postman** collections and environments, **Insomnia** v4 and v5, **OpenAPI / Swagger**, **HAR** files and pasted **curl** commands. For Postman you choose what to bring in and where it goes, environments included. Anything that does not come across — an Insomnia gRPC request, say — is listed before you confirm.' },
           { h3: 'Export', id: 'export' },
           { p: 'Use **Export** for a workspace, a folder (with its subfolders and requests) or a single request, in Carom’s format or as **OpenAPI 3.1**. Choose the slice — environments included — and where to save it.' },
           { note: 'There is no Postman export. Carom’s format and OpenAPI 3.1 are the ways out, alongside copying a request as curl.', kind: 'info' },

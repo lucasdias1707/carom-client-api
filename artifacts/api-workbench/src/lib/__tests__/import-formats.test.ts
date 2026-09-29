@@ -1,12 +1,13 @@
 import { translatorFor } from '@/locales';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { detectFormat, readImport } from '@/lib/import-formats';
 import { pathToTemplate, sampleFromSchema } from '@/lib/openapi';
 import { toTemplate } from '@/lib/insomnia';
 import { nameFor } from '@/lib/har';
 import { toOpenApi } from '@/lib/openapi-export';
 import { defaultSettings } from '@/lib/settings';
-import type { WorkspaceState } from '@/types';
+import type { ParsedImport } from '@/lib/postman';
+import type { RequestRecord, WorkspaceState } from '@/types';
 
 const openapi = {
   openapi: '3.0.3',
@@ -105,19 +106,23 @@ describe('detectFormat', () => {
 });
 
 describe('readImport', () => {
-  it('names Insomnia v5 rather than calling it broken JSON', () => {
-    // Someone who exported from Insomnia last week gets a YAML file, and
-    // "not valid JSON" would send them looking in the wrong place.
-    expect(() => readImport('type: collection.insomnia.rest/5.0\nname: X\n', 'ws')).toThrow(/Insomnia v5/);
+  it('reads Insomnia v5, which is YAML, as an Insomnia export', async () => {
+    const { format, imported } = await readImport('type: collection.insomnia.rest/5.0\nname: X\ncollection: []\n', 'ws');
+    expect(format).toBe('insomnia');
+    expect(imported.name).toBe('X');
   });
 
-  it('says what it does read when the file is something else entirely', () => {
-    expect(() => readImport('{"hello":"world"}', 'ws')).toThrow(/Postman.*Insomnia.*OpenAPI.*HAR/s);
+  it('says what it does read when the file is something else entirely', async () => {
+    await expect(readImport('{"hello":"world"}', 'ws')).rejects.toThrow(/Postman.*Insomnia.*OpenAPI.*HAR/s);
+    await expect(readImport('just some words', 'ws')).rejects.toThrow(/not a format this understands/);
   });
 });
 
 describe('OpenAPI', () => {
-  const { imported } = readImport(JSON.stringify(openapi), 'ws');
+  let imported: ParsedImport;
+  beforeAll(async () => {
+    imported = (await readImport(JSON.stringify(openapi), 'ws')).imported;
+  });
 
   it('turns each operation into a request, under a folder per tag', () => {
     expect(imported.requests.map((request) => request.name)).toEqual(['Fetch one order', 'replaceOrder']);
@@ -152,7 +157,10 @@ describe('OpenAPI', () => {
 });
 
 describe('Insomnia', () => {
-  const { imported } = readImport(JSON.stringify(insomnia), 'ws');
+  let imported: ParsedImport;
+  beforeAll(async () => {
+    imported = (await readImport(JSON.stringify(insomnia), 'ws')).imported;
+  });
 
   it('rebuilds the tree from parentId', () => {
     const invoices = imported.folders.find((folder) => folder.name === 'Invoices');
@@ -182,7 +190,10 @@ describe('Insomnia', () => {
 });
 
 describe('HAR', () => {
-  const { imported } = readImport(JSON.stringify(har), 'ws');
+  let imported: ParsedImport;
+  beforeAll(async () => {
+    imported = (await readImport(JSON.stringify(har), 'ws')).imported;
+  });
 
   it('drops what the page fetched for itself', () => {
     expect(imported.requests).toHaveLength(1);
@@ -239,8 +250,12 @@ describe('OpenAPI into Docs', () => {
     },
   };
 
-  const request = readImport(JSON.stringify(described), 'ws').imported.requests[0];
-  const fields = request.docs?.fields ?? [];
+  let request: RequestRecord;
+  let fields: NonNullable<RequestRecord['docs']>['fields'] = [];
+  beforeAll(async () => {
+    request = (await readImport(JSON.stringify(described), 'ws')).imported.requests[0];
+    fields = request.docs?.fields ?? [];
+  });
   const byName = (name: string) => fields.find((field) => field.name === name);
 
   it('keeps the description and the required flag a key/value row cannot hold', () => {

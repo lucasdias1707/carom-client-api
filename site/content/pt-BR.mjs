@@ -157,7 +157,7 @@ export default {
       title: 'Chegue como está, saia como quiser',
       lead: 'Mudar para o Carom não deveria significar recomeçar, e sair não deveria significar reescrever.',
       importTitle: 'Importar',
-      importItems: ['Carom', 'Coleções e ambientes do Postman', 'Insomnia (v4)', 'OpenAPI / Swagger', 'HAR', 'Comandos curl'],
+      importItems: ['Carom', 'Coleções e ambientes do Postman', 'Insomnia (v4 e v5)', 'OpenAPI / Swagger', 'HAR', 'Comandos curl'],
       exportTitle: 'Exportar',
       exportItems: ['Workspace, pasta ou requisição do Carom', 'OpenAPI 3.1', 'curl (copiar)'],
       note: 'Escolha o que trazer e para onde vai — ambientes inclusive. As variáveis geradas mantêm os nomes do Postman, então coleções que as usavam continuam funcionando.',
@@ -401,7 +401,7 @@ export default {
         title: 'Importar e exportar',
         blocks: [
           { h3: 'Importar', id: 'import' },
-          { p: 'Use **Importar** no fim da barra lateral. O Carom lê exportações do Carom, coleções e ambientes do **Postman**, **Insomnia** v4, **OpenAPI / Swagger**, arquivos **HAR** e comandos **curl** colados. No Postman você escolhe o que trazer e para onde vai, ambientes inclusive.' },
+          { p: 'Use **Importar** no fim da barra lateral. O Carom lê exportações do Carom, coleções e ambientes do **Postman**, **Insomnia** v4 e v5, **OpenAPI / Swagger**, arquivos **HAR** e comandos **curl** colados. No Postman você escolhe o que trazer e para onde vai, ambientes inclusive. O que não vem junto — uma requisição gRPC do Insomnia, por exemplo — aparece listado antes de você confirmar.' },
           { h3: 'Exportar', id: 'export' },
           { p: 'Use **Exportar** para um workspace, uma pasta (com suas subpastas e requisições) ou uma única requisição, no formato do Carom ou em **OpenAPI 3.1**. Escolha o recorte — ambientes inclusive — e onde salvar.' },
           { note: 'Não há exportação para o Postman. O formato do Carom e o OpenAPI 3.1 são as saídas, além de copiar uma requisição como curl.', kind: 'info' },
