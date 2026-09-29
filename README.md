@@ -199,6 +199,17 @@ Para compilar o desktop no Linux é preciso Rust e as libs de sistema:
 Detalhes de arquitetura, variáveis de ambiente e decisões de projeto estão em
 [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
+O site (landing page e guia, em três idiomas) fica em [`site/`](./site) e é publicado no
+GitHub Pages; como construir e como atualizar as capturas de tela está em
+[`site/README.md`](./site/README.md).
+
+## Licença
+
+O Carom é **gratuito para usar**, por enquanto, e o código é público para leitura e auditoria —
+mas **não é open source**: ler o código não dá direito de copiar, modificar, redistribuir ou
+vender. Os termos completos estão em [`LICENSE`](./LICENSE). O preço e os termos de versões
+futuras podem mudar; uma versão que você já tem mantém os termos com que foi lançada.
+
 ## Publicar uma versão
 
 Instaladores só são publicados a partir de uma tag, e **só com a chave de assinatura do

@@ -1,0 +1,31 @@
+Carom — free to use, source available
+
+Copyright (c) 2026 lucasdias1707. All rights reserved.
+
+1. Use. You may download, install and use Carom, in the released builds or
+   built from this source, for any purpose, personal or commercial, at no
+   charge.
+
+2. Source. The source code is public so that anyone can read it, audit it and
+   report problems. Reading it does not grant any right beyond section 1. In
+   particular, without written permission from the copyright holder you may
+   not copy, modify, redistribute or sublicense the source code or the
+   builds, offer them for sale, or use them to make a competing product.
+   Contributions you send to this repository may be included in Carom under
+   these same terms.
+
+3. Free for now. Carom is offered free of charge at the time of writing. The
+   copyright holder may change the terms, including introducing a price, for
+   future versions. A version you already have keeps the terms it was
+   released under.
+
+4. Third-party software. Carom includes open-source components, each under
+   its own license. Nothing here changes those licenses.
+
+5. No warranty. Carom is provided "as is", without warranty of any kind,
+   express or implied, including merchantability, fitness for a particular
+   purpose and non-infringement. In no event shall the copyright holder be
+   liable for any claim, damages or other liability arising from the use of
+   Carom.
+
+Carom is not open source: the source is visible, not licensed for reuse.

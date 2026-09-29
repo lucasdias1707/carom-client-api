@@ -1,0 +1,68 @@
+name: Pages
+
+# Publishes site/ to GitHub Pages. It has no dependencies to install: the build is
+# plain Node, so the only thing that can stop a deploy is the site itself.
+#
+# One-time setup, by someone with admin rights on the repository:
+#   Settings → Pages → Build and deployment → Source: GitHub Actions
+# Until then `configure-pages` fails with "Get Pages site failed", which is the
+# workflow saying exactly that.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - .github/workflows/pages.yml
+      # The shortcuts table and the generator list are read from these, so a change
+      # to them changes the guide.
+      - artifacts/api-workbench/src/lib/shortcuts.ts
+      - artifacts/api-workbench/src/lib/dynamic.ts
+      - artifacts/api-workbench/src/locales/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and let a running one finish rather than leave the site half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build
+        run: node site/build.mjs
+        env:
+          # Canonical URLs and social cards need the real address, whatever the repository is called.
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
+
+      - name: Check
+        run: node site/check.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
