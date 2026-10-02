@@ -37,3 +37,50 @@ export function windowOf(text: string, shown: number): string {
 function isHighSurrogate(code: number): boolean {
   return code >= 0xd800 && code <= 0xdbff;
 }
+
+/** The size of one block when a long body is drawn as many. */
+export const CHUNK_SIZE = 100_000;
+
+/**
+ * A body cut into blocks, ending each on a line break when one is near.
+ *
+ * Drawn as separate blocks the browser can skip the ones that are off screen,
+ * which is what makes a 26 MB body cost a fifth of a second instead of ten
+ * seconds: layout is paid for per visible block, not per character in the body.
+ * Cutting at a line break keeps a selection that spans two blocks from picking
+ * up a break that was never in the text; a minified body has none to cut at and
+ * is cut where the size says.
+ */
+export function chunksOf(text: string, size = CHUNK_SIZE): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + size, text.length);
+    if (end < text.length) {
+      const nearby = text.slice(end, end + LOOK_AHEAD + 1).indexOf('\n');
+      if (nearby !== -1) end += nearby + 1;
+      else if (isHighSurrogate(text.charCodeAt(end - 1))) end -= 1;
+    }
+    chunks.push(text.slice(start, end));
+    start = end;
+  }
+  return chunks;
+}
+
+/**
+ * How many lines a block will take, for the height reserved for it before it
+ * has been drawn. Close is enough: the browser replaces the guess with the real
+ * height the first time the block scrolls into view, and the guess only decides
+ * how the scrollbar is sized until then.
+ */
+export function estimateLines(chunk: string, columns: number, wrap: boolean): number {
+  let breaks = 0;
+  for (let at = chunk.indexOf('\n'); at !== -1; at = chunk.indexOf('\n', at + 1)) breaks++;
+  const lines = breaks + (chunk.endsWith('\n') ? 0 : 1);
+  return wrap ? Math.max(lines, Math.ceil(chunk.length / Math.max(columns, 1))) : lines;
+}
+
+/** Whether this engine can skip drawing blocks that are off screen. */
+export function canSkipOffscreen(): boolean {
+  return typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('content-visibility', 'auto');
+}

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { JsonTree } from '@/components/response/JsonTree';
 import { SyntaxText } from '@/components/response/SyntaxText';
+import { ChunkedText } from '@/components/response/ChunkedText';
 import { Windowed } from '@/components/response/Windowed';
 import { useToast } from '@/components/common/Toaster';
 import { saveMessage, saveText } from '@/lib/save';
@@ -287,13 +288,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
               {(visible) => <SyntaxText text={visible} language="xml" wrap={wrap} testId="display-response-body" />}
             </Windowed>
           ) : (
-            <Windowed key={response.id} text={response.body}>
-              {(visible) => (
-                <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-body">
-                  {visible || '(empty response body)'}
-                </pre>
-              )}
-            </Windowed>
+            <ChunkedText key={response.id} text={response.body} wrap={wrap} testId="display-response-body" empty="(empty response body)" />
           )}
         </TabsContent>
 
@@ -329,13 +324,7 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         </TabsContent>
 
         <TabsContent value="raw" className="contents">
-          <Windowed key={response.id} text={response.body}>
-            {(visible) => (
-              <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-raw">
-                {visible || '(empty response body)'}
-              </pre>
-            )}
-          </Windowed>
+          <ChunkedText key={response.id} text={response.body} wrap={wrap} testId="display-response-raw" empty="(empty response body)" />
         </TabsContent>
 
         <TabsContent value="preview" className="contents">
@@ -454,12 +443,6 @@ function Preview({ body, contentType }: { body: string; contentType: string | un
     );
   }
   return (
-    <Windowed text={body}>
-      {(visible) => (
-        <pre className="code wrap fill" data-testid="display-response-preview">
-          {visible || '(empty response body)'}
-        </pre>
-      )}
-    </Windowed>
+    <ChunkedText text={body} wrap testId="display-response-preview" empty="(empty response body)" />
   );
 }
