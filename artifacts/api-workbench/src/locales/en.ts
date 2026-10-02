@@ -40,6 +40,11 @@ export const en = {
   'common.confirmTypeNameAria': 'Type {name} to confirm',
 
   // ── Settings ─────────────────────────────────────────────────────────
+  'storage.trimmed.title': 'Storage is nearly full',
+  'storage.trimmed.body': 'Recent responses were left out so your requests could be saved. Free some space, or turn off keeping response bodies in Settings.',
+  'storage.failed.title': 'Your changes could not be saved',
+  'storage.failed.body': 'There is no room left for Carom’s data, so what you do now is lost when you close. Export your workspace to keep it, then free some space.',
+  'storage.recovered': 'Saving works again.',
   'settings.title': 'Settings',
   'settings.tab.general': 'General',
   'settings.tab.theme': 'Theme',

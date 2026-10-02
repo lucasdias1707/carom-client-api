@@ -41,6 +41,11 @@ export const ptBR: Catalogue = {
   'common.confirmTypeNameAria': 'Digite {name} para confirmar',
 
   // ── Configurações ────────────────────────────────────────────────────
+  'storage.trimmed.title': 'O armazenamento está quase cheio',
+  'storage.trimmed.body': 'As respostas recentes ficaram de fora para que suas requisições pudessem ser salvas. Libere espaço, ou desligue nas Configurações a opção de manter o corpo das respostas.',
+  'storage.failed.title': 'Não foi possível salvar suas alterações',
+  'storage.failed.body': 'Não há mais espaço para os dados do Carom, então o que você fizer agora se perde ao fechar. Exporte seu workspace para guardá-lo e depois libere espaço.',
+  'storage.recovered': 'Voltou a salvar.',
   'settings.title': 'Configurações',
   'settings.tab.general': 'Geral',
   'settings.tab.theme': 'Tema',

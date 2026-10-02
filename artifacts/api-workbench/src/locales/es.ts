@@ -44,6 +44,11 @@ export const es: Catalogue = {
   'common.confirmTypeNameAria': 'Escribe {name} para confirmar',
 
   // ── Ajustes ──────────────────────────────────────────────────────────
+  'storage.trimmed.title': 'El almacenamiento está casi lleno',
+  'storage.trimmed.body': 'Las respuestas recientes se dejaron fuera para poder guardar tus solicitudes. Libera espacio, o desactiva en los Ajustes la opción de conservar el cuerpo de las respuestas.',
+  'storage.failed.title': 'No se pudieron guardar tus cambios',
+  'storage.failed.body': 'Ya no hay espacio para los datos de Carom, así que lo que hagas ahora se pierde al cerrar. Exporta tu espacio de trabajo para conservarlo y después libera espacio.',
+  'storage.recovered': 'Vuelve a guardar.',
   'settings.title': 'Ajustes',
   'settings.tab.general': 'General',
   'settings.tab.theme': 'Tema',
