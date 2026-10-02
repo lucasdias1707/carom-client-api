@@ -1,6 +1,6 @@
 import { format, resolveLanguage, LANGUAGES, type Language, type Translate } from '@/lib/i18n';
 import { catalogueFor } from '@/locales';
-import { STORAGE_KEY } from '@/lib/storage';
+import { storedLanguage } from '@/lib/storage';
 import {
   Component,
   type ComponentType,
@@ -39,7 +39,7 @@ function toError(value: unknown): Error {
 }
 
 /**
- * A translator that needs nothing but `localStorage` and the browser.
+ * A translator that needs nothing but what storage read at start, and the browser.
  *
  * The error screen is the one place that must keep working when the app does
  * not, so it reaches past the store for the stored language and falls back to
@@ -50,9 +50,7 @@ function toError(value: unknown): Error {
 function fallbackTranslator(): Translate {
   let chosen: Language | undefined;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    const stored = raw ? (JSON.parse(raw) as { settings?: { language?: Language } }) : null;
-    const language = stored?.settings?.language;
+    const language = storedLanguage() as Language | undefined;
     if (language && LANGUAGES.includes(language)) chosen = language;
   } catch {
     // Unreadable storage is not a reason to fail again here.

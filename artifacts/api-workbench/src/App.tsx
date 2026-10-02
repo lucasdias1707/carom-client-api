@@ -1,4 +1,5 @@
 import { ToastProvider } from '@/components/common/Toaster';
+import { StorageWatcher } from '@/components/common/StorageWatcher';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Workbench } from '@/components/layout/Workbench';
 import { UpdateProvider } from '@/state/update-store';
@@ -10,6 +11,7 @@ export default function App() {
     <TooltipProvider delayDuration={250} skipDelayDuration={300}>
       <ToastProvider>
         <WorkspaceProvider>
+          <StorageWatcher />
           <UpdateProvider>
             <Workbench />
           </UpdateProvider>

@@ -16,7 +16,7 @@ import { emptyAuth } from '@/lib/factories';
 import { dropLegacyState, migrateLegacyState } from '@/lib/migrate';
 import { createSeedState } from '@/lib/seed';
 import { defaultSettings } from '@/lib/settings';
-import { readState, writeState, STATE_VERSION } from '@/lib/storage';
+import { flushState, readState, writeState, STATE_VERSION } from '@/lib/storage';
 import { buildVariableTable, valuesOf } from '@/lib/template';
 import { reducer } from '@/state/reducer';
 import { folderChain } from '@/state/selectors';
@@ -126,7 +126,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const writeTimer = useRef<number | null>(null);
 
   // Persist on a short debounce: typing in the composer updates state on every
-  // keystroke and localStorage writes are synchronous.
+  // keystroke, and a write is more than the keystroke is worth.
   useEffect(() => {
     if (writeTimer.current !== null) window.clearTimeout(writeTimer.current);
     writeTimer.current = window.setTimeout(() => writeState(state), 250);
@@ -136,9 +136,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   useEffect(() => {
-    const flush = () => writeState(state);
+    const flush = () => flushState(state);
+    // `pagehide` as well as `beforeunload`: a webview that is closed does not
+    // always fire the first, and the second is the one a tab switch to another
+    // app on a phone does.
     window.addEventListener('beforeunload', flush);
-    return () => window.removeEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+    };
   }, [state]);
 
   const language = resolveLanguage(state.settings.language);
