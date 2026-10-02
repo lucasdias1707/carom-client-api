@@ -21,7 +21,14 @@ serde_json = "1"
 
 # Requests are made from Rust, which is what frees the desktop build from CORS
 # and lets it reach localhost and the LAN like any other native client.
-tauri-plugin-http = "2"
+#
+# The three compression features are not on by default, and without them the
+# client neither asks for a compressed response nor can read one: every body
+# crossed the wire at full size, which for a large JSON payload is five to ten
+# times what it needs to be. With them it sends `Accept-Encoding` and decodes
+# what comes back, invisibly. zstd is left out: it builds C code, and a server
+# that offers it also offers gzip.
+tauri-plugin-http = { version = "2", features = ["gzip", "brotli", "deflate"] }
 
 # The native save dialog, and writing the file it names. This is what makes
 # "export" mean "choose a folder" on the desktop instead of "it went to
