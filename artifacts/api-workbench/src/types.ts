@@ -246,6 +246,17 @@ export type Settings = {
   sendMode: SendMode;
   /** Follow redirects when sending through the proxy. */
   followRedirects: boolean;
+  /**
+   * Ask servers for a compressed response, and decode it. Desktop only: a
+   * browser negotiates compression on its own and does not let a page say.
+   *
+   * Off by default, and that is measured, not cautious. The body is a tenth of
+   * the size on the wire, but the HTTP plugin hands a decoded body to the window
+   * in 4 KB pieces — 6,657 round trips for 26 MB against 131 uncompressed — and
+   * the trips cost more than a fast connection saves: 10.4 s against 0.76 s on
+   * the same response. It pays on a slow connection, roughly under 20 Mbit/s.
+   */
+  compressedResponses: boolean;
   timeoutMs: number;
   /** Persist response bodies between reloads. */
   persistResponses: boolean;

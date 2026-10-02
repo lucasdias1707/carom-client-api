@@ -452,7 +452,7 @@ export default {
         blocks: [
           {
             ul: [
-              '**Ajustes → General**: el idioma de la interfaz (English, Português, Español — sigue al sistema hasta que elijas), el idioma de los datos generados, la disposición de los paneles, el tiempo de espera, las redirecciones y **Atajos de teclado**.',
+              '**Ajustes → General**: el idioma de la interfaz (English, Português, Español — sigue al sistema hasta que elijas), el idioma de los datos generados, la disposición de los paneles, el tiempo de espera, las redirecciones, si la app de escritorio pide respuestas comprimidas a los servidores y **Atajos de teclado**.',
               '**Ajustes → Tema**: oscuro o claro, cinco paletas incluidas (Carom, Midnight, Ember, Forest, Paper) y fuentes con su tamaño. Cambia cualquier color de una paleta incluida y se convierte en una copia tuya; **Sorpréndeme** baraja una nueva.',
               'En el escritorio, **Ajustes → General → Actualizaciones** comprueba si hay una versión nueva y te deja elegir si Carom lo comprueba solo al iniciar.',
             ],

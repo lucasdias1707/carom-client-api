@@ -302,6 +302,25 @@ export function SettingsDialog({
           <Label htmlFor="checkbox-follow-redirects" className="font-normal">{t('settings.followRedirects')}</Label>
         </div>
 
+        {isDesktop() ? (
+          <div className="stack" style={{ gap: 4 }}>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="checkbox-compressed-responses"
+                checked={settings.compressedResponses}
+                onCheckedChange={(checked) =>
+                  dispatch({ type: 'settings/update', patch: { compressedResponses: checked === true } })
+                }
+                data-testid="checkbox-compressed-responses"
+              />
+              <Label htmlFor="checkbox-compressed-responses" className="font-normal">
+                {t('settings.compressed.label')}
+              </Label>
+            </div>
+            <p className="hint" style={{ margin: 0 }}>{t('settings.compressed.hint')}</p>
+          </div>
+        ) : null}
+
         <div className="flex items-center gap-2">
           <Checkbox
             id="checkbox-persist-responses"

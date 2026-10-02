@@ -62,6 +62,8 @@ export const en = {
   'settings.proxy.unavailable': 'The companion server is not reachable, so requests are sent straight from the browser and are subject to CORS.',
   'settings.timeout.label': 'Timeout (seconds)',
   'settings.followRedirects': 'Follow redirects',
+  'settings.compressed.label': 'Ask servers for compressed responses',
+  'settings.compressed.hint': 'Fewer bytes over the network, which pays off on a slow connection (roughly under 20 Mbit/s). On a faster one it is slower: a decoded response reaches the window in many small pieces, and for a large body that costs more than the transfer saves. Carom decodes for you, and the Headers tab then leaves out Content-Encoding and Content-Length. An Accept-Encoding header set on a request wins over this.',
   'settings.persistResponses': 'Keep response bodies between reloads',
   'settings.data.label': 'Workspace data',
   'settings.data.export': 'Export JSON',

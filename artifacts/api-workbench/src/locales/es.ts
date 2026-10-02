@@ -66,6 +66,8 @@ export const es: Catalogue = {
   'settings.proxy.unavailable': 'El servidor auxiliar no está accesible, así que las solicitudes salen directamente del navegador y quedan sujetas al CORS.',
   'settings.timeout.label': 'Tiempo de espera (segundos)',
   'settings.followRedirects': 'Seguir redirecciones',
+  'settings.compressed.label': 'Pedir respuestas comprimidas a los servidores',
+  'settings.compressed.hint': 'Menos bytes por la red, lo que compensa en una conexión lenta (por debajo de unos 20 Mbit/s). En una más rápida es más lento: la respuesta descomprimida llega a la ventana en muchos trozos pequeños, y en un cuerpo grande eso cuesta más de lo que ahorra la transferencia. Carom descomprime por ti, y la pestaña Cabeceras deja de mostrar Content-Encoding y Content-Length. Una cabecera Accept-Encoding escrita en la solicitud tiene prioridad sobre esta opción.',
   'settings.persistResponses': 'Conservar el cuerpo de las respuestas entre recargas',
   'settings.data.label': 'Datos del espacio de trabajo',
   'settings.data.export': 'Exportar JSON',

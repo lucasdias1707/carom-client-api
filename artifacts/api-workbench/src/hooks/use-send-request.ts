@@ -138,6 +138,7 @@ export function useSendRequest(proxyStatus: ProxyStatus): SendState {
           mode: state.settings.sendMode,
           timeoutMs: state.settings.timeoutMs,
           followRedirects: state.settings.followRedirects,
+          compressedResponses: state.settings.compressedResponses,
           proxyBaseUrl: PROXY_BASE_URL,
           proxyAvailable: proxyStatus === 'available',
           signal: controller.signal,
