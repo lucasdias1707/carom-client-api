@@ -230,6 +230,8 @@ export const en = {
   'response.copy': 'Copy response body',
   'response.copied': 'Response copied',
   'response.save': 'Save the response body',
+  'response.windowed': 'Showing the first {shown} of {total} characters. Drawing all of it at once would freeze the window — Copy and Save still take the whole body.',
+  'response.windowMore': 'Show the next {amount} characters',
   'response.saveFailed': 'Could not save the response',
   'response.clear': 'Clear responses',
   'response.clearTitle': 'Clear the response history?',

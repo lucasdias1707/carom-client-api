@@ -234,6 +234,8 @@ export const es: Catalogue = {
   'response.copy': 'Copiar el cuerpo de la respuesta',
   'response.copied': 'Respuesta copiada',
   'response.save': 'Guardar el cuerpo de la respuesta',
+  'response.windowed': 'Mostrando los primeros {shown} de {total} caracteres. Dibujar todo de una vez congelaría la ventana: Copiar y Guardar siguen llevando el cuerpo completo.',
+  'response.windowMore': 'Mostrar los siguientes {amount} caracteres',
   'response.saveFailed': 'No se pudo guardar la respuesta',
   'response.clear': 'Vaciar las respuestas',
   'response.clearTitle': '¿Vaciar el historial de respuestas?',

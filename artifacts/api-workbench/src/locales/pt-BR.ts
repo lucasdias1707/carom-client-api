@@ -231,6 +231,8 @@ export const ptBR: Catalogue = {
   'response.copy': 'Copiar o corpo da resposta',
   'response.copied': 'Resposta copiada',
   'response.save': 'Salvar o corpo da resposta',
+  'response.windowed': 'Mostrando os primeiros {shown} de {total} caracteres. Desenhar tudo de uma vez travaria a janela — Copiar e Salvar continuam levando o corpo inteiro.',
+  'response.windowMore': 'Mostrar os próximos {amount} caracteres',
   'response.saveFailed': 'Não foi possível salvar a resposta',
   'response.clear': 'Limpar as respostas',
   'response.clearTitle': 'Limpar o histórico de respostas?',

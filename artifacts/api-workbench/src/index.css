@@ -890,6 +890,21 @@
      of the payload with the pane's own background showing under it. */
   .code.fill { min-height: 100%; }
 
+  /* The line that says a long body stops here. Sticky, so it is on screen
+     wherever the scrolling has got to. */
+  .body-window {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-faint);
+    font-size: var(--fs-12-5);
+  }
+
   .editor {
     width: 100%;
     min-height: 220px;
