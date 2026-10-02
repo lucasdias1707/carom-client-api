@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { JsonTree } from '@/components/response/JsonTree';
 import { SyntaxText } from '@/components/response/SyntaxText';
+import { ChunkedText } from '@/components/response/ChunkedText';
+import { Windowed } from '@/components/response/Windowed';
 import { useToast } from '@/components/common/Toaster';
 import { saveMessage, saveText } from '@/lib/save';
 import { byteLength, contentTypeLabel, formatBytes, formatDuration, formatRelative, statusFamily, tryPrettyJson } from '@/lib/format';
@@ -77,6 +79,17 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
     }
   }, [response]);
 
+  /*
+    Both of these are worked out once per response. They used to sit below the
+    early return and run on every render, which on a 26 MB body meant parsing
+    and re-printing it each time a tab was clicked.
+  */
+  const xml = useMemo(
+    () => response !== null && parsed === null && !response.error && looksLikeXml(response.body, contentType),
+    [response, parsed, contentType],
+  );
+  const xmlText = useMemo(() => (xml && response ? prettyXml(response.body).text : ''), [xml, response]);
+
   const cookies = useMemo(
     () => (response?.headers ?? []).filter((header) => header.key.toLowerCase() === 'set-cookie').map((header) => parseCookie(header.value)),
     [response],
@@ -99,11 +112,6 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
   }
 
   const family = statusFamily(response.status);
-  const xml = parsed === null && !response.error && looksLikeXml(response.body, contentType);
-  const prettyText =
-    parsed !== null ? tryPrettyJson(response.body).text
-    : xml ? prettyXml(response.body).text
-    : response.body;
   const filteredHeaders = response.headers.filter((header) =>
     `${header.key} ${header.value}`.toLowerCase().includes(filter.toLowerCase()),
   );
@@ -121,11 +129,15 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
     const extension = parsed !== null ? 'json' : xml ? 'xml' : 'txt';
     const name = `response-${response.status}.${extension}`;
     try {
-      // `prettyText`, not the raw body: what lands in the file is what the
-      // Pretty tab shows. A minified payload is what the wire carried, not
-      // something anyone opens a saved file to read.
+      // Formatted, not the raw body: what lands in the file is what the Pretty
+      // tab shows. A minified payload is what the wire carried, not something
+      // anyone opens a saved file to read. Worked out here, when someone asks
+      // for it, because formatting a large JSON body is not free and nothing
+      // else needs the text. It is also why a saved file is bigger than the
+      // size in the status line, which counts the bytes that came over the wire.
+      const text = parsed !== null ? tryPrettyJson(response.body).text : xml ? xmlText : response.body;
       const message = saveMessage(
-        await saveText(name, prettyText, contentType ?? 'text/plain', t('save.anyFile')),
+        await saveText(name, text, contentType ?? 'text/plain', t('save.anyFile')),
         t('save.saved', { name }),
         t('save.downloaded'),
       );
@@ -272,11 +284,11 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
           {parsed !== null ? (
             <JsonTree data={parsed} term={filter} />
           ) : xml ? (
-            <SyntaxText text={prettyText} language="xml" wrap={wrap} testId="display-response-body" />
+            <Windowed key={response.id} text={xmlText}>
+              {(visible) => <SyntaxText text={visible} language="xml" wrap={wrap} testId="display-response-body" />}
+            </Windowed>
           ) : (
-            <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-body">
-              {prettyText || '(empty response body)'}
-            </pre>
+            <ChunkedText key={response.id} text={response.body} wrap={wrap} testId="display-response-body" empty="(empty response body)" />
           )}
         </TabsContent>
 
@@ -312,13 +324,11 @@ export function ResponsePane({ requestId, sending, scriptLogs = [], scriptTests 
         </TabsContent>
 
         <TabsContent value="raw" className="contents">
-          <pre className={`code fill ${wrap ? 'wrap' : ''}`} data-testid="display-response-raw">
-            {response.body || '(empty response body)'}
-          </pre>
+          <ChunkedText key={response.id} text={response.body} wrap={wrap} testId="display-response-raw" empty="(empty response body)" />
         </TabsContent>
 
         <TabsContent value="preview" className="contents">
-          <Preview body={response.body} contentType={contentType} />
+          <Preview key={response.id} body={response.body} contentType={contentType} />
         </TabsContent>
 
         <TabsContent value="headers" className="contents">
@@ -433,8 +443,6 @@ function Preview({ body, contentType }: { body: string; contentType: string | un
     );
   }
   return (
-    <pre className="code wrap fill" data-testid="display-response-preview">
-      {body || '(empty response body)'}
-    </pre>
+    <ChunkedText text={body} wrap testId="display-response-preview" empty="(empty response body)" />
   );
 }

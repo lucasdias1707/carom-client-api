@@ -890,6 +890,34 @@
      of the payload with the pane's own background showing under it. */
   .code.fill { min-height: 100%; }
 
+  /* One block of a long body. Off screen it is not drawn at all, and until it
+     has been, its height is a guess from the number of lines (the `auto` keeps
+     the real height once it is known). Without wrapping the block grows to its
+     longest line, because skipping what is off screen also clips it, and a clipped
+     line cannot be scrolled to. */
+  .code-chunk {
+    white-space: inherit;
+    word-break: inherit;
+    content-visibility: auto;
+    contain-intrinsic-size: auto calc(var(--lines, 1) * 1.65em);
+  }
+  .code.chunked:not(.wrap) .code-chunk { width: max-content; min-width: 100%; }
+
+  /* The line that says a long body stops here. Sticky, so it is on screen
+     wherever the scrolling has got to. */
+  .body-window {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-faint);
+    font-size: var(--fs-12-5);
+  }
+
   .editor {
     width: 100%;
     min-height: 220px;

@@ -47,6 +47,7 @@ export function defaultSettings(): Settings {
     layout: 'horizontal',
     sendMode: 'auto',
     followRedirects: true,
+    compressedResponses: false,
     timeoutMs: 30_000,
     persistResponses: true,
     autoCheckUpdates: true,

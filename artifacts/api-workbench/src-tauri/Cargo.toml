@@ -21,7 +21,20 @@ serde_json = "1"
 
 # Requests are made from Rust, which is what frees the desktop build from CORS
 # and lets it reach localhost and the LAN like any other native client.
-tauri-plugin-http = "2"
+#
+# The three compression features are not on by default, and without them the
+# client neither asks for a compressed response nor can read one. With them it
+# can, which is what the "compressed responses" setting turns on. The setting is
+# off by default: the plugin hands a decoded body to the window in 4 KB pieces,
+# one round trip each, and for a large body that costs far more than a fast
+# connection saves (26 MB: 10.4 s compressed, 0.76 s not). It pays on a slow link. zstd is left out: it builds C code, and a server
+# that offers it also offers gzip.
+#
+# `unsafe-headers` is what lets a request carry `Accept-Encoding` at all: the
+# plugin otherwise drops it, with the rest of the headers a browser forbids a
+# page to set. The app puts every other one of those back (`desktopHeaders` in
+# lib/http.ts), so the only header whose behaviour changes is that one.
+tauri-plugin-http = { version = "2", features = ["gzip", "brotli", "deflate", "unsafe-headers"] }
 
 # The native save dialog, and writing the file it names. This is what makes
 # "export" mean "choose a folder" on the desktop instead of "it went to

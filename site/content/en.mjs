@@ -458,7 +458,7 @@ export default {
         blocks: [
           {
             ul: [
-              '**Settings → General**: the interface language (English, Português, Español — it follows your system until you choose), the language of generated data, pane layout, timeout, redirects, and **Keyboard shortcuts**.',
+              '**Settings → General**: the interface language (English, Português, Español — it follows your system until you choose), the language of generated data, pane layout, timeout, redirects, whether the desktop app asks servers for compressed responses, and **Keyboard shortcuts**.',
               '**Settings → Theme**: dark or light, five built-in palettes (Carom, Midnight, Ember, Forest, Paper), and fonts with their size. Change any colour of a built-in palette and it becomes your own copy; **Surprise me** shuffles a new one.',
               'On the desktop, **Settings → General → Updates** checks for a new version, and lets you choose whether Carom checks by itself when it starts.',
             ],
