@@ -678,14 +678,145 @@ describe('workspaces', () => {
     expect(next.environments.filter((item) => item.workspaceId === workspace.id)).toHaveLength(1);
   });
 
-  it('clears tabs when switching, since they belong to the other workspace', () => {
+  /** Two workspaces, the first with three tabs open and the second one in front. */
+  function twoWorkspaces() {
     let state = seed();
+    const first = state.activeWorkspaceId;
+    state = reducer(state, { type: 'request/open', id: state.requests[1].id });
     state = reducer(state, { type: 'request/open', id: state.requests[2].id });
-    const workspace = createWorkspace('Second');
-    state = reducer(state, { type: 'workspace/create', workspace, environment: createEnvironment(workspace.id, 'Base', true, []) });
-    const back = reducer(state, { type: 'workspace/activate', id: state.workspaces[0].id });
-    expect(back.openTabIds).toEqual([]);
-    expect(back.activeRequestId).toBeNull();
+    state = reducer(state, { type: 'request/open', id: state.requests[1].id });
+    const shown = { tabs: state.openTabIds, front: state.activeRequestId, requests: state.requests, folders: state.folders };
+    const second = createWorkspace('Second');
+    state = reducer(state, {
+      type: 'workspace/create',
+      workspace: second,
+      environment: createEnvironment(second.id, 'Base', true, []),
+    });
+    return { state, first, second: second.id, shown };
+  }
+
+  it('shows a new workspace with no tabs, since nothing was open there', () => {
+    const { state } = twoWorkspaces();
+    expect(state.openTabIds).toEqual([]);
+    expect(state.activeRequestId).toBeNull();
+  });
+
+  it('brings the tabs back, in order and with the same one in front, when returning', () => {
+    const { state, first, shown } = twoWorkspaces();
+    expect(shown.tabs).toHaveLength(3);
+    const back = reducer(state, { type: 'workspace/activate', id: first });
+    expect(back.openTabIds).toEqual(shown.tabs);
+    expect(back.activeRequestId).toBe(shown.front);
+  });
+
+  it('keeps each workspace its own tabs through any number of switches', () => {
+    const { state, first, second } = twoWorkspaces();
+    const request = createRequest({ workspaceId: second, name: 'In second' });
+    let next = reducer(state, { type: 'request/create', request });
+    next = reducer(next, { type: 'request/open', id: request.id });
+    const there = next.openTabIds;
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    next = reducer(next, { type: 'workspace/activate', id: second });
+    expect(next.openTabIds).toEqual(there);
+    expect(next.activeRequestId).toBe(request.id);
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    expect(next.openTabIds).toHaveLength(3);
+    expect(next.openTabIds).not.toContain(request.id);
+  });
+
+  it('keeps the active environment of each workspace', () => {
+    const { state, first, second } = twoWorkspaces();
+    const named = createEnvironment(second, 'Staging', false, []);
+    let next = reducer(state, { type: 'environment/create', environment: named });
+    next = reducer(next, { type: 'environment/activate', id: named.id });
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    expect(next.activeEnvironmentId).toBeNull();
+    next = reducer(next, { type: 'workspace/activate', id: second });
+    expect(next.activeEnvironmentId).toBe(named.id);
+  });
+
+  it('leaves out a tab whose request was deleted while the workspace was away', () => {
+    const { state, first, shown } = twoWorkspaces();
+    const gone = shown.tabs.find((id) => id !== shown.front)!;
+    const away = reducer(state, { type: 'request/delete', id: gone });
+    const back = reducer(away, { type: 'workspace/activate', id: first });
+    expect(back.openTabIds).not.toContain(gone);
+    expect(back.openTabIds).toHaveLength(2);
+    expect(back.activeRequestId).toBe(shown.front);
+  });
+
+  it('falls back to a tab that is left when the one that was in front is gone', () => {
+    const { state, first, shown } = twoWorkspaces();
+    const front = shown.front!;
+    const away = reducer(state, { type: 'request/delete', id: front });
+    const back = reducer(away, { type: 'workspace/activate', id: first });
+    expect(back.openTabIds).not.toContain(front);
+    expect(back.activeRequestId).toBe(back.openTabIds.at(-1));
+  });
+
+  it('drops an environment that was deleted while the workspace was away', () => {
+    const { state, first, second } = twoWorkspaces();
+    const named = createEnvironment(second, 'Staging', false, []);
+    let next = reducer(state, { type: 'environment/create', environment: named });
+    next = reducer(next, { type: 'environment/activate', id: named.id });
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    next = reducer(next, { type: 'environment/delete', id: named.id });
+    next = reducer(next, { type: 'workspace/activate', id: second });
+    expect(next.activeEnvironmentId).toBeNull();
+  });
+
+  it('keeps unsaved edits of a tab in a workspace that is not in front', () => {
+    const { state, first, shown } = twoWorkspaces();
+    const id = shown.front!;
+    let next = reducer(state, { type: 'workspace/activate', id: first });
+    next = reducer(next, { type: 'request/update', id, patch: { name: 'Edited' } });
+    next = reducer(next, { type: 'workspace/activate', id: state.activeWorkspaceId });
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    expect(next.drafts[id]?.name).toBe('Edited');
+    expect(next.openTabIds).toContain(id);
+  });
+
+  it('remembers the folder pane that was open', () => {
+    const { state, first, shown } = twoWorkspaces();
+    const folder = shown.folders[0];
+    let next = reducer(state, { type: 'workspace/activate', id: first });
+    next = reducer(next, { type: 'folder/open', id: folder.id });
+    next = reducer(next, { type: 'workspace/activate', id: state.activeWorkspaceId });
+    expect(next.activeFolderId).toBeNull();
+    next = reducer(next, { type: 'workspace/activate', id: first });
+    expect(next.activeFolderId).toBe(folder.id);
+    expect(next.activeRequestId).toBeNull();
+  });
+
+  it('forgets what a deleted workspace was showing', () => {
+    const { state, first, second } = twoWorkspaces();
+    const away = reducer(state, { type: 'workspace/activate', id: first });
+    expect(away.workspaceViews[second]).toBeDefined();
+    const next = reducer(away, { type: 'workspace/delete', id: second });
+    expect(next.workspaceViews[second]).toBeUndefined();
+    expect(next.openTabIds).toEqual(away.openTabIds);
+  });
+
+  it('lands on the first workspace left, with its tabs, when the one in front is deleted', () => {
+    const { state, first, second } = twoWorkspaces();
+    const next = reducer(state, { type: 'workspace/delete', id: second });
+    expect(next.activeWorkspaceId).toBe(first);
+    expect(next.openTabIds).toHaveLength(3);
+    expect(next.workspaceViews).toEqual({});
+  });
+
+  it('does not touch the picked environment when another workspace is deleted', () => {
+    const { state, first, second } = twoWorkspaces();
+    const named = createEnvironment(second, 'Staging', false, []);
+    let next = reducer(state, { type: 'environment/create', environment: named });
+    next = reducer(next, { type: 'environment/activate', id: named.id });
+    next = reducer(next, { type: 'workspace/delete', id: first });
+    expect(next.activeEnvironmentId).toBe(named.id);
+  });
+
+  it('ignores a request to open a workspace that does not exist', () => {
+    const state = seed();
+    expect(reducer(state, { type: 'workspace/activate', id: 'nope' })).toBe(state);
   });
 
   it('refuses to delete the only workspace', () => {
