@@ -342,6 +342,18 @@ export type RequestVersion = {
   request: RequestRecord;
 };
 
+/**
+ * What a workspace was showing when it was last left: the tab strip, which tab
+ * had focus, and the environment that was picked. Remembered per workspace so
+ * that switching away and back is a pause rather than a reset.
+ */
+export type WorkspaceView = {
+  openTabIds: string[];
+  activeRequestId: string | null;
+  activeFolderId: string | null;
+  activeEnvironmentId: string | null;
+};
+
 export type WorkspaceState = {
   version: number;
   workspaces: Workspace[];
@@ -368,5 +380,12 @@ export type WorkspaceState = {
   activeRequestId: string | null;
   /** Set when a folder's own pane is open; clears when a request is opened. */
   activeFolderId: string | null;
+  /**
+   * The view of every workspace that is not the active one, by workspace id.
+   * The active workspace's own view is the top-level `openTabIds` and friends;
+   * it is filed here when it is left. Absent on a state written before this
+   * existed, which `hydrate` reads as "nothing remembered".
+   */
+  workspaceViews: Record<string, WorkspaceView>;
   settings: Settings;
 };

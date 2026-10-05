@@ -3,7 +3,7 @@ import { dropVersions, recordVersion } from '@/lib/versions';
 import { cloneRequest } from '@/lib/factories';
 import { createId } from '@/lib/id';
 import type { Action } from '@/state/actions';
-import type { Environment, RequestRecord, Workspace, WorkspaceState } from '@/types';
+import type { Environment, RequestRecord, Workspace, WorkspaceState, WorkspaceView } from '@/types';
 import { isDescendantFolder } from '@/state/selectors';
 
 /** Keep at most this many responses per request so history stays useful but bounded. */
@@ -18,6 +18,58 @@ function withTabOpen(state: WorkspaceState, id: string): WorkspaceState {
   const openTabIds = state.openTabIds.includes(id) ? state.openTabIds : [...state.openTabIds, id];
   // A request and a folder never share the pane, so opening one closes the other.
   return { ...state, openTabIds, activeRequestId: id, activeFolderId: null };
+}
+
+/**
+ * Move to another workspace, filing the current view under the one being left
+ * and bringing back the one remembered for the destination.
+ *
+ * A remembered view is checked against what exists now, because the workspace
+ * may have been edited, re-linked or imported into while it was out of sight:
+ * a tab whose request is gone is dropped, and so is an environment that is
+ * gone. A destination with nothing remembered opens empty, as it always did.
+ */
+function switchWorkspace(state: WorkspaceState, id: string): WorkspaceState {
+  const views = { ...state.workspaceViews };
+  if (state.workspaces.some((workspace) => workspace.id === state.activeWorkspaceId)) {
+    views[state.activeWorkspaceId] = {
+      openTabIds: state.openTabIds,
+      activeRequestId: state.activeRequestId,
+      activeFolderId: state.activeFolderId,
+      activeEnvironmentId: state.activeEnvironmentId,
+    };
+  }
+  return enterWorkspace({ ...state, workspaceViews: views }, id);
+}
+
+/** Show the remembered view of `id`, dropping whatever of it no longer exists. */
+function enterWorkspace(state: WorkspaceState, id: string): WorkspaceState {
+  const { [id]: remembered, ...others }: Record<string, WorkspaceView> = state.workspaceViews;
+  const inside = new Set(state.requests.filter((request) => request.workspaceId === id).map((request) => request.id));
+  const openTabIds = (remembered?.openTabIds ?? []).filter((tabId) => inside.has(tabId));
+  const folderId = state.folders.some((folder) => folder.id === remembered?.activeFolderId && folder.workspaceId === id)
+    ? (remembered?.activeFolderId ?? null)
+    : null;
+  const requestId =
+    remembered?.activeRequestId && openTabIds.includes(remembered.activeRequestId)
+      ? remembered.activeRequestId
+      : folderId
+        ? null
+        : (openTabIds.at(-1) ?? null);
+  const environmentId = state.environments.some(
+    (environment) => environment.id === remembered?.activeEnvironmentId && environment.workspaceId === id,
+  )
+    ? (remembered?.activeEnvironmentId ?? null)
+    : null;
+  return {
+    ...state,
+    workspaceViews: others,
+    activeWorkspaceId: id,
+    openTabIds,
+    activeRequestId: requestId,
+    activeFolderId: folderId,
+    activeEnvironmentId: environmentId,
+  };
 }
 
 /** Pick the tab that should take focus after `closedId` goes away. */
@@ -78,7 +130,12 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case 'state/replace':
       // A file written by an older build carries no drafts, and an imported
       // workspace has no unsaved edits by definition.
-      return { ...action.state, drafts: action.state.drafts ?? {}, versions: action.state.versions ?? [] };
+      return {
+        ...action.state,
+        drafts: action.state.drafts ?? {},
+        versions: action.state.versions ?? [],
+        workspaceViews: action.state.workspaceViews ?? {},
+      };
 
     case 'restore': {
       const previous = action.previous;
@@ -350,28 +407,23 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       };
 
     case 'workspace/create':
-      return {
-        ...state,
-        workspaces: [...state.workspaces, action.workspace],
-        environments: [...state.environments, action.environment],
-        activeWorkspaceId: action.workspace.id,
-        activeEnvironmentId: null,
-        openTabIds: [],
-        activeRequestId: null,
-        activeFolderId: null,
-      };
+      // A new workspace has nothing remembered, so it opens empty; the one
+      // being left keeps its tabs for when it is back.
+      return switchWorkspace(
+        {
+          ...state,
+          workspaces: [...state.workspaces, action.workspace],
+          environments: [...state.environments, action.environment],
+        },
+        action.workspace.id,
+      );
 
     case 'workspace/activate': {
       if (action.id === state.activeWorkspaceId) return state;
-      // Tabs belong to the workspace they were opened from.
-      return {
-        ...state,
-        activeWorkspaceId: action.id,
-        activeEnvironmentId: null,
-        openTabIds: [],
-        activeRequestId: null,
-        activeFolderId: null,
-      };
+      if (!state.workspaces.some((workspace) => workspace.id === action.id)) return state;
+      // Tabs belong to the workspace they were opened from: they are put away
+      // here and come back when it does.
+      return switchWorkspace(state, action.id);
     }
 
     case 'workspace/rename':
@@ -464,15 +516,17 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         state.requests.filter((request) => request.workspaceId === action.id).map((request) => request.id),
       );
       const next = removeRequests(state, doomedRequests);
-      const activeWorkspaceId = state.activeWorkspaceId === action.id ? remaining[0].id : state.activeWorkspaceId;
-      return {
+      const { [action.id]: _forgotten, ...workspaceViews } = next.workspaceViews;
+      const without: WorkspaceState = {
         ...next,
         workspaces: remaining,
         folders: next.folders.filter((folder) => folder.workspaceId !== action.id),
         environments: next.environments.filter((environment) => environment.workspaceId !== action.id),
-        activeWorkspaceId,
-        activeEnvironmentId: null,
+        workspaceViews,
       };
+      // Deleting one that is not in front leaves the view alone. Deleting the
+      // one in front lands on the first that is left, as it was when last seen.
+      return state.activeWorkspaceId === action.id ? enterWorkspace(without, remaining[0].id) : without;
     }
 
     case 'environment/activate':
@@ -534,17 +588,16 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         });
       };
 
-      const next: WorkspaceState = {
+      const grown: WorkspaceState = {
         ...state,
         workspaces: action.workspace ? [...state.workspaces, action.workspace] : state.workspaces,
         folders: [...state.folders, ...action.folders],
         requests: [...state.requests, ...action.requests],
         environments: withBaseVariables([...state.environments, ...added]),
-        activeWorkspaceId: destination,
-        // Tabs belong to the workspace they were opened from, so importing
-        // somewhere else leaves them behind rather than dragging them along.
-        ...(moving ? { openTabIds: [], activeRequestId: null, activeEnvironmentId: null } : {}),
       };
+      // Importing somewhere else is a switch: the tabs in front are put away
+      // for when that workspace is back, and the destination shows its own.
+      const next = moving ? switchWorkspace(grown, destination) : grown;
 
       // Land on what was just imported rather than leaving it to be hunted for
       // in the tree: the outermost new folder.

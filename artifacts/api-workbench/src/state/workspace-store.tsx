@@ -85,6 +85,7 @@ function hydrate(state: WorkspaceState): WorkspaceState {
     openTabIds: state.openTabIds ?? [],
     drafts: state.drafts ?? {},
     versions: state.versions ?? [],
+    workspaceViews: state.workspaceViews ?? {},
     folders: (state.folders ?? []).map((folder) => ({
       ...folder,
       variables: folder.variables ?? [],

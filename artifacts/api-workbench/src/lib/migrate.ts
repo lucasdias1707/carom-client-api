@@ -130,6 +130,7 @@ export function migrateLegacyState(): WorkspaceState | null {
     openTabIds: requests[0] ? [requests[0].id] : [],
     drafts: {},
     versions: [],
+    workspaceViews: {},
     activeFolderId: null,
     activeRequestId: requests[0]?.id ?? null,
     settings: defaultSettings(),
